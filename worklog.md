@@ -53,3 +53,33 @@ Stage Summary:
 - 3 new DB tables: Friendship, NonUserSplit (schema pushed to Render PG)
 - 14 files changed, 1867 insertions, 297 deletions
 - Pushed to GitHub: main branch, Vercel will auto-deploy
+
+
+---
+Task ID: 3
+Agent: main
+Task: Fix all internal server errors and flow bugs across entire codebase
+
+Work Log:
+- Read and audited ALL 16 API route files, ALL 12 component files, Prisma schema, auth utils, and store
+- Found and fixed 10 bugs across the codebase:
+  1. **CRITICAL: settlements/route.ts** - `metadata` field received a JS object but Prisma schema defines it as `String?` — caused Prisma crash on EVERY settlement creation. Fixed with JSON.stringify().
+  2. **CRITICAL: settle-view.tsx** - Sent `fromId`/`toId` but API expects `fromUserId`/`toUserId` — ALL settlement recordings silently failed with 400 error.
+  3. **CRITICAL: settle-view.tsx** - Never fetched settlements for the selected group — settlements section was always empty.
+  4. **CRITICAL: group-detail-view.tsx** - handleRemoveMember sent `memberId` but API expects `userId` — remove member ALWAYS failed.
+  5. **CRITICAL: add-expense-view.tsx** - Group exact/percentage split sent `value` field but backend expects `amount`/`percentage` — exact and percentage group splits had 0 amounts.
+  6. **MEDIUM: add-expense-view.tsx** - handleCategorize didn't check for `data.error` in response body — AI errors showed as success with no category change.
+  7. **MEDIUM: dashboard-view.tsx** - Activity items used `act.description`, `act.groupName`, `act.amount` but API returns `message` with no amount/groupName — dashboard activity showed undefined.
+  8. **MEDIUM: activity-view.tsx** - Same field name mismatch as dashboard.
+  9. **MEDIUM: invites/accept/route.ts GET** - `group: true` include doesn't include `_count` — invite page always showed 0 members.
+  10. **MEDIUM: invite/[code]/page.tsx** - `action` type mismatch (`accept` vs `accepted`) — TS error, action result never displayed correctly.
+  11. **TS FIX: friends/route.ts** - `let targetUser = null` caused TS `never` type narrowing issues. Fixed with proper type annotation.
+- Verified TypeScript compilation: zero errors
+- Verified Next.js production build: clean success, all 23 routes
+- Pushed to GitHub: main branch
+
+Stage Summary:
+- 10 bugs fixed (4 critical causing 500s, 6 medium)
+- 16 source files changed, 54 insertions, 41 deletions
+- Zero TypeScript errors, clean production build
+- Pushed: https://github.com/ayushgohil404/SplitFlow_1.git (commit 2147faa)
