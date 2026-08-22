@@ -16,6 +16,9 @@ import {
   Shield,
   Calendar,
   Scale,
+  Mail,
+  Send,
+  Link,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -115,10 +118,12 @@ export function GroupDetailView() {
   const [activeTab, setActiveTab] = useState('expenses');
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
 
-  // Members dialog
-  const [addMemberOpen, setAddMemberOpen] = useState(false);
-  const [memberEmail, setMemberEmail] = useState('');
-  const [addingMember, setAddingMember] = useState(false);
+  // Invite dialog
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Settings dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -187,27 +192,36 @@ export function GroupDetailView() {
     }
   };
 
-  const handleAddMember = async () => {
-    if (!memberEmail.trim() || !selectedGroupId) return;
-    setAddingMember(true);
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim() || !selectedGroupId) return;
+    setInviting(true);
+    setInviteLink('');
     try {
-      const res = await fetch(`/api/groups/${selectedGroupId}/members`, {
+      const res = await fetch('/api/invites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: memberEmail.trim() }),
+        body: JSON.stringify({ groupId: selectedGroupId, email: inviteEmail.trim() }),
       });
+      const data = await res.json();
       if (res.ok) {
-        toast.success('Member added!');
-        setAddMemberOpen(false);
-        setMemberEmail('');
-        fetchGroup();
+        setInviteLink(data.inviteLink);
+        toast.success(data.message || 'Invite link generated!');
       } else {
-        toast.error('Failed to add member');
+        toast.error(data.error || 'Failed to send invite');
       }
     } catch {
-      toast.error('Failed to add member');
+      toast.error('Failed to send invite');
     } finally {
-      setAddingMember(false);
+      setInviting(false);
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      setLinkCopied(true);
+      toast.success('Link copied! Share it with your friend.');
+      setTimeout(() => setLinkCopied(false), 2000);
     }
   };
 
@@ -397,8 +411,8 @@ export function GroupDetailView() {
         <TabsContent value="members" className="mt-4">
           <div className="flex justify-end mb-4">
             {isAdmin && (
-              <Button size="sm" variant="outline" onClick={() => setAddMemberOpen(true)}>
-                <UserPlus className="w-4 h-4 mr-1.5" />Add Member
+              <Button size="sm" variant="outline" onClick={() => { setInviteOpen(true); setInviteLink(''); setInviteEmail(''); }}>
+                <UserPlus className="w-4 h-4 mr-1.5" />Invite People
               </Button>
             )}
           </div>
@@ -546,33 +560,73 @@ export function GroupDetailView() {
         </TabsContent>
       </Tabs>
 
-      {/* Add Member Dialog */}
-      <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
-        <DialogContent className="sm:max-w-sm">
+      {/* Invite People Dialog */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Member</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-emerald-600" />
+              Invite People
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="member-email">Email Address</Label>
-              <Input
-                id="member-email"
-                type="email"
-                placeholder="friend@example.com"
-                value={memberEmail}
-                onChange={(e) => setMemberEmail(e.target.value)}
-              />
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Enter your friend's email to generate an invite link. Share the link with them — when they open it and sign up, they'll join this group automatically.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-email">Friend's Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  id="invite-email"
+                  type="email"
+                  placeholder="friend@email.com"
+                  value={inviteEmail}
+                  onChange={(e) => { setInviteEmail(e.target.value); setInviteLink(''); }}
+                  className="pl-10"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendInvite()}
+                />
+              </div>
             </div>
+            <Button
+              onClick={handleSendInvite}
+              disabled={!inviteEmail.trim() || inviting}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {inviting ? 'Generating...' : 'Generate Invite Link'}
+            </Button>
+
+            {inviteLink && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3"
+              >
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <p className="text-xs font-medium text-emerald-700 mb-1">Invite Link</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-white rounded px-2.5 py-1.5 text-xs text-gray-700 font-mono truncate border">
+                      {inviteLink}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 h-8"
+                      onClick={copyInviteLink}
+                    >
+                      {linkCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 text-center">
+                  <Link className="w-3 h-3 inline mr-1" />
+                  Share this link via WhatsApp, email, or any messaging app. The link expires in 7 days.
+                </p>
+              </motion.div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddMemberOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleAddMember}
-              disabled={!memberEmail.trim() || addingMember}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              {addingMember ? 'Adding...' : 'Add Member'}
-            </Button>
+            <Button variant="outline" onClick={() => setInviteOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

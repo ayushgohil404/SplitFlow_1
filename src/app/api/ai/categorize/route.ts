@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import ZAI from 'z-ai-web-dev-sdk'
-import type { ChatMessage } from 'z-ai-web-dev-sdk'
+import { getGroq, CHAT_MODEL } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -41,6 +40,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    }
+
     const body = await req.json()
     const { description } = body as { description: string }
 
@@ -48,12 +51,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'description is required' }, { status: 400 })
     }
 
-    const zai = await ZAI.create()
-    const messages: ChatMessage[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: description },
-    ]
-    const response = await zai.chat.completions.create({ messages })
+    const response = await getGroq().chat.completions.create({
+      model: CHAT_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: description },
+      ],
+      temperature: 0.1,
+    })
+
     const raw = response.choices?.[0]?.message?.content ?? ''
     const parsed = extractJSON(raw) as { category: string; emoji: string; confidence: number }
 

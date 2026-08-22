@@ -1,35 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import ZAI from 'z-ai-web-dev-sdk'
-import type { ChatMessage } from 'z-ai-web-dev-sdk'
+import { getGroq, CHAT_MODEL } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
-  // Try direct parse first
   try {
     return JSON.parse(text)
   } catch {
-    // Try extracting from markdown code block
     const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (codeBlockMatch) {
       return JSON.parse(codeBlockMatch[1].trim())
     }
-    // Try finding first { ... } block
     const braceMatch = text.match(/\{[\s\S]*\}/)
     if (braceMatch) {
       return JSON.parse(braceMatch[0])
     }
     throw new Error('No valid JSON found')
   }
-}
-
-async function chatCompletion(systemPrompt: string, userMessage: string): Promise<string> {
-  const zai = await ZAI.create()
-  const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: userMessage },
-  ]
-  const response = await zai.chat.completions.create({ messages })
-  return response.choices?.[0]?.message?.content ?? ''
 }
 
 const SYSTEM_PROMPT = `You are an expert expense parser. Parse natural language expense descriptions into structured data.
@@ -39,7 +25,7 @@ You must return ONLY valid JSON (no markdown, no explanation) with this exact sc
   "description": "string - clean description of the expense",
   "amount": number - the total amount,
   "splitType": "equal" | "exact" | "percentage" | "single",
-  "currency": "string - 3-letter currency code (default USD)",
+  "currency": "string - 3-letter currency code (default INR)",
   "category": "food" | "transport" | "entertainment" | "shopping" | "bills" | "rent" | "travel" | "health" | "education" | "groceries" | "utilities" | "other",
   "splits": [optional array of { "name": "string", "percentage": number } or { "name": "string", "amount": number }]
 }
@@ -75,6 +61,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    }
+
     const body = await req.json()
     const { text } = body as { text: string }
 
@@ -82,14 +72,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'text is required' }, { status: 400 })
     }
 
-    const raw = await chatCompletion(SYSTEM_PROMPT, text)
+    const response = await getGroq().chat.completions.create({
+      model: CHAT_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: text },
+      ],
+      temperature: 0.1,
+    })
+
+    const raw = response.choices?.[0]?.message?.content ?? ''
     const parsed = extractJSON(raw) as Record<string, unknown>
 
     if (parsed.error) {
       return NextResponse.json({ error: parsed.error, rawText: text }, { status: 200 })
     }
 
-    // Ensure amount is a number
     if (typeof parsed.amount === 'string') {
       parsed.amount = parseFloat(parsed.amount as string)
     }

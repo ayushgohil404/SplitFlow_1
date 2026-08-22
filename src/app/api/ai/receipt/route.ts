@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import ZAI from 'z-ai-web-dev-sdk'
-import type { VisionMessage, VisionMultimodalContentItem } from 'z-ai-web-dev-sdk'
+import { getGroq, VISION_MODEL } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -24,7 +23,7 @@ const SYSTEM_PROMPT = `You are a receipt scanning assistant for SplitFlow, an ex
 You must return ONLY valid JSON with this schema:
 {
   "merchant": "string - the store/merchant name",
-  "amount": number - the total amount on the receipt",
+  "amount": number - the total amount on the receipt,
   "date": "string or null - the date in YYYY-MM-DD format if visible, otherwise null",
   "items": [optional array of { "name": "string", "quantity": number, "price": number }],
   "tax": number or null - the tax amount if visible, otherwise null,
@@ -49,6 +48,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    }
+
     const formData = await req.formData()
     const file = formData.get('receipt') as File | null
 
@@ -56,26 +59,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'receipt file is required' }, { status: 400 })
     }
 
-    // Convert file to base64
     const bytes = await file.arrayBuffer()
     const base64 = Buffer.from(bytes).toString('base64')
     const mimeType = file.type || 'image/jpeg'
     const dataUrl = `data:${mimeType};base64,${base64}`
 
-    const userContent: VisionMultimodalContentItem[] = [
-      { type: 'text', text: 'Analyze this receipt image and extract all the information.' },
-      { type: 'image_url', image_url: { url: dataUrl } },
-    ]
-
-    const messages: VisionMessage[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userContent },
-    ]
-
-    const zai = await ZAI.create()
-    const response = await zai.chat.completions.createVision({
-      model: 'gpt-4o-mini',
-      messages,
+    const response = await getGroq().chat.completions.create({
+      model: VISION_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze this receipt image and extract all the information.' },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      temperature: 0.1,
     })
 
     const raw = response.choices?.[0]?.message?.content ?? ''

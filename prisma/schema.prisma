@@ -25,6 +25,8 @@ model User {
   activities        Activity[]        @relation("User")
   createdGroups     Group[]           @relation("GroupCreator")
   sessions          Session[]
+  sentInvites      Invite[]           @relation("Inviter")
+  receivedInvites  Invite[]           @relation("Invitee")
 }
 
 model Account {
@@ -81,6 +83,7 @@ model Group {
 
   creator    User      @relation("GroupCreator", fields: [createdBy], references: [id])
   activities Activity[]
+  invites    Invite[]
 }
 
 model GroupMember {
@@ -170,4 +173,22 @@ model BalanceCache {
   amount    Float
   
   @@unique([fromUserId, toUserId, groupId])
+}
+
+model Invite {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  groupId   String
+  inviterId String
+  inviteeEmail String
+  inviteeId String?
+  status    String   @default("pending") // pending, accepted, declined, expired
+  role      String   @default("member")
+  expiresAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviter User  @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User? @relation("Invitee", fields: [inviteeId], references: [id], onDelete: SetNull)
 }

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
-import type { ChatMessage } from 'z-ai-web-dev-sdk'
+import { getGroq, CHAT_MODEL } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -27,6 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    }
+
     const body = await req.json()
     const { groupId } = body as { groupId: string }
 
@@ -34,30 +37,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'groupId is required' }, { status: 400 })
     }
 
-    // Verify membership
     const membership = await db.groupMember.findUnique({
-      where: {
-        groupId_userId: { groupId, userId: user.id },
-      },
+      where: { groupId_userId: { groupId, userId: user.id } },
     })
     if (!membership) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
     }
 
-    // Fetch all expenses for the group with splits and user info
     const expenses = await db.expense.findMany({
       where: { groupId },
       include: {
-        splits: {
-          include: {
-            user: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-        paidByUser: {
-          select: { id: true, name: true },
-        },
+        splits: { include: { user: { select: { id: true, name: true } } } },
+        paidByUser: { select: { id: true, name: true } },
       },
       orderBy: { date: 'desc' },
     })
@@ -69,7 +60,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Prepare data summary for the LLM
     const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0)
     const categoryTotals: Record<string, number> = {}
     const memberTotals: Record<string, { name: string; paid: number; share: number }> = {}
@@ -129,12 +119,15 @@ Be specific with numbers. Reference actual amounts and categories. If there are 
 
 Do NOT wrap the JSON in markdown code blocks. Return raw JSON only.`
 
-    const zai = await ZAI.create()
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Analyze this group's expense data:\n\n${JSON.stringify(expenseData, null, 2)}` },
-    ]
-    const response = await zai.chat.completions.create({ messages })
+    const response = await getGroq().chat.completions.create({
+      model: CHAT_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Analyze this group's expense data:\n\n${JSON.stringify(expenseData, null, 2)}` },
+      ],
+      temperature: 0.3,
+    })
+
     const raw = response.choices?.[0]?.message?.content ?? ''
     const parsed = extractJSON(raw) as { insights: string; summary: string }
 
