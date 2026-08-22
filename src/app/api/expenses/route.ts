@@ -160,37 +160,107 @@ export async function POST(req: NextRequest) {
         }))
       }
     } else if (splitType === 'exact') {
-      if (!splits || splits.length === 0) {
-        return NextResponse.json({ error: 'Splits are required for exact split type' }, { status: 400 })
+      // Collect all split amounts (user splits + email splits)
+      const emailTotal = emailSplits?.reduce((sum, s) => sum + (s.amount ?? 0), 0) ?? 0
+      const userSplitTotal = splits?.reduce((sum, s) => sum + (s.amount ?? 0), 0) ?? 0
+      const splitsTotal = userSplitTotal + emailTotal
+
+      if (splitsTotal === 0) {
+        return NextResponse.json({ error: 'Split amounts are required for exact split type' }, { status: 400 })
       }
-      const splitsTotal = splits.reduce((sum, s) => sum + (s.amount ?? 0), 0)
-      if (Math.abs(splitsTotal - amount) > 0.01) {
-        return NextResponse.json({ error: 'Split amounts must equal the total expense amount' }, { status: 400 })
+      if (Math.abs(splitsTotal - amount) > 0.5) {
+        return NextResponse.json({ error: `Split amounts (₹${splitsTotal.toFixed(2)}) must equal total (₹${amount.toFixed(2)})` }, { status: 400 })
       }
-      userSplits = splits.map((s) => ({
-        userId: s.userId,
-        amount: s.amount!,
-        percentage: Math.round(((s.amount! / amount) * 100) * 100) / 100,
-        share: 0,
-      }))
+
+      // Process user splits
+      if (splits && splits.length > 0) {
+        userSplits = splits.map((s) => ({
+          userId: s.userId,
+          amount: s.amount!,
+          percentage: Math.round(((s.amount! / amount) * 100) * 100) / 100,
+          share: 0,
+        }))
+      } else if (!groupId) {
+        // Direct expense: user's share = total - email splits
+        const myAmount = Math.round((amount - emailTotal) * 100) / 100
+        userSplits = [{ userId: user.id, amount: myAmount, percentage: Math.round((myAmount / amount) * 10000) / 100, share: 0 }]
+      }
+
+      // Process email splits
+      if (emailSplits && emailSplits.length > 0) {
+        for (const es of emailSplits) {
+          const existingUser = await db.user.findUnique({
+            where: { email: es.email.trim().toLowerCase() },
+          })
+          if (existingUser) {
+            userSplits.push({
+              userId: existingUser.id,
+              amount: es.amount ?? 0,
+              percentage: Math.round(((es.amount! / amount) * 100) * 100) / 100,
+              share: 0,
+            })
+          } else {
+            finalEmailSplits.push({
+              email: es.email.trim().toLowerCase(),
+              name: es.name || es.email.split('@')[0],
+              amount: es.amount ?? 0,
+              percentage: Math.round(((es.amount! / amount) * 100) * 100) / 100,
+              share: 0,
+            })
+          }
+        }
+      }
     } else if (splitType === 'percentage') {
-      if (!splits || splits.length === 0) {
-        return NextResponse.json({ error: 'Splits are required for percentage split type' }, { status: 400 })
+      const emailPctTotal = emailSplits?.reduce((sum, s) => sum + (s.percentage ?? 0), 0) ?? 0
+      const userPctTotal = splits?.reduce((sum, s) => sum + (s.percentage ?? 0), 0) ?? 0
+      const pctTotal = userPctTotal + emailPctTotal
+
+      if (pctTotal === 0) {
+        return NextResponse.json({ error: 'Split percentages are required for percentage split type' }, { status: 400 })
       }
-      const pctTotal = splits.reduce((sum, s) => sum + (s.percentage ?? 0), 0)
-      if (Math.abs(pctTotal - 100) > 0.01) {
-        return NextResponse.json({ error: 'Percentages must add up to 100' }, { status: 400 })
+      if (Math.abs(pctTotal - 100) > 1) {
+        return NextResponse.json({ error: `Percentages add up to ${pctTotal.toFixed(1)}%, must equal 100%` }, { status: 400 })
       }
-      userSplits = splits.map((s) => ({
-        userId: s.userId,
-        amount: Math.round(amount * (s.percentage! / 100) * 100) / 100,
-        percentage: s.percentage!,
-        share: 0,
-      }))
+
+      if (splits && splits.length > 0) {
+        userSplits = splits.map((s) => ({
+          userId: s.userId,
+          amount: Math.round(amount * (s.percentage! / 100) * 100) / 100,
+          percentage: s.percentage!,
+          share: 0,
+        }))
+      } else if (!groupId) {
+        const myPct = Math.round((100 - emailPctTotal) * 100) / 100
+        userSplits = [{ userId: user.id, amount: Math.round(amount * myPct / 100 * 100) / 100, percentage: myPct, share: 0 }]
+      }
+
+      if (emailSplits && emailSplits.length > 0) {
+        for (const es of emailSplits) {
+          const existingUser = await db.user.findUnique({
+            where: { email: es.email.trim().toLowerCase() },
+          })
+          if (existingUser) {
+            userSplits.push({
+              userId: existingUser.id,
+              amount: Math.round(amount * (es.percentage! / 100) * 100) / 100,
+              percentage: es.percentage!,
+              share: 0,
+            })
+          } else {
+            finalEmailSplits.push({
+              email: es.email.trim().toLowerCase(),
+              name: es.name || es.email.split('@')[0],
+              amount: Math.round(amount * (es.percentage! / 100) * 100) / 100,
+              percentage: es.percentage!,
+              share: 0,
+            })
+          }
+        }
+      }
     }
 
-    // Process email splits (non-user participants)
-    if (emailSplits && emailSplits.length > 0) {
+    // Process email splits for equal/share modes (exact/percentage already handled above)
+    if (emailSplits && emailSplits.length > 0 && splitType !== 'exact' && splitType !== 'percentage') {
       // Check if any email belongs to a registered user
       for (const es of emailSplits) {
         const existingUser = await db.user.findUnique({
