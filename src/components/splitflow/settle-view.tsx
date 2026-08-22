@@ -9,12 +9,13 @@ import {
   CheckCircle2,
   Zap,
   CreditCard,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
 
@@ -68,6 +75,7 @@ export function SettleView() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [simplified, setSimplified] = useState<SimplifiedPayment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [simplifyLoading, setSimplifyLoading] = useState(false);
 
   // Record payment dialog
@@ -75,10 +83,12 @@ export function SettleView() {
   const [payFrom, setPayFrom] = useState('');
   const [payTo, setPayTo] = useState('');
   const [payAmount, setPayAmount] = useState('');
+  const [payAmountError, setPayAmountError] = useState('');
   const [payNote, setPayNote] = useState('');
   const [recording, setRecording] = useState(false);
 
   const fetchGroupBalances = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/user/balance');
       if (res.ok) {
@@ -97,7 +107,8 @@ export function SettleView() {
   }, [fetchGroupBalances]);
 
   const fetchGroupDetail = useCallback(async (groupId: string) => {
-    if (!groupId) return;
+    setDetailLoading(true);
+    setSimplified([]);
     try {
       const res = await fetch(`/api/groups/${groupId}`);
       if (res.ok) {
@@ -107,6 +118,8 @@ export function SettleView() {
       }
     } catch {
       // silent
+    } finally {
+      setDetailLoading(false);
     }
   }, []);
 
@@ -128,7 +141,7 @@ export function SettleView() {
       if (res.ok) {
         const data = await res.json();
         setSimplified(data.payments || []);
-        toast.success('Optimal plan calculated!');
+        toast.success('Optimal payment plan calculated!');
       }
     } catch {
       toast.error('Failed to simplify debts');
@@ -138,7 +151,20 @@ export function SettleView() {
   };
 
   const handleRecordPayment = async () => {
-    if (!payFrom || !payTo || !payAmount || !selectedGroupId) return;
+    setPayAmountError('');
+    const numAmount = parseFloat(payAmount);
+    if (!payFrom || !payTo || !payAmount || !selectedGroupId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setPayAmountError('Enter a valid amount greater than $0');
+      return;
+    }
+    if (payFrom === payTo) {
+      toast.error('Payer and receiver must be different people');
+      return;
+    }
     setRecording(true);
     try {
       const res = await fetch('/api/settlements', {
@@ -148,7 +174,7 @@ export function SettleView() {
           groupId: selectedGroupId,
           fromId: payFrom,
           toId: payTo,
-          amount: parseFloat(payAmount),
+          amount: numAmount,
           note: payNote.trim(),
         }),
       });
@@ -165,7 +191,7 @@ export function SettleView() {
         toast.error('Failed to record payment');
       }
     } catch {
-      toast.error('Failed to record payment');
+      toast.error('Network error. Please try again.');
     } finally {
       setRecording(false);
     }
@@ -177,6 +203,7 @@ export function SettleView() {
   const totalOwing = groupBalances
     .filter((g) => g.yourBalance < 0)
     .reduce((sum, g) => sum + Math.abs(g.yourBalance), 0);
+  const hasAnyBalance = totalOwed > 0 || totalOwing > 0;
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -211,42 +238,49 @@ export function SettleView() {
       </div>
 
       {/* Group balances list */}
-      {groupBalances.length === 0 && !loading ? (
+      {loading ? (
+        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+      ) : !hasAnyBalance ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <HandCoins className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No balances to settle</p>
+            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">All settled up!</h3>
+            <p className="text-sm text-gray-500">You don&apos;t owe anyone and no one owes you. Nice!</p>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Balances by Group</CardTitle>
+            <CardTitle className="text-base">Select a group to settle</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-gray-100">
-              {groupBalances.map((gb) => (
-                <button
-                  key={gb.groupId}
-                  className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${
-                    selectedGroupId === gb.groupId ? 'bg-emerald-50/50' : ''
-                  }`}
-                  onClick={() => setSelectedGroupId(gb.groupId)}
-                >
-                  <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm">{gb.groupName}</p>
-                  </div>
-                  <span
-                    className={`text-sm font-semibold ${
-                      gb.yourBalance >= 0 ? 'text-emerald-600' : 'text-red-500'
+              {groupBalances.map((gb) => {
+                const isActive = selectedGroupId === gb.groupId;
+                return (
+                  <button
+                    key={gb.groupId}
+                    className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${
+                      isActive ? 'bg-emerald-50/50 border-l-2 border-l-emerald-500' : ''
                     }`}
+                    onClick={() => setSelectedGroupId(gb.groupId)}
                   >
-                    {gb.yourBalance >= 0 ? '+' : ''}
-                    ${gb.yourBalance.toFixed(2)}
-                  </span>
-                </button>
-              ))}
+                    <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm">{gb.groupName}</p>
+                      {isActive && <p className="text-xs text-emerald-600 mt-0.5">Selected</p>}
+                    </div>
+                    <span
+                      className={`text-sm font-semibold ${
+                        gb.yourBalance >= 0 ? 'text-emerald-600' : 'text-red-500'
+                      }`}
+                    >
+                      {gb.yourBalance >= 0 ? '+' : ''}
+                      ${gb.yourBalance.toFixed(2)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -255,7 +289,7 @@ export function SettleView() {
       {/* Selected group detail */}
       {selectedGroupId && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-gray-900">Detailed Balances</h3>
             <div className="flex gap-2">
               <Button
@@ -265,19 +299,30 @@ export function SettleView() {
               >
                 <CreditCard className="w-4 h-4 mr-1.5" />Record Payment
               </Button>
-              <Button size="sm" variant="outline" onClick={handleSimplify} disabled={simplifyLoading}>
-                {simplifyLoading ? '...' : <Zap className="w-4 h-4 mr-1.5" />}
-                Simplify Debts
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline" onClick={handleSimplify} disabled={simplifyLoading}>
+                      {simplifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
+                      Simplify
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs max-w-xs">
+                    Calculates the minimum number of payments needed to settle all debts
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
 
-          {/* Balances */}
-          {balances.length === 0 ? (
+          {detailLoading ? (
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+          ) : balances.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">All settled up in this group!</p>
+                <p className="text-sm text-gray-600 font-medium">All settled up in this group!</p>
+                <p className="text-xs text-gray-400 mt-1">No outstanding balances</p>
               </CardContent>
             </Card>
           ) : (
@@ -286,23 +331,25 @@ export function SettleView() {
                 const isYouOwe = b.from?.id === user?.id;
                 const isOwedToYou = b.to?.id === user?.id;
                 return (
-                  <Card key={idx}>
+                  <Card key={idx} className={isYouOwe || isOwedToYou ? 'ring-1 ring-emerald-100' : ''}>
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isYouOwe ? 'bg-red-50' : 'bg-emerald-50'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isYouOwe ? 'bg-red-50' : 'bg-emerald-50'}`}>
                         {isYouOwe ? (
                           <ArrowDownRight className="w-5 h-5 text-red-500" />
                         ) : (
                           <ArrowUpRight className="w-5 h-5 text-emerald-600" />
                         )}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900">
                           <span className="font-medium">{b.from?.name || 'Someone'}</span>
                           {' → '}
                           <span className="font-medium">{b.to?.name || 'Someone'}</span>
                         </p>
+                        {isYouOwe && <p className="text-xs text-red-500 mt-0.5">You need to pay</p>}
+                        {isOwedToYou && <p className="text-xs text-emerald-600 mt-0.5">Owed to you</p>}
                       </div>
-                      <span className={`text-sm font-bold ${isYouOwe ? 'text-red-500' : isOwedToYou ? 'text-emerald-600' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-red-500' : isOwedToYou ? 'text-emerald-600' : 'text-gray-700'}`}>
                         ${b.amount.toFixed(2)}
                       </span>
                     </CardContent>
@@ -314,18 +361,19 @@ export function SettleView() {
 
           {/* Simplified payments */}
           {simplified.length > 0 && (
-            <Card className="border-emerald-200">
+            <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Zap className="w-4 h-4 text-emerald-600" />Optimal Payment Plan
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <p className="text-xs text-gray-500 mb-3">Reduce from {balances.length} transactions to {simplified.length}:</p>
                 <div className="space-y-2">
                   {simplified.map((p, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-2 bg-emerald-50/50 rounded-lg">
-                      <span className="text-sm flex-1 text-gray-900">{p.from} → {p.to}</span>
-                      <span className="text-sm font-semibold text-emerald-700">${p.amount.toFixed(2)}</span>
+                    <div key={idx} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-emerald-100">
+                      <span className="text-sm flex-1 text-gray-900 font-medium">{p.from} → {p.to}</span>
+                      <span className="text-sm font-bold text-emerald-700">${p.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -338,7 +386,7 @@ export function SettleView() {
             <div>
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Settlements</h4>
               <div className="space-y-2">
-                {settlements.map((s) => (
+                {settlements.slice(0, 5).map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -358,11 +406,14 @@ export function SettleView() {
       <Dialog open={recordOpen} onOpenChange={setRecordOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>Record a Payment</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>From (payer)</Label>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Record that a payment was made. This will reduce the outstanding balance.
+            </p>
+            <div className="space-y-1.5">
+              <Label>From (payer) <span className="text-red-400">*</span></Label>
               <Select value={payFrom} onValueChange={setPayFrom}>
                 <SelectTrigger><SelectValue placeholder="Who is paying?" /></SelectTrigger>
                 <SelectContent>
@@ -372,8 +423,8 @@ export function SettleView() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>To (receiver)</Label>
+            <div className="space-y-1.5">
+              <Label>To (receiver) <span className="text-red-400">*</span></Label>
               <Select value={payTo} onValueChange={setPayTo}>
                 <SelectTrigger><SelectValue placeholder="Who receives payment?" /></SelectTrigger>
                 <SelectContent>
@@ -383,27 +434,28 @@ export function SettleView() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="pay-amount">Amount</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="pay-amount">Amount <span className="text-red-400">*</span></Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
                 <Input
                   id="pay-amount"
                   type="number"
                   step="0.01"
-                  min="0"
+                  min="0.01"
                   placeholder="0.00"
                   value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                  className="pl-7"
+                  onChange={(e) => { setPayAmount(e.target.value); setPayAmountError(''); }}
+                  className={`pl-7 ${payAmountError ? 'border-red-300' : ''}`}
                 />
               </div>
+              {payAmountError && <p className="text-xs text-red-500 mt-1">{payAmountError}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="pay-note">Note (optional)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="pay-note">Note <span className="text-gray-400 font-normal">(optional)</span></Label>
               <Input
                 id="pay-note"
-                placeholder="e.g., Venmo payment"
+                placeholder="e.g., Venmo, Cash, UPI"
                 value={payNote}
                 onChange={(e) => setPayNote(e.target.value)}
               />

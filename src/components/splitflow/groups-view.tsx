@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   Plus,
   LogIn,
   Users,
-  Copy,
-  Check,
   Receipt,
+  Search,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +46,7 @@ interface Group {
   inviteCode: string;
 }
 
-const EMOJI_OPTIONS = ['🏠', '🍕', '✈️', '🎉', '💡', '📚', '🏋️', '🚗', '🎮', '🏖️'];
+const EMOJI_OPTIONS = ['🏠', '🍕', '✈️', '🎉', '💡', '📚', '🏋️', '🚗', '🎮', '🏖️', '💼', '🐕'];
 const CATEGORIES = [
   { value: 'general', label: 'General' },
   { value: 'travel', label: 'Travel' },
@@ -78,13 +79,17 @@ export function GroupsView() {
   const { navigateToGroup } = useAppStore();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
+  const [joinError, setJoinError] = useState('');
   const [joining, setJoining] = useState(false);
 
   // Create form state
   const [formName, setFormName] = useState('');
+  const [formNameError, setFormNameError] = useState('');
   const [formDesc, setFormDesc] = useState('');
   const [formEmoji, setFormEmoji] = useState('🏠');
   const [formCategory, setFormCategory] = useState('general');
@@ -92,14 +97,18 @@ export function GroupsView() {
   const [creating, setCreating] = useState(false);
 
   const fetchGroups = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
       const res = await fetch('/api/groups');
       if (res.ok) {
         const data = await res.json();
         setGroups(Array.isArray(data) ? data : data.groups || []);
+      } else {
+        setError(true);
       }
     } catch {
-      // silent
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -109,8 +118,27 @@ export function GroupsView() {
     fetchGroups();
   }, [fetchGroups]);
 
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups;
+    const q = searchQuery.toLowerCase();
+    return groups.filter(
+      (g) =>
+        g.name.toLowerCase().includes(q) ||
+        g.description?.toLowerCase().includes(q) ||
+        g.category?.toLowerCase().includes(q)
+    );
+  }, [groups, searchQuery]);
+
   const handleCreate = async () => {
-    if (!formName.trim()) return;
+    setFormNameError('');
+    if (!formName.trim()) {
+      setFormNameError('Please enter a group name');
+      return;
+    }
+    if (formName.trim().length < 2) {
+      setFormNameError('Group name must be at least 2 characters');
+      return;
+    }
     setCreating(true);
     try {
       const res = await fetch('/api/groups', {
@@ -125,7 +153,7 @@ export function GroupsView() {
         }),
       });
       if (res.ok) {
-        toast.success('Group created!');
+        toast.success('Group created! Share the invite code with friends.');
         setCreateOpen(false);
         setFormName('');
         setFormDesc('');
@@ -134,72 +162,121 @@ export function GroupsView() {
         setFormCurrency('USD');
         fetchGroups();
       } else {
-        toast.error('Failed to create group');
+        toast.error('Failed to create group. Please try again.');
       }
     } catch {
-      toast.error('Failed to create group');
+      toast.error('Network error. Please check your connection.');
     } finally {
       setCreating(false);
     }
   };
 
   const handleJoin = async () => {
-    if (!inviteCode.trim()) return;
+    setJoinError('');
+    if (!inviteCode.trim()) {
+      setJoinError('Please enter an invite code');
+      return;
+    }
     setJoining(true);
     try {
       const res = await fetch('/api/groups/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteCode: inviteCode.trim() }),
+        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
       });
       if (res.ok) {
-        toast.success('Joined group!');
+        toast.success('Joined group successfully!');
         setJoinOpen(false);
         setInviteCode('');
         fetchGroups();
       } else {
-        toast.error('Invalid invite code');
+        const data = await res.json().catch(() => ({}));
+        setJoinError(data.error || 'Invalid invite code. Please check and try again.');
       }
     } catch {
-      toast.error('Failed to join group');
+      setJoinError('Network error. Please try again.');
     } finally {
       setJoining(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-          <Plus className="w-4 h-4 mr-2" />Create Group
-        </Button>
-        <Button variant="outline" onClick={() => setJoinOpen(true)}>
-          <LogIn className="w-4 h-4 mr-2" />Join Group
-        </Button>
+    <div className="space-y-5">
+      {/* Actions bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex gap-2">
+          <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+            <Plus className="w-4 h-4 mr-2" />Create Group
+          </Button>
+          <Button variant="outline" onClick={() => setJoinOpen(true)}>
+            <LogIn className="w-4 h-4 mr-2" />Join Group
+          </Button>
+        </div>
+        
+        {/* Search */}
+        {groups.length > 3 && (
+          <div className="relative flex-1 max-w-xs sm:ml-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search groups..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pl-9 text-sm"
+            />
+          </div>
+        )}
       </div>
 
-      {loading ? (
+      {/* Error state */}
+      {error && !loading ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+            <AlertCircle className="w-7 h-7 text-red-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load groups</h3>
+          <p className="text-sm text-gray-500 mb-4">Something went wrong. Please try again.</p>
+          <Button onClick={fetchGroups} variant="outline" className="gap-2">
+            <RefreshCw className="w-4 h-4" /> Retry
+          </Button>
+        </div>
+      ) : loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-40 rounded-xl bg-gray-100 animate-pulse" />
           ))}
         </div>
-      ) : groups.length === 0 ? (
+      ) : filteredGroups.length === 0 && searchQuery ? (
+        <div className="text-center py-12">
+          <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">No groups matching &quot;{searchQuery}&quot;</p>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
+            Clear search
+          </Button>
+        </div>
+      ) : filteredGroups.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
+          className="flex flex-col items-center justify-center py-16 text-center"
         >
           <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-emerald-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No groups yet</h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Create a group to start splitting expenses with friends.
+          <p className="text-sm text-gray-500 mb-1 max-w-sm leading-relaxed">
+            Create a group to start splitting expenses with friends, roommates, or travel buddies.
           </p>
-          <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />Create Your First Group
-          </Button>
+          <p className="text-xs text-gray-400 mb-6">
+            You can also join an existing group using an invite code.
+          </p>
+          <div className="flex gap-3">
+            <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="w-4 h-4 mr-2" />Create Your First Group
+            </Button>
+            <Button variant="outline" onClick={() => setJoinOpen(true)}>
+              <LogIn className="w-4 h-4 mr-2" />Join a Group
+            </Button>
+          </div>
         </motion.div>
       ) : (
         <motion.div
@@ -208,28 +285,28 @@ export function GroupsView() {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <motion.div key={group.id} variants={item}>
               <Card
-                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 h-full"
                 onClick={() => navigateToGroup(group.id)}
               >
                 <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">{group.emoji || '👥'}</span>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{group.name}</h3>
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <Users className="w-3 h-3" />{group.memberCount} members
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <Users className="w-3 h-3" />{group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
                   {group.description && (
-                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">{group.description}</p>
+                    <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">{group.description}</p>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 pt-2 border-t border-gray-100">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Total expenses</span>
+                      <span className="text-gray-500">Total spent</span>
                       <span className="font-medium text-gray-900">
                         ${(group.totalExpenses || 0).toFixed(2)}
                       </span>
@@ -253,23 +330,24 @@ export function GroupsView() {
         </motion.div>
       )}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      {/* Create Group Dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) setFormNameError(''); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Group</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Emoji</Label>
+              <Label>Icon</Label>
               <div className="flex flex-wrap gap-2">
                 {EMOJI_OPTIONS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
                     onClick={() => setFormEmoji(emoji)}
-                    className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-colors ${
+                    className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${
                       formEmoji === emoji
-                        ? 'bg-emerald-100 ring-2 ring-emerald-500'
+                        ? 'bg-emerald-100 ring-2 ring-emerald-500 scale-110'
                         : 'bg-gray-50 hover:bg-gray-100'
                     }`}
                   >
@@ -278,52 +356,48 @@ export function GroupsView() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="group-name">Group Name</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="group-name">Group Name <span className="text-red-400">*</span></Label>
               <Input
                 id="group-name"
-                placeholder="e.g., Weekend Trip"
+                placeholder="e.g., Weekend Trip to Goa"
                 value={formName}
-                onChange={(e) => setFormName(e.target.value)}
+                onChange={(e) => { setFormName(e.target.value); setFormNameError(''); }}
+                className={`h-11 ${formNameError ? 'border-red-300' : ''}`}
+                autoFocus
               />
+              {formNameError && <p className="text-xs text-red-500">{formNameError}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="group-desc">Description (optional)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="group-desc">Description <span className="text-gray-400 font-normal">(optional)</span></Label>
               <Textarea
                 id="group-desc"
                 placeholder="What's this group for?"
                 value={formDesc}
                 onChange={(e) => setFormDesc(e.target.value)}
                 rows={2}
+                className="resize-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Category</Label>
                 <Select value={formCategory} onValueChange={setFormCategory}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Currency</Label>
                 <Select value={formCurrency} onValueChange={setFormCurrency}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -331,7 +405,7 @@ export function GroupsView() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setCreateOpen(false); setFormNameError(''); }}>Cancel</Button>
             <Button
               onClick={handleCreate}
               disabled={!formName.trim() || creating}
@@ -343,25 +417,32 @@ export function GroupsView() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
+      {/* Join Group Dialog */}
+      <Dialog open={joinOpen} onOpenChange={(open) => { setJoinOpen(open); setJoinError(''); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Join a Group</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Ask the group creator for their invite code and paste it below.
+            </p>
+            <div className="space-y-1.5">
               <Label htmlFor="invite-code">Invite Code</Label>
               <Input
                 id="invite-code"
-                placeholder="Enter invite code"
+                placeholder="e.g., ABC123"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="h-11 text-center font-mono text-lg"
+                onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setJoinError(''); }}
+                className={`h-11 text-center font-mono text-lg tracking-widest ${joinError ? 'border-red-300' : ''}`}
+                autoFocus
+                maxLength={8}
               />
+              {joinError && <p className="text-xs text-red-500">{joinError}</p>}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setJoinOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setJoinOpen(false); setJoinError(''); }}>Cancel</Button>
             <Button
               onClick={handleJoin}
               disabled={!inviteCode.trim() || joining}
