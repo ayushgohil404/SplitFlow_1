@@ -12,6 +12,7 @@ import {
   Mail,
   X,
   UserPlus,
+  User,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -108,6 +109,7 @@ export function AddExpenseView() {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [emailParticipants, setEmailParticipants] = useState<EmailParticipant[]>([]);
   const [emailSplitAmounts, setEmailSplitAmounts] = useState<Record<string, string>>({});
+  const [userSplitValue, setUserSplitValue] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
 
@@ -190,7 +192,8 @@ export function AddExpenseView() {
       if (res.ok) {
         const data = await res.json();
         if (data.error) {
-          toast.error(data.error || 'Could not parse expense');
+          console.log('[AI Parse] Error response:', data);
+          toast.error(data.error || 'Could not parse expense. Try a different phrasing.');
           return;
         }
 
@@ -481,10 +484,17 @@ export function AddExpenseView() {
           }));
           body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
         } else if (splitType === 'exact') {
-          body.splits = splits.map((s) => ({
+          // Include user's own split
+          const userAmt = parseFloat(userSplitValue) || 0;
+          const bodySplits: any[] = [];
+          if (userAmt > 0) {
+            bodySplits.push({ userId: user?.id, amount: userAmt });
+          }
+          bodySplits.push(...splits.map((s) => ({
             userId: s.userId,
             amount: parseFloat(s.value) || 0,
-          }));
+          })));
+          body.splits = bodySplits;
           // Include email participant amounts
           if (emailParticipants.length > 0) {
             body.nonUserSplits = emailParticipants.map((p) => ({
@@ -494,10 +504,17 @@ export function AddExpenseView() {
             }));
           }
         } else if (splitType === 'percentage') {
-          body.splits = splits.map((s) => ({
+          // Include user's own split
+          const userPct = parseFloat(userSplitValue) || 0;
+          const bodySplits: any[] = [];
+          if (userPct > 0) {
+            bodySplits.push({ userId: user?.id, percentage: userPct });
+          }
+          bodySplits.push(...splits.map((s) => ({
             userId: s.userId,
             percentage: parseFloat(s.value) || 0,
-          }));
+          })));
+          body.splits = bodySplits;
           // Include email participant percentages
           if (emailParticipants.length > 0) {
             body.nonUserSplits = emailParticipants.map((p) => ({
@@ -535,6 +552,15 @@ export function AddExpenseView() {
   const perPerson = amount && !isNaN(parseFloat(amount)) && members.length > 0
     ? (parseFloat(amount) / members.length).toFixed(2)
     : '0.00';
+
+  // Computed total for direct exact/percentage split check
+  const totalSplitAmount = (() => {
+    const uv = parseFloat(userSplitValue) || 0;
+    const friendsTotal = splits.reduce((s, sp) => s + (parseFloat(sp.value) || 0), 0);
+    const emailTotal = Object.values(emailSplitAmounts).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+    return uv + friendsTotal + emailTotal;
+  })();
+  const totalSplitOk = Math.abs(totalSplitAmount - (parseFloat(amount) || 0)) < 0.5;
 
   // Split participants for direct exact/percentage mode
   const directParticipants = [
@@ -1019,32 +1045,84 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Split Details for Direct mode (exact/percentage with friends) */}
-            {mode === 'direct' && splitType !== 'equal' && splitType !== 'share' && directParticipants.length > 0 && (
+            {/* Split Details for Direct mode (exact/percentage) */}
+            {mode === 'direct' && (splitType === 'exact' || splitType === 'percentage') && (
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
                 </Label>
-                <div className="space-y-2">
-                  {directParticipants.map((p) => {
-                    const split = splits.find((s) => s.userId === p.id);
-                    return (
-                      <div key={p.id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 w-32 truncate shrink-0">{p.name}</span>
+                {directParticipants.length === 0 && emailParticipants.length === 0 ? (
+                  <p className="text-xs text-gray-400">Select friends or add emails above to set split amounts.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {/* User (You) row */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 w-32 shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <User className="w-3 h-3 text-emerald-700" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">You</span>
+                      </div>
+                      <Input
+                        type="number"
+                        step={splitType === 'percentage' ? '1' : '0.01'}
+                        min="0"
+                        placeholder="0"
+                        value={userSplitValue}
+                        onChange={(e) => setUserSplitValue(e.target.value)}
+                        className="h-9"
+                      />
+                      <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                    </div>
+                    {/* Selected friends */}
+                    {directParticipants.map((p) => {
+                      const split = splits.find((s) => s.userId === p.id);
+                      return (
+                        <div key={p.id} className="flex items-center gap-3">
+                          <span className="text-sm text-gray-700 w-32 truncate shrink-0">{p.name}</span>
+                          <Input
+                            type="number"
+                            step={splitType === 'percentage' ? '1' : '0.01'}
+                            min="0"
+                            placeholder="0"
+                            value={split?.value || ''}
+                            onChange={(e) => updateSplit(p.id, e.target.value)}
+                            className="h-9"
+                          />
+                          <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                        </div>
+                      );
+                    })}
+                    {/* Email participants */}
+                    {emailParticipants.map((ep) => (
+                      <div key={ep.email} className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 w-32 shrink-0">
+                          <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                          <span className="text-sm text-gray-700 truncate">{ep.name}</span>
+                        </div>
                         <Input
                           type="number"
                           step={splitType === 'percentage' ? '1' : '0.01'}
                           min="0"
                           placeholder="0"
-                          value={split?.value || ''}
-                          onChange={(e) => updateSplit(p.id, e.target.value)}
+                          value={emailSplitAmounts[ep.email] || ''}
+                          onChange={(e) => setEmailSplitAmounts((prev) => ({ ...prev, [ep.email]: e.target.value }))}
                           className="h-9"
                         />
                         <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
+                {/* Total check */}
+                {(directParticipants.length > 0 || emailParticipants.length > 0) && (
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <span className="text-xs text-gray-500">Total</span>
+                    <span className={`text-sm font-semibold ${totalSplitOk ? 'text-emerald-600' : 'text-red-500'}`}>
+                      ₹{totalSplitAmount.toFixed(2)} / ₹{parseFloat(amount || '0').toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

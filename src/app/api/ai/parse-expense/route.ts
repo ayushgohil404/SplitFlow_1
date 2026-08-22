@@ -105,10 +105,29 @@ export async function POST(req: NextRequest) {
     })
 
     const raw = response.choices?.[0]?.message?.content ?? ''
-    const parsed = extractJSON(raw) as Record<string, unknown>
+    console.log('[AI Parse] Raw response:', raw.substring(0, 500))
+
+    let parsed: Record<string, unknown>
+    try {
+      parsed = extractJSON(raw) as Record<string, unknown>
+    } catch (parseErr) {
+      console.error('[AI Parse] JSON parse failed:', parseErr, 'Raw:', raw.substring(0, 300))
+      return NextResponse.json(
+        { error: 'AI returned an invalid response. Please try rephrasing.' },
+        { status: 200 }
+      )
+    }
 
     if (parsed.error) {
       return NextResponse.json({ error: parsed.error, rawText: text }, { status: 200 })
+    }
+
+    if (!parsed.amount || !parsed.description) {
+      console.log('[AI Parse] Missing fields:', { amount: parsed.amount, description: parsed.description }, 'Full:', JSON.stringify(parsed).substring(0, 300))
+      return NextResponse.json(
+        { error: 'Could not determine amount or description. Try being more specific, e.g.: "Paid ₹500 for dinner with Alex"' },
+        { status: 200 }
+      )
     }
 
     if (typeof parsed.amount === 'string') {
@@ -117,9 +136,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(parsed)
   } catch (error) {
-    console.error('Error parsing expense:', error)
+    console.error('[AI Parse] Exception:', error)
     return NextResponse.json(
-      { error: 'Could not parse expense' },
+      { error: 'AI is temporarily unavailable. Please try again or fill the form manually.' },
       { status: 200 }
     )
   }
