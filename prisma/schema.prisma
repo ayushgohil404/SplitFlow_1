@@ -27,6 +27,9 @@ model User {
   sessions          Session[]
   sentInvites      Invite[]           @relation("Inviter")
   receivedInvites  Invite[]           @relation("Invitee")
+  sentFriendRequests  Friendship[]     @relation("Requester")
+  receivedFriendRequests Friendship[]   @relation("Addressee")
+  nonUserSplits   NonUserSplit[]      @relation("NonUserSplitLink")
 }
 
 model Account {
@@ -102,7 +105,7 @@ model GroupMember {
 
 model Expense {
   id          String   @id @default(cuid())
-  groupId     String
+  groupId     String?
   description String
   amount      Float
   category    String   @default("other")
@@ -116,9 +119,10 @@ model Expense {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  group      Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group      Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   paidBy     User           @relation("PaidBy", fields: [createdBy], references: [id])
   splits     ExpenseSplit[]
+  nonUserSplits NonUserSplit[]
   settlements Settlement[]
 }
 
@@ -136,9 +140,26 @@ model ExpenseSplit {
   @@unique([expenseId, userId])
 }
 
+model NonUserSplit {
+  id        String  @id @default(cuid())
+  expenseId String
+  email     String
+  name      String?
+  amount    Float
+  percentage Float?
+  share     Float  @default(1)
+  linkedUserId String? /// When this email user signs up, link to their User id
+  createdAt DateTime @default(now())
+
+  expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  linkedUser  User?    @relation("NonUserSplitLink", fields: [linkedUserId], references: [id], onDelete: SetNull)
+
+  @@unique([expenseId, email])
+}
+
 model Settlement {
   id          String   @id @default(cuid())
-  groupId     String
+  groupId     String?
   fromUserId  String
   toUserId    String
   amount      Float
@@ -146,7 +167,7 @@ model Settlement {
   status      String   @default("completed")
   createdAt   DateTime @default(now())
 
-  group     Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group     Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
   fromUser  User   @relation("SentBy", fields: [fromUserId], references: [id])
   toUser    User   @relation("ReceivedBy", fields: [toUserId], references: [id])
   expenses  Expense[]
@@ -169,7 +190,7 @@ model BalanceCache {
   id        String  @id @default(cuid())
   fromUserId String
   toUserId   String
-  groupId   String
+  groupId   String?
   amount    Float
   
   @@unique([fromUserId, toUserId, groupId])
@@ -191,4 +212,18 @@ model Invite {
   group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
   inviter User  @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
   invitee User? @relation("Invitee", fields: [inviteeId], references: [id], onDelete: SetNull)
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      String   @default("pending") // pending, accepted, declined
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requester User @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("Addressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
 }

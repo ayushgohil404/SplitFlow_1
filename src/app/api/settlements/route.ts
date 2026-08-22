@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
       note?: string
     }
 
-    if (!groupId || !fromUserId || !toUserId || !amount || amount <= 0) {
+    if (!fromUserId || !toUserId || !amount || amount <= 0) {
       return NextResponse.json(
-        { error: 'groupId, fromUserId, toUserId, and amount are required' },
+        { error: 'fromUserId, toUserId, and amount are required' },
         { status: 400 }
       )
     }
@@ -63,16 +63,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'fromUserId and toUserId must be different' }, { status: 400 })
     }
 
-    // Verify both users are members
-    const fromMember = await db.groupMember.findUnique({
-      where: { groupId_userId: { groupId, userId: fromUserId } },
-    })
-    const toMember = await db.groupMember.findUnique({
-      where: { groupId_userId: { groupId, userId: toUserId } },
-    })
+    // If groupId provided, verify membership
+    if (groupId) {
+      const fromMember = await db.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: fromUserId } },
+      })
+      const toMember = await db.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: toUserId } },
+      })
 
-    if (!fromMember || !toMember) {
-      return NextResponse.json({ error: 'Both users must be group members' }, { status: 403 })
+      if (!fromMember || !toMember) {
+        return NextResponse.json({ error: 'Both users must be group members' }, { status: 403 })
+      }
     }
 
     const settlement = await db.settlement.create({
@@ -98,7 +100,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         groupId,
         type: 'settlement_created',
-        message: `${fromUser?.name ?? 'Someone'} paid ${toUser?.name ?? 'someone'} $${amount.toFixed(2)}`,
+        message: `${fromUser?.name ?? 'Someone'} paid ${toUser?.name ?? 'someone'} ₹${amount.toFixed(2)}`,
         metadata: { settlementId: settlement.id, amount, fromUserId, toUserId },
       },
     })

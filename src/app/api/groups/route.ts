@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         name: name.trim(),
         description: description?.trim() ?? null,
         emoji: emoji ?? null,
-        currency: currency ?? 'USD',
+        currency: currency ?? 'INR',
         category: category ?? null,
         inviteCode,
         createdBy: user.id,

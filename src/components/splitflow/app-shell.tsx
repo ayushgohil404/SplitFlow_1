@@ -14,6 +14,7 @@ import {
   Menu,
   LogOut,
   ArrowLeft,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -37,17 +38,18 @@ import { AnalyticsView } from './analytics-view';
 import { ActivityView } from './activity-view';
 import { AIAssistantView } from './ai-assistant-view';
 import { FriendsView } from './friends-view';
+import { HistoryView } from './history-view';
 
 type NavItem = {
   view: View;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  shortcut?: string;
   description: string;
 };
 
 const navItems: NavItem[] = [
   { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview & balances' },
+  { view: 'history', label: 'History', icon: Clock, description: 'All expense records' },
   { view: 'groups', label: 'Groups', icon: Users, description: 'Manage groups' },
   { view: 'friends', label: 'Friends', icon: UserPlus, description: 'Friends & balances' },
   { view: 'settle', label: 'Settle Up', icon: HandCoins, description: 'Record payments' },
@@ -66,6 +68,7 @@ const viewLabels: Record<View, string> = {
   activity: 'Activity',
   'ai-assistant': 'AI Assistant',
   friends: 'Friends',
+  history: 'History',
 };
 
 // Views that show a back button
@@ -113,13 +116,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                           isActive
                             ? 'bg-emerald-50 text-emerald-700 shadow-sm'
                             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
+                        }`
+                      }
                       aria-current={isActive ? 'page' : undefined}
                     >
                       <item.icon
-                        className={`w-5 h-5 shrink-0 ${
-                          isActive ? 'text-emerald-600' : 'text-gray-400'
-                        }`}
+                        className={`w-5 h-5 shrink-0 ${isActive ? 'text-emerald-600' : 'text-gray-400'}`}
                       />
                       <span className="flex-1">{item.label}</span>
                       {isActive && (
@@ -180,6 +182,7 @@ function ViewRouter() {
     activity: <ActivityView />,
     'ai-assistant': <AIAssistantView />,
     friends: <FriendsView />,
+    history: <HistoryView />,
   };
 
   return (
@@ -275,7 +278,7 @@ export function AppShell() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">
-                  Record a new expense to split with your group
+                  Record a new expense to split with friends or group
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

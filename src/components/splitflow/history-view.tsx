@@ -1,0 +1,296 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Clock,
+  Search,
+  Filter,
+  ChevronDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Users,
+  User,
+  Loader2,
+  Receipt,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
+
+const CATEGORY_EMOJIS: Record<string, string> = {
+  food: '🍕',
+  travel: '✈️',
+  housing: '🏠',
+  entertainment: '🎉',
+  utilities: '💡',
+  shopping: '🛍️',
+  transport: '🚗',
+  health: '🏥',
+  education: '📚',
+  general: '📋',
+};
+
+const CATEGORIES = [
+  { value: '', label: 'All Categories' },
+  { value: 'food', label: '🍕 Food' },
+  { value: 'travel', label: '✈️ Travel' },
+  { value: 'housing', label: '🏠 Housing' },
+  { value: 'entertainment', label: '🎉 Entertainment' },
+  { value: 'utilities', label: '💡 Utilities' },
+  { value: 'shopping', label: '🛍️ Shopping' },
+  { value: 'transport', label: '🚗 Transport' },
+  { value: 'health', label: '🏥 Health' },
+  { value: 'education', label: '📚 Education' },
+];
+
+interface ExpenseItem {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  splitType: string;
+  createdBy: string;
+  paidByUser: { id: string; name: string; image: string | null };
+  group: { id: string; name: string; emoji: string } | null;
+  splits: { userId: string; userName: string; amount: number }[];
+  nonUserSplits: { email: string; name: string; amount: number }[];
+}
+
+export function HistoryView() {
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [category, setCategory] = useState('');
+  const [page, setPage] = useState(0);
+  const limit = 30;
+
+  const fetchHistory = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(page * limit),
+      });
+      if (filter !== 'all') params.set('filter', filter);
+      if (search.trim()) params.set('search', search.trim());
+      if (category) params.set('category', category);
+
+      const res = await fetch(`/api/expenses/history?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setExpenses(data.expenses || []);
+        setTotal(data.total || 0);
+      } else {
+        toast.error('Failed to load history');
+      }
+    } catch {
+      toast.error('Failed to load history');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, search, category, page]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Group expenses by date
+  const groupedExpenses: Record<string, ExpenseItem[]> = {};
+  for (const exp of expenses) {
+    const dateKey = new Date(exp.date).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    if (!groupedExpenses[dateKey]) groupedExpenses[dateKey] = [];
+    groupedExpenses[dateKey].push(exp);
+  }
+
+  const totalPages = Math.ceil(total / limit);
+  const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Expense History</h2>
+        <p className="text-sm text-gray-500 mt-1">All your expenses across groups and direct splits.</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-emerald-600 font-medium">Total Expenses</p>
+            <p className="text-2xl font-bold text-emerald-700 mt-1">{expenses.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-blue-600 font-medium">Total Amount</p>
+            <p className="text-2xl font-bold text-blue-700 mt-1">₹{totalAmount.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search & Filters */}
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search expenses..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                className="h-10 pl-9"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(0); }}>
+              <SelectTrigger className="h-9 flex-1">
+                <Filter className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Expenses</SelectItem>
+                <SelectItem value="group">Group Expenses</SelectItem>
+                <SelectItem value="direct">Direct Splits</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(0); }}>
+              <SelectTrigger className="h-9 flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Expense List */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : expenses.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No expenses found</p>
+            <p className="text-sm text-gray-400 mt-1">
+              {search || filter !== 'all' || category
+                ? 'Try adjusting your filters'
+                : 'Add your first expense to get started'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(groupedExpenses).map(([dateKey, dayExpenses]) => (
+            <div key={dateKey}>
+              <div className="flex items-center gap-3 mb-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{dateKey}</p>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+              <div className="space-y-2">
+                {dayExpenses.map((exp) => {
+                  const isPayer = true; // We're looking at expenses we're involved in
+                  const splitCount = exp.splits.length + (exp.nonUserSplits?.length || 0);
+                  const myShare = exp.splits.find(s => s.userName === 'User')?.amount || 0;
+
+                  return (
+                    <Card key={exp.id} className="hover:shadow-sm transition-shadow">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                          <span className="text-lg">{CATEGORY_EMOJIS[exp.category] || '📋'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{exp.description}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {exp.group ? (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                {exp.group.emoji} {exp.group.name}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-emerald-600 border-emerald-200">
+                                <User className="w-2.5 h-2.5 mr-0.5" /> Direct
+                              </Badge>
+                            )}
+                            <span className="text-xs text-gray-400">
+                              {exp.paidByUser?.name || 'You'} paid
+                            </span>
+                            <span className="text-xs text-gray-300">·</span>
+                            <span className="text-xs text-gray-400">
+                              Split {splitType === 'equal' ? `equally` : exp.splitType} with {splitCount}
+                            </span>
+                          </div>
+                          {(exp.nonUserSplits && exp.nonUserSplits.length > 0) && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                {exp.nonUserSplits.length} email participant{exp.nonUserSplits.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900 shrink-0">
+                          ₹{Number(exp.amount).toFixed(2)}
+                        </span>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage(Math.max(0, page - 1))}
+              >
+                Previous
+              </Button>
+              <span className="text-xs text-gray-500">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}

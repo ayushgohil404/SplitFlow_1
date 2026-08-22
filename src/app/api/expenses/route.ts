@@ -15,35 +15,37 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') ?? '50', 10)
     const offset = parseInt(searchParams.get('offset') ?? '0', 10)
 
-    if (!groupId) {
-      return NextResponse.json({ error: 'groupId is required' }, { status: 400 })
-    }
-
-    const expenses = await db.expense.findMany({
-      where: { groupId },
-      include: {
-        splits: {
-          include: {
-            user: {
-              select: { id: true, name: true, image: true },
+    // If groupId is provided, return expenses for that group
+    if (groupId) {
+      const expenses = await db.expense.findMany({
+        where: { groupId },
+        include: {
+          splits: {
+            include: {
+              user: {
+                select: { id: true, name: true, image: true },
+              },
             },
           },
+          nonUserSplits: true,
+          paidByUser: {
+            select: { id: true, name: true, image: true },
+          },
+          group: {
+            select: { id: true, name: true, emoji: true, currency: true },
+          },
         },
-        paidByUser: {
-          select: { id: true, name: true, image: true },
-        },
-        group: {
-          select: { id: true, name: true, emoji: true, currency: true },
-        },
-      },
-      orderBy: { date: 'desc' },
-      take: limit,
-      skip: offset,
-    })
+        orderBy: { date: 'desc' },
+        take: limit,
+        skip: offset,
+      })
 
-    const total = await db.expense.count({ where: { groupId } })
+      const total = await db.expense.count({ where: { groupId } })
 
-    return NextResponse.json({ expenses, total })
+      return NextResponse.json({ expenses, total })
+    }
+
+    return NextResponse.json({ error: 'groupId is required' }, { status: 400 })
   } catch (error) {
     console.error('Error listing expenses:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -65,70 +67,95 @@ export async function POST(req: NextRequest) {
       category,
       splitType,
       splits,
+      nonUserSplits: emailSplits,
       note,
       date,
       isRecurring,
       recurringFrequency,
     } = body as {
-      groupId: string
+      groupId?: string
       description: string
       amount: number
       category?: string
       splitType: 'equal' | 'exact' | 'percentage'
       splits?: { userId: string; amount?: number; percentage?: number; share?: number }[]
+      nonUserSplits?: { email: string; name?: string; amount?: number; percentage?: number; share?: number }[]
       note?: string
       date?: string
       isRecurring?: boolean
       recurringFrequency?: string
     }
 
-    if (!groupId || !description?.trim() || !amount || amount <= 0 || !splitType) {
+    if (!description?.trim() || !amount || amount <= 0 || !splitType) {
       return NextResponse.json(
-        { error: 'groupId, description, amount, and splitType are required' },
+        { error: 'description, amount, and splitType are required' },
         { status: 400 }
       )
     }
 
-    // Verify membership
-    const membership = await db.groupMember.findUnique({
-      where: {
-        groupId_userId: { groupId, userId: user.id },
-      },
-    })
-    if (!membership) {
-      return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
+    // If groupId provided, verify membership
+    if (groupId) {
+      const membership = await db.groupMember.findUnique({
+        where: {
+          groupId_userId: { groupId, userId: user.id },
+        },
+      })
+      if (!membership) {
+        return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
+      }
     }
 
-    // Get all group members for auto-splitting
-    const groupMembers = await db.groupMember.findMany({
-      where: { groupId },
-      select: { userId: true },
-    })
+    // Determine participants
+    let userSplits: { userId: string; amount: number; percentage: number; share: number }[] = []
+    let finalEmailSplits: { email: string; name: string; amount: number; percentage: number; share: number }[] = []
 
-    let finalSplits: { userId: string; amount: number; percentage: number; share: number }[] = []
+    // Get group members if in a group
+    let groupMembers: { userId: string }[] = []
+    if (groupId) {
+      groupMembers = await db.groupMember.findMany({
+        where: { groupId },
+        select: { userId: true },
+      })
+    }
 
-    if (splitType === 'equal') {
+    // Collect all participant user IDs from splits
+    const splitUserIds = splits?.map((s) => s.userId) || []
+
+    // If no groupId and no splits provided, use the user alone (for direct expenses with email participants)
+    if (!groupId && splitUserIds.length === 0) {
+      // Direct expense with only email participants
+      userSplits = [{ userId: user.id, amount: 0, percentage: 0, share: 0 }]
+    } else if (splitType === 'equal') {
       if (splits && splits.length > 0) {
-        // Use provided splits with share values
-        finalSplits = splits.map((s) => ({
+        userSplits = splits.map((s) => ({
           userId: s.userId,
           amount: s.amount ?? 0,
           percentage: 0,
           share: s.share ?? 1,
         }))
-        const totalShares = finalSplits.reduce((sum, s) => sum + s.share, 0)
-        for (const s of finalSplits) {
-          s.amount = Math.round((amount * s.share) / totalShares) * 100 / 100
+        const totalShares = userSplits.reduce((sum, s) => sum + s.share, 0)
+        for (const s of userSplits) {
+          s.amount = Math.round((amount * s.share) / totalShares * 100) / 100
           s.percentage = Math.round((s.share / totalShares) * 10000) / 100
         }
-      } else {
-        // Auto-calculate equal splits among all members
+      } else if (groupMembers.length > 0) {
         const perPerson = Math.round((amount / groupMembers.length) * 100) / 100
         const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * groupMembers.length
-        finalSplits = groupMembers.map((m, i) => ({
+        userSplits = groupMembers.map((m, i) => ({
           userId: m.userId,
           amount: i === 0 ? perPerson + remainder / 100 : perPerson,
           percentage: Math.round((100 / groupMembers.length) * 100) / 100,
+          share: 1,
+        }))
+      } else {
+        // Direct expense, equal split between all user participants
+        const allIds = [user.id, ...splitUserIds.filter((id) => id !== user.id)]
+        const perPerson = Math.round((amount / allIds.length) * 100) / 100
+        const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * allIds.length
+        userSplits = allIds.map((id, i) => ({
+          userId: id,
+          amount: i === 0 ? perPerson + remainder / 100 : perPerson,
+          percentage: Math.round((100 / allIds.length) * 100) / 100,
           share: 1,
         }))
       }
@@ -140,7 +167,7 @@ export async function POST(req: NextRequest) {
       if (Math.abs(splitsTotal - amount) > 0.01) {
         return NextResponse.json({ error: 'Split amounts must equal the total expense amount' }, { status: 400 })
       }
-      finalSplits = splits.map((s) => ({
+      userSplits = splits.map((s) => ({
         userId: s.userId,
         amount: s.amount!,
         percentage: Math.round(((s.amount! / amount) * 100) * 100) / 100,
@@ -154,7 +181,7 @@ export async function POST(req: NextRequest) {
       if (Math.abs(pctTotal - 100) > 0.01) {
         return NextResponse.json({ error: 'Percentages must add up to 100' }, { status: 400 })
       }
-      finalSplits = splits.map((s) => ({
+      userSplits = splits.map((s) => ({
         userId: s.userId,
         amount: Math.round(amount * (s.percentage! / 100) * 100) / 100,
         percentage: s.percentage!,
@@ -162,9 +189,70 @@ export async function POST(req: NextRequest) {
       }))
     }
 
+    // Process email splits (non-user participants)
+    if (emailSplits && emailSplits.length > 0) {
+      // Check if any email belongs to a registered user
+      for (const es of emailSplits) {
+        const existingUser = await db.user.findUnique({
+          where: { email: es.email.trim().toLowerCase() },
+        })
+
+        if (existingUser) {
+          // This email belongs to a registered user — create a regular split instead
+          if (splitType === 'equal') {
+            const perPerson = Math.round((amount / (userSplits.length + 1)) * 100) / 100
+            userSplits.push({
+              userId: existingUser.id,
+              amount: perPerson,
+              percentage: Math.round((100 / (userSplits.length + 1)) * 100) / 100,
+              share: 1,
+            })
+          } else {
+            userSplits.push({
+              userId: existingUser.id,
+              amount: es.amount ?? 0,
+              percentage: es.percentage ?? 0,
+              share: es.share ?? 1,
+            })
+          }
+        } else {
+          // Non-user — create non-user split
+          finalEmailSplits.push({
+            email: es.email.trim().toLowerCase(),
+            name: es.name || es.email.split('@')[0],
+            amount: es.amount ?? 0,
+            percentage: es.percentage ?? 0,
+            share: es.share ?? 1,
+          })
+        }
+      }
+
+      // Recalculate equal splits if email users were converted to real users
+      if (splitType === 'equal' && emailSplits.length > 0) {
+        // Remove the placeholder zero split
+        userSplits = userSplits.filter((s) => s.amount > 0)
+        const totalParticipants = userSplits.length + finalEmailSplits.length
+        const perPerson = Math.round((amount / totalParticipants) * 100) / 100
+        const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * totalParticipants
+
+        userSplits.forEach((s, i) => {
+          s.amount = i === 0 ? perPerson + remainder / 100 : perPerson
+          s.percentage = Math.round((100 / totalParticipants) * 100) / 100
+          s.share = 1
+        })
+
+        finalEmailSplits.forEach((s) => {
+          s.amount = perPerson
+          s.percentage = Math.round((100 / totalParticipants) * 100) / 100
+          s.share = 1
+        })
+      }
+    }
+
+    // Create the expense
     const expense = await db.expense.create({
       data: {
-        groupId,
+        groupId: groupId || null,
         description: description.trim(),
         amount,
         category: category ?? null,
@@ -175,8 +263,17 @@ export async function POST(req: NextRequest) {
         recurringFrequency: recurringFrequency ?? null,
         createdBy: user.id,
         splits: {
-          create: finalSplits.map((s) => ({
+          create: userSplits.map((s) => ({
             userId: s.userId,
+            amount: s.amount,
+            percentage: s.percentage,
+            share: s.share,
+          })),
+        },
+        nonUserSplits: {
+          create: finalEmailSplits.map((s) => ({
+            email: s.email,
+            name: s.name,
             amount: s.amount,
             percentage: s.percentage,
             share: s.share,
@@ -191,19 +288,24 @@ export async function POST(req: NextRequest) {
             },
           },
         },
+        nonUserSplits: true,
         paidByUser: {
           select: { id: true, name: true, image: true },
+        },
+        group: {
+          select: { id: true, name: true, emoji: true, currency: true },
         },
       },
     })
 
+    // Log activity
     await db.activity.create({
       data: {
         userId: user.id,
-        groupId,
+        groupId: groupId || null,
         type: 'expense_created',
-        message: `${user.name ?? 'Someone'} added "${description.trim()}" for $${amount.toFixed(2)}`,
-        metadata: { expenseId: expense.id, amount },
+        message: `${user.name ?? 'Someone'} added "${description.trim()}" for ₹${amount.toFixed(2)}`,
+        metadata: JSON.stringify({ expenseId: expense.id, amount, isDirect: !groupId }),
       },
     })
 

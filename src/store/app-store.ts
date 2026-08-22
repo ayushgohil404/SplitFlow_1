@@ -9,7 +9,8 @@ export type View =
   | 'analytics' 
   | 'activity' 
   | 'ai-assistant'
-  | 'friends';
+  | 'friends'
+  | 'history';
 
 interface AppState {
   view: View;
