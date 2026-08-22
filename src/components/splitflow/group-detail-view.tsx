@@ -130,11 +130,35 @@ export function GroupDetailView() {
       const res = await fetch(`/api/groups/${selectedGroupId}`);
       if (res.ok) {
         const data = await res.json();
-        setGroup(data);
-        setEditName(data.name || '');
-        setEditDesc(data.description || '');
-        setEditEmoji(data.emoji || '👥');
-        setEditCurrency(data.currency || 'USD');
+        const g = data.group || data;
+        const apiBalances = data.balances || [];
+        const members = (g.members || []).map((m: any) => ({
+          id: m.user?.id || m.userId || m.id,
+          name: m.user?.name || m.name || 'Unknown',
+          email: m.user?.email || m.email || '',
+          role: m.role,
+          joinedAt: m.joinedAt,
+        }));
+        const expenses = (g.expenses || []).map((e: any) => ({
+          ...e,
+          paidBy: e.paidBy || { id: e.createdBy, name: 'Unknown' },
+          splits: (e.splits || []).map((s: any) => ({
+            userId: s.userId,
+            userName: 'User',
+            amount: Number(s.amount),
+          })),
+        }));
+        const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+        const balances = apiBalances.map((b: any) => ({
+          from: { id: b.fromUserId, name: 'User' },
+          to: { id: b.toUserId, name: 'User' },
+          amount: Number(b.amount),
+        }));
+        setGroup({ ...g, members, expenses, totalExpenses, balances } as GroupData);
+        setEditName(g.name || '');
+        setEditDesc(g.description || '');
+        setEditEmoji(g.emoji || '👥');
+        setEditCurrency(g.currency || 'USD');
       } else {
         toast.error('Failed to load group');
       }

@@ -1,31 +1,26 @@
-'use client'
+'use client';
+
+import { useAuth } from '@/hooks/use-auth';
+import { AuthPage } from '@/components/splitflow/auth-page';
+import { AppShell } from '@/components/splitflow/app-shell';
 
 export default function Home() {
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      gap: '2rem',
-      padding: '1rem'
-    }}>
-      <div style={{
-        position: 'relative',
-        width: '6rem',
-        height: '6rem'
-      }}>
-        <img
-          src="/logo.svg"
-          alt="Z.ai Logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
-        />
+  const { user, isLoading, checked } = useAuth();
+
+  if (!checked || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-emerald-950">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading SplitFlow...</p>
+        </div>
       </div>
-    </div>
-  )
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  return <AppShell />;
 }

@@ -169,7 +169,6 @@ export function GroupsView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
           <Plus className="w-4 h-4 mr-2" />Create Group
@@ -179,7 +178,6 @@ export function GroupsView() {
         </Button>
       </div>
 
-      {/* Groups grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -255,7 +253,6 @@ export function GroupsView() {
         </motion.div>
       )}
 
-      {/* Create Group Dialog */
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -346,7 +343,6 @@ export function GroupsView() {
         </DialogContent>
       </Dialog>
 
-      {/* Join Group Dialog */
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

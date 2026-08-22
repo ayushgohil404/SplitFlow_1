@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -53,8 +52,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -93,7 +92,7 @@ export async function POST(req: NextRequest) {
     // Verify membership
     const membership = await db.groupMember.findUnique({
       where: {
-        groupId_userId: { groupId, userId: session.user.id },
+        groupId_userId: { groupId, userId: user.id },
       },
     })
     if (!membership) {
@@ -174,7 +173,7 @@ export async function POST(req: NextRequest) {
         date: date ? new Date(date) : new Date(),
         isRecurring: isRecurring ?? false,
         recurringFrequency: recurringFrequency ?? null,
-        createdBy: session.user.id,
+        createdBy: user.id,
         splits: {
           create: finalSplits.map((s) => ({
             userId: s.userId,
@@ -200,10 +199,10 @@ export async function POST(req: NextRequest) {
 
     await db.activity.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         groupId,
         type: 'expense_created',
-        message: `${session.user.name ?? 'Someone'} added "${description.trim()}" for $${amount.toFixed(2)}`,
+        message: `${user.name ?? 'Someone'} added "${description.trim()}" for $${amount.toFixed(2)}`,
         metadata: { expenseId: expense.id, amount },
       },
     })

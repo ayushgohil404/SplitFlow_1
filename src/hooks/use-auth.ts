@@ -4,18 +4,31 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/app-store';
 
 export function useAuth() {
-  const { user, setUser, setLoading, isLoading } = useAppStore();
+  const { user, setUser, isLoading } = useAppStore();
   const [checked, setChecked] = useState(false);
 
   const checkSession = useCallback(async () => {
     try {
+      // Check NextAuth session first
       const res = await fetch('/api/auth/session');
       const session = await res.json();
       if (session?.user) {
         setUser(session.user);
-      } else {
-        setUser(null);
+        setChecked(true);
+        return;
       }
+      
+      // Fallback: check demo session
+      const demoRes = await fetch('/api/auth/demo-session');
+      if (demoRes.ok) {
+        const demoSession = await demoRes.json();
+        if (demoSession?.user) {
+          setUser(demoSession.user);
+          setChecked(true);
+          return;
+        }
+      }
+      setUser(null);
     } catch {
       setUser(null);
     } finally {
@@ -27,31 +40,14 @@ export function useAuth() {
     checkSession();
   }, [checkSession]);
 
-  const signIn = async (provider: string, credentials?: { email: string; name: string }) => {
-    if (provider === 'credentials' && credentials) {
-      const res = await fetch('/api/auth/callback/credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: credentials.email,
-          name: credentials.name,
-          csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 'dummy',
-        }),
-      });
-      if (res.ok) {
-        await checkSession();
-        return;
-      }
-    }
-    window.location.href = `/api/auth/signin/${provider}`;
-  };
-
   const signOut = async () => {
     await fetch('/api/auth/signout', { method: 'POST' });
+    // Clear demo cookie
+    document.cookie = 'sf-token=; path=/; max-age=0';
     setUser(null);
     setChecked(false);
     window.location.href = '/';
   };
 
-  return { user, isLoading: isLoading && !checked, checked, signIn, signOut, checkSession };
+  return { user, isLoading: isLoading && !checked, checked, signOut, checkSession };
 }

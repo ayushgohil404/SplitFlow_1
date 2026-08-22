@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 
 export async function POST(
@@ -8,8 +7,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -57,10 +56,10 @@ export async function POST(
 
     await db.activity.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         groupId: id,
         type: 'member_added',
-        message: `${session.user.name ?? 'Someone'} added ${targetUser.name ?? targetUser.email} to the group`,
+        message: `${user.name ?? 'Someone'} added ${targetUser.name ?? targetUser.email} to the group`,
       },
     })
 
@@ -76,8 +75,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -122,10 +121,10 @@ export async function DELETE(
 
     await db.activity.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         groupId: id,
         type: 'member_removed',
-        message: `${session.user.name ?? 'Someone'} removed ${targetUser?.name ?? 'a member'} from the group`,
+        message: `${user.name ?? 'Someone'} removed ${targetUser?.name ?? 'a member'} from the group`,
       },
     })
 

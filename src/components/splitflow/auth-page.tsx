@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,6 @@ import { Github, Chrome, Sparkles, ArrowRight, Wallet, Users, Shield } from 'luc
 import { motion } from 'framer-motion';
 
 export function AuthPage() {
-  const { signIn, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [demoLoading, setDemoLoading] = useState(false);
@@ -18,8 +17,20 @@ export function AuthPage() {
   const handleDemoLogin = async () => {
     if (!email) return;
     setDemoLoading(true);
-    await signIn('credentials', { email, name: name || email.split('@')[0] });
-    setTimeout(() => setDemoLoading(false), 3000);
+    try {
+      const res = await fetch('/api/auth/demo-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: name || email.split('@')[0] }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch {
+      // silent
+    } finally {
+      setTimeout(() => setDemoLoading(false), 2000);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -41,7 +52,6 @@ export function AuthPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-5xl grid lg:grid-cols-2 gap-8 lg:gap-16 items-center"
         >
-          {/* Left: Branding */}
           <div className="text-center lg:text-left space-y-6">
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
@@ -85,7 +95,6 @@ export function AuthPage() {
             </motion.div>
           </div>
 
-          {/* Right: Login Card */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -97,12 +106,10 @@ export function AuthPage() {
                 <CardDescription>Choose how you&apos;d like to sign in</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* OAuth Buttons */}
                 <Button 
                   variant="outline" 
                   className="w-full h-12 text-base gap-3" 
                   onClick={() => signIn('github')}
-                  disabled={isLoading}
                 >
                   <Github className="w-5 h-5" />
                   Continue with GitHub
@@ -111,7 +118,6 @@ export function AuthPage() {
                   variant="outline" 
                   className="w-full h-12 text-base gap-3" 
                   onClick={() => signIn('google')}
-                  disabled={isLoading}
                 >
                   <Chrome className="w-5 h-5" />
                   Continue with Google
@@ -126,7 +132,6 @@ export function AuthPage() {
                   </div>
                 </div>
 
-                {/* Demo Login */}
                 <div className="space-y-3">
                   <div>
                     <Label htmlFor="demo-name">Name</Label>
@@ -170,9 +175,8 @@ export function AuthPage() {
         </motion.div>
       </div>
 
-      {/* Footer */}
       <footer className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-        Free forever. No ads. No premium. Built with 💚
+        Free forever. No ads. No premium. Built with love
       </footer>
     </div>
   );

@@ -140,7 +140,6 @@ export function AIAssistantView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-[calc(100vh-10rem)]">
-      {/* Group selector + header */
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -166,7 +165,6 @@ export function AIAssistantView() {
         </Select>
       </div>
 
-      {/* Messages */}
       <Card className="flex-1 flex flex-col min-h-0">
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && (

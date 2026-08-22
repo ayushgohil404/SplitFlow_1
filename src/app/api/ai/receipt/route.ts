@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/auth-utils'
 import ZAI from 'z-ai-web-dev-sdk'
 import type { VisionMessage, VisionMultimodalContentItem } from 'z-ai-web-dev-sdk'
 
@@ -45,8 +44,8 @@ Do NOT wrap the JSON in markdown code blocks. Return raw JSON only.`
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -29,7 +28,7 @@ export async function POST(req: NextRequest) {
       where: {
         groupId_userId: {
           groupId: group.id,
-          userId: session.user.id,
+          userId: user.id,
         },
       },
     })
@@ -41,17 +40,17 @@ export async function POST(req: NextRequest) {
     await db.groupMember.create({
       data: {
         groupId: group.id,
-        userId: session.user.id,
+        userId: user.id,
         role: 'member',
       },
     })
 
     await db.activity.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         groupId: group.id,
         type: 'member_joined',
-        message: `${session.user.name ?? 'Someone'} joined the group`,
+        message: `${user.name ?? 'Someone'} joined the group`,
       },
     })
 

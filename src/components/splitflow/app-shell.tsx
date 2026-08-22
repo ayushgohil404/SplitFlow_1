@@ -202,10 +202,7 @@ export function AppShell() {
             variant="ghost"
             size="icon"
             className="lg:hidden -ml-1"
-            onClick={() => {
-              setSheetOpen(true);
-              setSidebarOpen(true);
-            }}
+            onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-5 h-5" />
           </Button>

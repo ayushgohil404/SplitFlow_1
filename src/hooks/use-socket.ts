@@ -1,20 +1,29 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
 
 export function useSocket() {
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<any>(null);
+  const initRef = useRef(false);
 
   useEffect(() => {
-    const socket = io('/?XTransformPort=3003', {
-      transports: ['websocket', 'polling'],
+    if (initRef.current) return;
+    initRef.current = true;
+    
+    let socket: any = null;
+    import('socket.io-client').then(({ io }) => {
+      socket = io('/?XTransformPort=3003', {
+        transports: ['websocket', 'polling'],
+      });
+      socketRef.current = socket;
+      socket.on('connect', () => console.log('[Socket] Connected'));
+      socket.on('disconnect', () => console.log('[Socket] Disconnected'));
+    }).catch(() => {
+      console.warn('[Socket] Could not connect to WebSocket service');
     });
-    socketRef.current = socket;
-    socket.on('connect', () => console.log('[Socket] Connected'));
-    socket.on('disconnect', () => console.log('[Socket] Disconnected'));
+
     return () => {
-      socket.disconnect();
+      socket?.disconnect();
     };
   }, []);
 
@@ -37,5 +46,5 @@ export function useSocket() {
     socketRef.current?.emit(event, data);
   }, []);
 
-  return { socket: socketRef.current, joinGroup, leaveGroup, on, emit };
+  return { joinGroup, leaveGroup, on, emit };
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 import ZAI from 'z-ai-web-dev-sdk'
 import type { ChatMessage } from 'z-ai-web-dev-sdk'
@@ -23,8 +22,8 @@ function extractJSON(text: string): unknown {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const user = await getAuthUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -38,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Verify membership
     const membership = await db.groupMember.findUnique({
       where: {
-        groupId_userId: { groupId, userId: session.user.id },
+        groupId_userId: { groupId, userId: user.id },
       },
     })
     if (!membership) {
