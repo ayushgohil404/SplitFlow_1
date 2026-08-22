@@ -101,7 +101,7 @@ export function DashboardView() {
 
   const formatCurrency = (amount: number) => {
     const sign = amount >= 0 ? '+' : '';
-    return `${sign}$${Math.abs(amount).toFixed(2)}`;
+    return `${sign}₹${Math.abs(amount).toFixed(2)}`;
   };
 
   const isEmpty = !loading && !error && !balance?.totalOwed && !balance?.totalOwing && groups.length === 0;
@@ -187,7 +187,7 @@ export function DashboardView() {
                         <div>
                           <p className="text-sm font-medium text-gray-500">You are owed</p>
                           <p className="text-3xl font-bold text-emerald-600 mt-1">
-                            ${balance?.totalOwed?.toFixed(2) || '0.00'}
+                            ₹{balance?.totalOwed?.toFixed(2) || '0.00'}
                           </p>
                           <p className="text-xs text-gray-400 mt-1">Across all groups</p>
                         </div>
@@ -217,7 +217,7 @@ export function DashboardView() {
                         <div>
                           <p className="text-sm font-medium text-gray-500">You owe</p>
                           <p className="text-3xl font-bold text-red-500 mt-1">
-                            ${balance?.totalOwing?.toFixed(2) || '0.00'}
+                            ₹{balance?.totalOwing?.toFixed(2) || '0.00'}
                           </p>
                           <p className="text-xs text-gray-400 mt-1">Across all groups</p>
                         </div>
@@ -334,7 +334,7 @@ export function DashboardView() {
                       <p className="text-xs text-gray-500">{act.groupName} · {act.user?.name}</p>
                     </div>
                     <span className="text-sm font-medium text-gray-700 shrink-0">
-                      ${act.amount?.toFixed(2)}
+                      ₹{act.amount?.toFixed(2)}
                     </span>
                   </div>
                 ))}

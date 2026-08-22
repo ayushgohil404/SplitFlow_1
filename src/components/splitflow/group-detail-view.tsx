@@ -164,7 +164,7 @@ export function GroupDetailView() {
         setEditName(g.name || '');
         setEditDesc(g.description || '');
         setEditEmoji(g.emoji || '👥');
-        setEditCurrency(g.currency || 'USD');
+        setEditCurrency(g.currency || 'INR');
       } else {
         toast.error('Failed to load group');
       }
@@ -321,7 +321,7 @@ export function GroupDetailView() {
               )}
               <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
                 <span className="flex items-center gap-1"><Users className="w-4 h-4" />{group.members.length} members</span>
-                <span className="flex items-center gap-1"><Receipt className="w-4 h-4" />${group.totalExpenses?.toFixed(2)} total</span>
+                <span className="flex items-center gap-1"><Receipt className="w-4 h-4" />₹{group.totalExpenses?.toFixed(2)} total</span>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -384,7 +384,7 @@ export function GroupDetailView() {
                       </p>
                     </div>
                     <span className="text-sm font-semibold text-gray-900 shrink-0">
-                      ${exp.amount.toFixed(2)}
+                      ₹{exp.amount.toFixed(2)}
                     </span>
                   </CardContent>
                 </Card>
@@ -473,7 +473,7 @@ export function GroupDetailView() {
                         </p>
                       </div>
                       <span className={`text-sm font-bold ${isYouOwe ? 'text-red-500' : 'text-emerald-600'}`}>
-                        {isYouOwe ? '-' : '+'}${bal.amount.toFixed(2)}
+                        {isYouOwe ? '-' : '+'}₹{bal.amount.toFixed(2)}
                       </span>
                     </CardContent>
                   </Card>
@@ -507,10 +507,10 @@ export function GroupDetailView() {
                 <Select value={editCurrency} onValueChange={setEditCurrency}>
                   <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="INR">INR (₹)</SelectItem>
                     <SelectItem value="USD">USD ($)</SelectItem>
                     <SelectItem value="EUR">EUR (€)</SelectItem>
                     <SelectItem value="GBP">GBP (£)</SelectItem>
-                    <SelectItem value="INR">INR (₹)</SelectItem>
                     <SelectItem value="JPY">JPY (¥)</SelectItem>
                   </SelectContent>
                 </Select>

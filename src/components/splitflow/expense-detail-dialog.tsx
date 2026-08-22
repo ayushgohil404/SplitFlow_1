@@ -130,7 +130,7 @@ export function ExpenseDetailDialog({
                   <Receipt className="w-3 h-3" />Amount
                 </p>
                 <p className="text-lg font-bold text-gray-900">
-                  ${expense.amount.toFixed(2)}
+                  ₹{expense.amount.toFixed(2)}
                 </p>
               </div>
               <div className="space-y-1">
@@ -184,7 +184,7 @@ export function ExpenseDetailDialog({
                       {split.userName}
                     </span>
                     <span className="text-sm font-semibold text-gray-900">
-                      ${split.amount.toFixed(2)}
+                      ₹{split.amount.toFixed(2)}
                     </span>
                   </div>
                 ))}

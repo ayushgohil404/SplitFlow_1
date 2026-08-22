@@ -67,13 +67,13 @@ export function FriendsView() {
         <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-5">
             <p className="text-sm text-gray-500">Friends owe you</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">${totalOwed.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">₹{totalOwed.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-red-400">
           <CardContent className="p-5">
             <p className="text-sm text-gray-500">You owe friends</p>
-            <p className="text-2xl font-bold text-red-500 mt-1">${totalOwing.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-red-500 mt-1">₹{totalOwing.toFixed(2)}</p>
           </CardContent>
         </Card>
       </div>
@@ -128,7 +128,7 @@ export function FriendsView() {
                       }
                       >
                         {friend.totalBalance > 0 ? '+' : ''}
-                        ${friend.totalBalance.toFixed(2)}
+                        ₹{friend.totalBalance.toFixed(2)}
                       </span>
                     )}
                     {expandedId === friend.userId ? (
@@ -169,7 +169,7 @@ export function FriendsView() {
                             }`
                           }
                           >
-                            {g.balance > 0 ? '+' : ''}${g.balance.toFixed(2)}
+                            {g.balance > 0 ? '+' : ''}₹{g.balance.toFixed(2)}
                           </span>
                         </div>
                       ))}

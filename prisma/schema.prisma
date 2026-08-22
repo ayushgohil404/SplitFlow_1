@@ -68,7 +68,7 @@ model Group {
   name        String
   description String?
   emoji       String   @default("💰")
-  currency    String   @default("USD")
+  currency    String   @default("INR")
   category    String   @default("general")
   inviteCode  String   @unique @default(cuid())
   createdBy   String

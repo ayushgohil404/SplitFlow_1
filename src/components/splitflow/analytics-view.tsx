@@ -255,7 +255,7 @@ export function AnalyticsView() {
       <Card>
         <CardContent className="p-5">
           <p className="text-sm text-gray-500">Total spending</p>
-          <p className="text-3xl font-bold text-gray-900">${totalSpent.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-gray-900">₹{totalSpent.toFixed(2)}</p>
           <p className="text-sm text-gray-500 mt-1">{filteredExpenses.length} expenses</p>
         </CardContent>
       </Card>
@@ -295,7 +295,7 @@ export function AnalyticsView() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => `$${value.toFixed(2)}`}
+                      formatter={(value: number) => `₹${value.toFixed(2)}`}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -335,8 +335,8 @@ export function AnalyticsView() {
                         return months[parseInt(m) - 1];
                       }}
                     />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${v}`} />
+                    <Tooltip formatter={(value: number) => `₹${value.toFixed(2)}`} />
                     <Line
                       type="monotone"
                       dataKey="total"
@@ -361,9 +361,9 @@ export function AnalyticsView() {
           <CardContent>
             <ResponsiveContainer width="100%" height={Math.max(200, categoryData.length * 40)}>
               <BarChart data={categoryData} layout="vertical" margin={{ left: 20 }}>
-                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${v}`} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
-                <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                <Tooltip formatter={(value: number) => `₹${value.toFixed(2)}`} />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                   {categoryData.map((_entry, index) => (
                     <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -389,7 +389,7 @@ export function AnalyticsView() {
                 <div key={m.name} className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-700 font-medium">{m.name}</span>
-                    <span className="text-gray-900 font-semibold">${m.total.toFixed(2)}</span>
+                    <span className="text-gray-900 font-semibold">₹{m.total.toFixed(2)}</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2.5">
                     <div

@@ -159,7 +159,7 @@ export function SettleView() {
       return;
     }
     if (isNaN(numAmount) || numAmount <= 0) {
-      setPayAmountError('Enter a valid amount greater than $0');
+      setPayAmountError('Enter a valid amount greater than ₹0');
       return;
     }
     if (payFrom === payTo) {
@@ -215,7 +215,7 @@ export function SettleView() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Others owe you</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">${totalOwed.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">₹{totalOwed.toFixed(2)}</p>
               </div>
               <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center">
                 <ArrowUpRight className="w-6 h-6 text-emerald-600" />
@@ -228,7 +228,7 @@ export function SettleView() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">You owe others</p>
-                <p className="text-2xl font-bold text-red-500 mt-1">${totalOwing.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-red-500 mt-1">₹{totalOwing.toFixed(2)}</p>
               </div>
               <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
                 <ArrowDownRight className="w-6 h-6 text-red-500" />
@@ -277,7 +277,7 @@ export function SettleView() {
                       }`}
                     >
                       {gb.yourBalance >= 0 ? '+' : ''}
-                      ${gb.yourBalance.toFixed(2)}
+                      ₹{gb.yourBalance.toFixed(2)}
                     </span>
                   </button>
                 );
@@ -351,7 +351,7 @@ export function SettleView() {
                         {isOwedToYou && <p className="text-xs text-emerald-600 mt-0.5">Owed to you</p>}
                       </div>
                       <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-red-500' : isOwedToYou ? 'text-emerald-600' : 'text-gray-700'}`}>
-                        ${b.amount.toFixed(2)}
+                        ₹{b.amount.toFixed(2)}
                       </span>
                     </CardContent>
                   </Card>
@@ -374,7 +374,7 @@ export function SettleView() {
                   {simplified.map((p, idx) => (
                     <div key={idx} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-emerald-100">
                       <span className="text-sm flex-1 text-gray-900 font-medium">{p.from} → {p.to}</span>
-                      <span className="text-sm font-bold text-emerald-700">${p.amount.toFixed(2)}</span>
+                      <span className="text-sm font-bold text-emerald-700">₹{p.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -394,7 +394,7 @@ export function SettleView() {
                       <p className="text-sm text-gray-900">{s.from?.name} paid {s.to?.name}</p>
                       {s.note && <p className="text-xs text-gray-500">{s.note}</p>}
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">${s.amount.toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-gray-700">₹{s.amount.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -438,7 +438,7 @@ export function SettleView() {
             <div className="space-y-1.5">
               <Label htmlFor="pay-amount">Amount <span className="text-red-400">*</span></Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
                 <Input
                   id="pay-amount"
                   type="number"

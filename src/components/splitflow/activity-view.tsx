@@ -184,7 +184,7 @@ export function ActivityView() {
                           <span className="text-xs text-gray-400">{act.groupName}</span>
                           {act.amount > 0 && (
                             <span className="text-xs font-medium text-gray-600">
-                              ${act.amount.toFixed(2)}
+                              ₹{act.amount.toFixed(2)}
                             </span>
                           )}
                         </div>

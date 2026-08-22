@@ -58,10 +58,10 @@ const CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 const CURRENCIES = [
+  { value: 'INR', label: 'INR (₹)' },
   { value: 'USD', label: 'USD ($)' },
   { value: 'EUR', label: 'EUR (€)' },
   { value: 'GBP', label: 'GBP (£)' },
-  { value: 'INR', label: 'INR (₹)' },
   { value: 'JPY', label: 'JPY (¥)' },
 ];
 
@@ -93,7 +93,7 @@ export function GroupsView() {
   const [formDesc, setFormDesc] = useState('');
   const [formEmoji, setFormEmoji] = useState('🏠');
   const [formCategory, setFormCategory] = useState('general');
-  const [formCurrency, setFormCurrency] = useState('USD');
+  const [formCurrency, setFormCurrency] = useState('INR');
   const [creating, setCreating] = useState(false);
 
   const fetchGroups = useCallback(async () => {
@@ -159,7 +159,7 @@ export function GroupsView() {
         setFormDesc('');
         setFormEmoji('🏠');
         setFormCategory('general');
-        setFormCurrency('USD');
+        setFormCurrency('INR');
         fetchGroups();
       } else {
         toast.error('Failed to create group. Please try again.');
@@ -308,7 +308,7 @@ export function GroupsView() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">Total spent</span>
                       <span className="font-medium text-gray-900">
-                        ${(group.totalExpenses || 0).toFixed(2)}
+                        ₹{(group.totalExpenses || 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -319,7 +319,7 @@ export function GroupsView() {
                         }`}
                       >
                         {(group.yourBalance || 0) >= 0 ? '+' : ''}
-                        ${(group.yourBalance || 0).toFixed(2)}
+                        ₹{(group.yourBalance || 0).toFixed(2)}
                       </span>
                     </div>
                   </div>

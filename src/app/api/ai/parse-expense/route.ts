@@ -50,23 +50,23 @@ Rules:
 - If split is "percentage", include each person's percentage.
 - If split is "exact", include each person's exact amount.
 - "me" refers to the person writing the expense. Include "me" as a name in splits.
-- Default currency is USD unless another currency is specified.
+- Default currency is INR unless another currency is specified.
 - Category should be inferred from context.
 - Amount should be a number (not a string).
 - If you cannot determine the amount or the text is not an expense, return { "error": "Could not parse expense", "rawText": "<original text>" }.
 
 Examples:
-Input: "Paid $45 for pizza with Alex and Sam, split equally"
-Output: {"description":"Pizza","amount":45,"splitType":"equal","currency":"USD","category":"food","splits":[{"name":"me","percentage":null,"amount":null},{"name":"Alex","percentage":null,"amount":null},{"name":"Sam","percentage":null,"amount":null}]}
+Input: "Paid ₹1500 for pizza with Alex and Sam, split equally"
+Output: {"description":"Pizza","amount":1500,"splitType":"equal","currency":"INR","category":"food","splits":[{"name":"me","percentage":null,"amount":null},{"name":"Alex","percentage":null,"amount":null},{"name":"Sam","percentage":null,"amount":null}]}
 
-Input: "Lunch $30 split 60/40 between me and John"
-Output: {"description":"Lunch","amount":30,"splitType":"percentage","currency":"USD","category":"food","splits":[{"name":"me","percentage":60},{"name":"John","percentage":40}]}
+Input: "Lunch ₹900 split 60/40 between me and John"
+Output: {"description":"Lunch","amount":900,"splitType":"percentage","currency":"INR","category":"food","splits":[{"name":"me","percentage":60},{"name":"John","percentage":40}]}
 
-Input: "Uber ride $22 paid by me for the group"
-Output: {"description":"Uber ride","amount":22,"splitType":"equal","currency":"USD","category":"transport","splits":[{"name":"me","percentage":null,"amount":null}]}
+Input: "Uber ride ₹450 paid by me for the group"
+Output: {"description":"Uber ride","amount":450,"splitType":"equal","currency":"INR","category":"transport","splits":[{"name":"me","percentage":null,"amount":null}]}
 
-Input: "Bought coffee for $5"
-Output: {"description":"Coffee","amount":5,"splitType":"single","currency":"USD","category":"food"}`
+Input: "Bought coffee for ₹200"
+Output: {"description":"Coffee","amount":200,"splitType":"single","currency":"INR","category":"food"}`
 
 export async function POST(req: NextRequest) {
   try {

@@ -157,7 +157,7 @@ export function AddExpenseView() {
         if (data.splitType) setSplitType(data.splitType);
         toast.success('Expense parsed from your description!');
       } else {
-        toast.error('Could not parse expense. Try being more specific, e.g. "$30 pizza for 3 people"');
+        toast.error('Could not parse expense. Try being more specific, e.g. "₹30 pizza for 3 people"');
       }
     } catch {
       toast.error('AI is currently unavailable. Please fill the form manually.');
@@ -240,7 +240,7 @@ export function AddExpenseView() {
     }
     const numAmount = parseFloat(amount);
     if (!amount || isNaN(numAmount) || numAmount <= 0) {
-      setAmountError('Please enter a valid amount greater than $0');
+      setAmountError('Please enter a valid amount greater than ₹0');
       valid = false;
     } else {
       setAmountError('');
@@ -322,8 +322,8 @@ export function AddExpenseView() {
                 <TooltipContent className="text-xs max-w-xs">
                   Describe your expense in plain English. AI will extract the amount, category, and split details.
                   <br /><br />
-                  Examples: &quot;Paid $45 for pizza split equally with Alex and Sam&quot;
-                  or &quot;Uber to airport $22&quot;
+                  Examples: &quot;Paid ₹45 for pizza split equally with Alex and Sam&quot;
+                  or &quot;Uber to airport ₹22&quot;
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -331,7 +331,7 @@ export function AddExpenseView() {
           <div className="flex gap-2">
             <div className="flex-1">
               <Input
-                placeholder='e.g. "Paid $45 for pizza split 3 ways"'
+                placeholder='e.g. "Paid ₹45 for pizza split 3 ways"'
                 value={nlpInput}
                 onChange={(e) => setNlpInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleNlpSubmit()}
@@ -398,7 +398,7 @@ export function AddExpenseView() {
                   Amount <span className="text-red-400">*</span>
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
                   <Input
                     id="amount"
                     type="number"
@@ -484,7 +484,7 @@ export function AddExpenseView() {
                     </TooltipTrigger>
                     <TooltipContent className="text-xs max-w-xs">
                       <strong>Equal:</strong> Split evenly among all members<br/>
-                      <strong>Exact:</strong> Enter specific dollar amounts per person<br/>
+                      <strong>Exact:</strong> Enter specific amounts per person<br/>
                       <strong>Percentage:</strong> Enter percentage each person pays
                     </TooltipContent>
                   </Tooltip>
@@ -504,7 +504,7 @@ export function AddExpenseView() {
                     onClick={() => setSplitType(type)}
                     size="sm"
                   >
-                    {type === 'equal' ? 'Equal' : type === 'exact' ? 'Exact $' : 'Percentage %'}
+                    {type === 'equal' ? 'Equal' : type === 'exact' ? 'Exact ₹' : 'Percentage %'}
                   </Button>
                 ))}
               </div>
@@ -514,7 +514,7 @@ export function AddExpenseView() {
             {splitType !== 'equal' && members.length > 0 && (
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <Label className="text-sm font-medium">
-                  Split Details {splitType === 'percentage' ? '(%)' : '($)'}
+                  Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
                 </Label>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {members.map((m) => {
@@ -531,7 +531,7 @@ export function AddExpenseView() {
                           onChange={(e) => updateSplit(m.id, e.target.value)}
                           className="h-9"
                         />
-                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '$'}</span>
+                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                       </div>
                     );
                   })}
@@ -542,7 +542,7 @@ export function AddExpenseView() {
             {splitType === 'equal' && members.length > 0 && (
               <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                 <p className="text-sm text-emerald-700">
-                  Split equally among <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''}: <strong>${perPerson}</strong> each
+                  Split equally among <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''}: <strong>₹{perPerson}</strong> each
                 </p>
               </div>
             )}
