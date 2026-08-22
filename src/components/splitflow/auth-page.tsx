@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Github, Chrome, Sparkles, Wallet, Users, Shield, Bot, Camera, Zap, ExternalLink } from 'lucide-react';
+import { Github, Chrome, Sparkles, Wallet, Users, Shield, Bot, Camera, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -138,35 +138,6 @@ export function AuthPage() {
                 <p className="text-[11px] text-gray-400 text-center leading-relaxed pt-2">
                   By signing in, you agree to our terms. Your data stays on your server.
                 </p>
-
-                {/* Setup guide for developers */}
-                <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="text-xs font-semibold text-amber-800 mb-2">Developer Setup Required</p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed mb-2">
-                    To enable OAuth, add your credentials to the <code className="bg-amber-100 px-1 py-0.5 rounded text-[10px] font-mono">.env</code> file.
-                    See <code className="bg-amber-100 px-1 py-0.5 rounded text-[10px] font-mono">.env.example</code> for full instructions.
-                  </p>
-                  <div className="flex flex-col gap-1.5">
-                    <a 
-                      href="https://github.com/settings/developers" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 hover:text-emerald-800 font-medium"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Create GitHub OAuth App
-                    </a>
-                    <a 
-                      href="https://console.cloud.google.com/apis/credentials/oauthclient" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 hover:text-emerald-800 font-medium"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Create Google OAuth Client
-                    </a>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </motion.div>
