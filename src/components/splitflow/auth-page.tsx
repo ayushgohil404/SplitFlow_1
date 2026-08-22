@@ -3,64 +3,25 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Github, Chrome, Sparkles, ArrowRight, Wallet, Users, Shield, Bot, Camera, Zap } from 'lucide-react';
+import { Github, Chrome, Sparkles, Wallet, Users, Shield, Bot, Camera, Zap, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export function AuthPage() {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [demoLoading, setDemoLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
-  const handleDemoLogin = async () => {
-    setError('');
-    if (!email.trim()) {
-      setError('Please enter your email address');
-      return;
-    }
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    setDemoLoading(true);
-    try {
-      const res = await fetch('/api/auth/demo-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), name: name.trim() || email.split('@')[0] }),
-      });
-      if (res.ok) {
-        toast.success('Welcome to SplitFlow!');
-        window.location.reload();
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || 'Login failed. Please try again.');
-      }
-    } catch {
-      setError('Network error. Please check your connection and try again.');
-    } finally {
-      setDemoLoading(false);
-    }
-  };
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
   const handleOAuthLogin = (provider: 'github' | 'google') => {
-    // Use NextAuth signIn - but handle gracefully if OAuth isn't configured
+    setOauthLoading(provider);
     try {
       import('next-auth/react').then(({ signIn }) => {
         signIn(provider, { callbackUrl: '/' });
       });
     } catch {
-      toast.info('OAuth is optional. Use the demo login below to get started instantly!');
+      setOauthLoading(null);
+      toast.error(`${provider === 'github' ? 'GitHub' : 'Google'} login failed. Check your OAuth configuration.`);
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !demoLoading) handleDemoLogin();
+    // Reset loading after 10s as fallback (in case redirect doesn't happen)
+    setTimeout(() => setOauthLoading(null), 10000);
   };
 
   const features = [
@@ -132,7 +93,7 @@ export function AuthPage() {
             </motion.div>
           </div>
 
-          {/* Right side - login card */}
+          {/* Right side - OAuth login card */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -141,83 +102,70 @@ export function AuthPage() {
             <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-2xl">Get Started Free</CardTitle>
-                <CardDescription>No account needed. Just enter your email to try SplitFlow.</CardDescription>
+                <CardDescription>Sign in with your GitHub or Google account</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* OAuth buttons */}
+                {/* GitHub OAuth */}
                 <Button 
                   variant="outline" 
                   className="w-full h-11 text-sm gap-3" 
                   onClick={() => handleOAuthLogin('github')}
+                  disabled={oauthLoading !== null}
                 >
-                  <Github className="w-5 h-5" />
+                  {oauthLoading === 'github' ? (
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  ) : (
+                    <Github className="w-5 h-5" />
+                  )}
                   Continue with GitHub
                 </Button>
+
+                {/* Google OAuth */}
                 <Button 
                   variant="outline" 
                   className="w-full h-11 text-sm gap-3" 
                   onClick={() => handleOAuthLogin('google')}
+                  disabled={oauthLoading !== null}
                 >
-                  <Chrome className="w-5 h-5" />
+                  {oauthLoading === 'google' ? (
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  ) : (
+                    <Chrome className="w-5 h-5" />
+                  )}
                   Continue with Google
                 </Button>
 
-                <div className="relative py-1">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-3 text-gray-400">or try instantly</span>
-                  </div>
-                </div>
+                <p className="text-[11px] text-gray-400 text-center leading-relaxed pt-2">
+                  By signing in, you agree to our terms. Your data stays on your server.
+                </p>
 
-                {/* Demo login form */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="demo-name" className="text-sm">Name <span className="text-gray-400 font-normal">(optional)</span></Label>
-                    <Input 
-                      id="demo-name"
-                      placeholder="Your name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      className="h-11"
-                      autoComplete="name"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="demo-email" className="text-sm">Email <span className="text-red-400">*</span></Label>
-                    <Input 
-                      id="demo-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                      onKeyDown={handleKeyDown}
-                      className={`h-11 ${error ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
-                      autoComplete="email"
-                    />
-                    {error && (
-                      <p className="text-xs text-red-500 mt-1">{error}</p>
-                    )}
-                  </div>
-                  <Button 
-                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-sm font-medium gap-2 shadow-sm" 
-                    onClick={handleDemoLogin}
-                    disabled={!email.trim() || demoLoading}
-                  >
-                    {demoLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        Start Splitting
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-[11px] text-gray-400 text-center leading-relaxed">
-                    By signing in, you agree to our terms. Your data stays on your server.
+                {/* Setup guide for developers */}
+                <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <p className="text-xs font-semibold text-amber-800 mb-2">Developer Setup Required</p>
+                  <p className="text-[11px] text-amber-700 leading-relaxed mb-2">
+                    To enable OAuth, add your credentials to the <code className="bg-amber-100 px-1 py-0.5 rounded text-[10px] font-mono">.env</code> file.
+                    See <code className="bg-amber-100 px-1 py-0.5 rounded text-[10px] font-mono">.env.example</code> for full instructions.
                   </p>
+                  <div className="flex flex-col gap-1.5">
+                    <a 
+                      href="https://github.com/settings/developers" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 hover:text-emerald-800 font-medium"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Create GitHub OAuth App
+                    </a>
+                    <a 
+                      href="https://console.cloud.google.com/apis/credentials/oauthclient" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 hover:text-emerald-800 font-medium"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Create Google OAuth Client
+                    </a>
+                  </div>
                 </div>
               </CardContent>
             </Card>
