@@ -327,7 +327,11 @@ export function AddExpenseView() {
           if (!selectedFriends.includes(friendMatch.id)) {
             setSelectedFriends((prev) => [...prev, friendMatch.id]);
           }
-          if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+          // For share type, set the friend's share value
+          if (sType === 'share' && ns.share != null && ns.share > 0) {
+            // We'll apply share values after the useEffect sets up splits
+            friendAmtMap[friendMatch.id] = String(ns.share);
+          } else if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
             friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
           }
         } else if (ns.name?.includes('@')) {
@@ -355,6 +359,11 @@ export function AddExpenseView() {
         setSplitType(sType as 'exact' | 'percentage');
       } else if (sType === 'share') {
         setSplitType('share');
+        // Set owner share from AI parse if available
+        const meSplit = namedSplits?.find((s) => s.name === 'me');
+        if (meSplit?.share && typeof meSplit.share === 'number' && meSplit.share > 0) {
+          setOwnerShare(meSplit.share);
+        }
       } else if (sType === 'equal') {
         setSplitType('equal');
       } else if (sType === 'single') {
@@ -553,10 +562,12 @@ export function AddExpenseView() {
           body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
         } else if (splitType === 'share') {
           body.splitType = 'equal';
-          body.splits = splits.map((s) => ({
+          // Include owner's share in direct mode
+          const ownerSplit = user?.id ? [{ userId: user.id, share: ownerShare }] : [];
+          body.splits = [...ownerSplit, ...splits.map((s) => ({
             userId: s.userId,
             share: s.share || 1,
-          }));
+          }))];
           body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
         } else if (splitType === 'exact') {
           // Include user's own split
@@ -637,22 +648,30 @@ export function AddExpenseView() {
   })();
   const totalSplitOk = Math.abs(totalSplitAmount - (parseFloat(amount) || 0)) < 0.5;
 
+  // User's own share count (for direct share mode)
+  const [ownerShare, setOwnerShare] = useState(1);
+
   // Split participants for direct exact/percentage mode
   const directParticipants = [
     ...(friends.filter((f) => selectedFriends.includes(f.id)).map((f) => ({ id: f.id, name: f.name }))),
+  ];
+  // All participants including owner (for direct share mode display)
+  const allDirectParticipants = [
+    ...(user?.id ? [{ id: user.id, name: user?.name || 'You' }] : []),
+    ...directParticipants,
   ];
 
   useEffect(() => {
     if (mode === 'direct' && (splitType === 'exact' || splitType === 'percentage' || splitType === 'share')) {
       const newSplits = directParticipants.map((p) => {
-        // Check if AI parse left a pending value for this friend (by friend ID — most reliable)
         const pendingById = pendingFriendSplitValues[p.id];
-        // Also check by name as fallback
         const friend = friends.find((f) => f.id === p.id);
         const friendName = friend?.name?.toLowerCase();
         const pendingByName = friendName ? pendingFriendSplitValues[friendName] : undefined;
         const pendingValue = pendingById || pendingByName || '';
-        return { userId: p.id, value: pendingValue, share: 1 };
+        // For share type, the pending value is the share count
+        const pendingShare = splitType === 'share' ? (parseInt(pendingValue) || 1) : 1;
+        return { userId: p.id, value: pendingValue, share: pendingShare };
       });
       setSplits(newSplits);
     }
@@ -1002,20 +1021,23 @@ export function AddExpenseView() {
                     Family / Group Size 👨‍👩‍👧‍👦
                   </Label>
                   {(() => {
-                    const allParticipants = mode === 'group'
+                    const shareParticipants = mode === 'group'
                       ? members.map((m) => ({ id: m.id, name: m.name }))
-                      : directParticipants;
-                    const totalShares = allParticipants.reduce((sum, p) => {
+                      : allDirectParticipants;
+                    const totalShares = shareParticipants.reduce((sum, p) => {
+                      if (p.id === user?.id && mode === 'direct') return sum + ownerShare;
                       const s = splits.find((sp) => sp.userId === p.id);
                       return sum + (s?.share || 1);
-                    }, 0);
-                    const numAmount = parseFloat(amount) || 0;
-                    const ratioStr = allParticipants
-                      .map((p) => {
-                        const s = splits.find((sp) => sp.userId === p.id);
-                        return s?.share || 1;
-                      })
-                      .join(' : ');
+                    }, 0) + (mode === 'direct' ? emailParticipants.length : 0);
+                    const ratioArr = shareParticipants.map((p) => {
+                      if (p.id === user?.id && mode === 'direct') return ownerShare;
+                      const s = splits.find((sp) => sp.userId === p.id);
+                      return s?.share || 1;
+                    });
+                    if (mode === 'direct') {
+                      emailParticipants.forEach(() => ratioArr.push(1));
+                    }
+                    const ratioStr = ratioArr.join(' : ');
                     return (
                       <span className="text-xs text-emerald-700 font-medium bg-emerald-100 px-2 py-1 rounded-full">
                         Ratio: {ratioStr} = {totalShares} total shares
@@ -1027,14 +1049,74 @@ export function AddExpenseView() {
                   Set how many people each participant represents. The expense will be split proportionally.
                 </p>
                 <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {/* In direct mode, show owner first */}
+                  {mode === 'direct' && user?.id && (() => {
+                    const shareParticipants = allDirectParticipants;
+                    const emailShareTotal = emailParticipants.length;
+                    const totalShares = shareParticipants.reduce((sum, p) => {
+                      if (p.id === user!.id) return sum + ownerShare;
+                      const s = splits.find((sp) => sp.userId === p.id);
+                      return sum + (s?.share || 1);
+                    }, 0) + emailShareTotal;
+                    const numAmount = parseFloat(amount) || 0;
+                    const shareAmount = totalShares > 0
+                      ? Math.round((numAmount * ownerShare) / totalShares * 100) / 100
+                      : 0;
+                    const sharePct = totalShares > 0
+                      ? Math.round((ownerShare / totalShares) * 1000) / 10
+                      : 0;
+                    return (
+                      <div key={user!.id} className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 w-28 truncate shrink-0">
+                          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <User className="w-3 h-3 text-emerald-700" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">You</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setOwnerShare(Math.max(1, ownerShare - 1))}
+                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                            disabled={ownerShare <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={ownerShare}
+                            onChange={(e) => setOwnerShare(parseInt(e.target.value) || 1)}
+                            className="w-10 h-7 text-center text-sm font-medium border border-gray-200 rounded-md bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setOwnerShare(ownerShare + 1)}
+                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-400 shrink-0">{ownerShare === 1 ? 'person' : 'people'}</span>
+                        <div className="flex-1" />
+                        <span className="text-sm font-semibold text-emerald-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+                        <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+                      </div>
+                    );
+                  })()}
                   {(mode === 'group' ? members : directParticipants).map((p) => {
                     const split = splits.find((s) => s.userId === p.id);
                     const shareCount = split?.share || 1;
-                    const allParticipants = mode === 'group' ? members : directParticipants;
-                    const totalShares = allParticipants.reduce((sum, pp) => {
+                    const shareParticipants = mode === 'group'
+                      ? members
+                      : allDirectParticipants;
+                    const emailShareTotal = mode === 'direct' ? emailParticipants.length : 0;
+                    const totalShares = shareParticipants.reduce((sum, pp) => {
+                      if (pp.id === user?.id && mode === 'direct') return sum + ownerShare;
                       const s = splits.find((sp) => sp.userId === pp.id);
                       return sum + (s?.share || 1);
-                    }, 0);
+                    }, 0) + emailShareTotal;
                     const numAmount = parseFloat(amount) || 0;
                     const shareAmount = totalShares > 0
                       ? Math.round((numAmount * shareCount) / totalShares * 100) / 100
@@ -1078,11 +1160,35 @@ export function AddExpenseView() {
                     );
                   })}
                 </div>
-                {emailParticipants.length > 0 && splitType === 'share' && (
+                {emailParticipants.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-emerald-200">
-                    <p className="text-xs text-amber-600">
-                      Email participants are counted as 1 share each.
-                    </p>
+                    {emailParticipants.map((ep) => {
+                      const shareParticipants = mode === 'group' ? members : allDirectParticipants;
+                      const totalShares = shareParticipants.reduce((sum, p) => {
+                        if (p.id === user?.id && mode === 'direct') return sum + ownerShare;
+                        const s = splits.find((sp) => sp.userId === p.id);
+                        return sum + (s?.share || 1);
+                      }, 0) + emailParticipants.length;
+                      const numAmount = parseFloat(amount) || 0;
+                      const shareAmount = totalShares > 0
+                        ? Math.round((numAmount * 1) / totalShares * 100) / 100
+                        : 0;
+                      const sharePct = totalShares > 0
+                        ? Math.round((1 / totalShares) * 1000) / 10
+                        : 0;
+                      return (
+                        <div key={ep.email} className="flex items-center gap-3 text-amber-700">
+                          <div className="flex items-center gap-1.5 w-28 truncate shrink-0">
+                            <Mail className="w-3.5 h-3.5" />
+                            <span className="text-sm truncate">{ep.name}</span>
+                          </div>
+                          <span className="text-xs bg-amber-100 px-2 py-0.5 rounded-full">1 share</span>
+                          <div className="flex-1" />
+                          <span className="text-sm font-semibold text-amber-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+                          <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

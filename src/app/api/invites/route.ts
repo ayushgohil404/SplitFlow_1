@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         inviteeId: existingMember?.id || null,
         expiresAt,
       },
-      })
+    });
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://splitflow-1.vercel.app'
 

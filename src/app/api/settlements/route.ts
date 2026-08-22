@@ -63,8 +63,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'fromUserId and toUserId must be different' }, { status: 400 })
     }
 
-    // If groupId provided, verify membership
+    // If groupId provided, verify caller is a member
     if (groupId) {
+      const callerMember = await db.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: user.id } },
+      })
+      if (!callerMember) {
+        return NextResponse.json({ error: 'You are not a member of this group' }, { status: 403 })
+      }
+
       const fromMember = await db.groupMember.findUnique({
         where: { groupId_userId: { groupId, userId: fromUserId } },
       })

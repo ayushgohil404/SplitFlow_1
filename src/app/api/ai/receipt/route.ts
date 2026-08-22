@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     if (!isGroqConfigured()) {
       return NextResponse.json(
         { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
-        { status: 503 }
+        { status: 200 }
       )
     }
 
@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
     const mimeType = file.type || 'image/jpeg'
     const dataUrl = `data:${mimeType};base64,${base64}`
 
-    // Receipt scanning needs vision model — no text fallback
     const groq = getGroq()
     const response = await groq.chat.completions.create({
       model: VISION_MODEL,
@@ -85,7 +84,16 @@ export async function POST(req: NextRequest) {
     })
 
     const raw = response.choices?.[0]?.message?.content ?? ''
-    const parsed = extractJSON(raw) as Record<string, unknown>
+
+    let parsed: Record<string, unknown>
+    try {
+      parsed = extractJSON(raw) as Record<string, unknown>
+    } catch {
+      return NextResponse.json({
+        error: 'Could not parse receipt data. Try a clearer photo or enter details manually.',
+        rawText: raw.substring(0, 200),
+      }, { status: 200 })
+    }
 
     if (parsed.error) {
       return NextResponse.json({
@@ -108,7 +116,9 @@ export async function POST(req: NextRequest) {
     let userMsg = 'Failed to scan receipt. Try entering details manually.'
     if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
       userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
+    } else if (msg.includes('All AI models failed')) {
+      userMsg = 'Vision model unavailable. Try a different image or enter manually.'
     }
-    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 500 })
+    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 200 })
   }
 }

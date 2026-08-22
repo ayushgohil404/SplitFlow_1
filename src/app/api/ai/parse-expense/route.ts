@@ -26,7 +26,7 @@ const ALLOWED_CATEGORIES = [
   'food', 'transport', 'entertainment', 'shopping', 'bills',
   'rent', 'travel', 'health', 'education', 'groceries', 'utilities', 'other',
 ]
-const ALLOWED_SPLIT_TYPES = ['equal', 'exact', 'percentage', 'single']
+const ALLOWED_SPLIT_TYPES = ['equal', 'exact', 'percentage', 'share', 'single']
 
 const SYSTEM_PROMPT = `You are an expert expense parser for SplitFlow. Your ONLY job is to parse natural language into structured JSON.
 
@@ -41,12 +41,12 @@ const SYSTEM_PROMPT = `You are an expert expense parser for SplitFlow. Your ONLY
 {
   "description": "string",
   "amount": number,
-  "splitType": "equal" | "exact" | "percentage" | "single",
+  "splitType": "equal" | "exact" | "percentage" | "share" | "single",
   "currency": "INR",
   "category": "food" | "transport" | "entertainment" | "shopping" | "bills" | "rent" | "travel" | "health" | "education" | "groceries" | "utilities" | "other",
   "groupId": "string | null",
-  "splits": "[{\"name\": \"string\", \"amount\": number|null, \"percentage\": number|null}]",
-  "emailSplits": "[{\"email\": \"string\", \"name\": \"string|null\", \"amount\": number|null, \"percentage\": number|null}]"
+  "splits": "[{\"name\": \"string\", \"amount\": number|null, \"percentage\": number|null, \"share\": number|null}]",
+  "emailSplits": "[{\"email\": \"string\", \"name\": \"string|null\", \"amount\": number|null, \"percentage\": number|null, \"share\": number|null}]"
 }
 
 ## PARTICIPANT RULES:
@@ -73,6 +73,9 @@ const SYSTEM_PROMPT = `You are an expert expense parser for SplitFlow. Your ONLY
 - "me X% and [name] Y%" → percentage split
 - "I bear X" / "my share X" → me gets X amount
 - "with [name1] and [name2]" + no amounts → equal split among all including me
+- "family of N" / "my family of N members" / "split with family of N" → splitType="share", set share=N for "me", share=other_person_count for the other person
+- "me with 4 members and [name] with 3" → splitType="share", me gets share=4, [name] gets share=3
+- "by family size" → splitType="share"
 
 ## AMOUNT EXTRACTION:
 - Support: ₹1000, 1000, 1k, 1.5k, 2.5l, 1000 rs, 1000 rupees, Rs.1000, INR 1000, Rs 1000, 1,000
@@ -209,6 +212,7 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
       s.name = String(s.name).trim().substring(0, 100)
       if (s.amount != null && typeof s.amount !== 'number') s.amount = null
       if (s.percentage != null && typeof s.percentage !== 'number') s.percentage = null
+      if (s.share != null && typeof s.share !== 'number') s.share = null
     }
   }
 
@@ -225,6 +229,7 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
       s.name = s.name ? String(s.name).trim().substring(0, 100) : s.email.split('@')[0]
       if (s.amount != null && typeof s.amount !== 'number') s.amount = null
       if (s.percentage != null && typeof s.percentage !== 'number') s.percentage = null
+      if (s.share != null && typeof s.share !== 'number') s.share = null
     }
   }
 

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (!isGroqConfigured()) {
       return NextResponse.json(
         { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
-        { status: 503 }
+        { status: 200 }
       )
     }
 
@@ -62,11 +62,21 @@ export async function POST(req: NextRequest) {
       { temperature: 0.1, max_tokens: 100 }
     )
 
-    const parsed = extractJSON(raw) as { category: string; emoji: string; confidence: number }
+    let parsed: { category?: string; emoji?: string; confidence?: number }
+    try {
+      parsed = extractJSON(raw) as typeof parsed
+    } catch {
+      // AI returned invalid JSON — return a sensible default
+      return NextResponse.json({
+        category: 'other',
+        emoji: '\ud83d\udcdd',
+        confidence: 0.3,
+      })
+    }
 
     return NextResponse.json({
       category: parsed.category ?? 'other',
-      emoji: parsed.emoji ?? '📝',
+      emoji: parsed.emoji ?? '\ud83d\udcdd',
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
     })
   } catch (error: any) {
@@ -75,7 +85,9 @@ export async function POST(req: NextRequest) {
     let userMsg = 'Failed to categorize. Try selecting manually.'
     if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
       userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
+    } else if (msg.includes('All AI models failed')) {
+      userMsg = 'AI models unavailable. Try selecting manually.'
     }
-    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 500 })
+    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 200 })
   }
 }

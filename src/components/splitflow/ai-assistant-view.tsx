@@ -13,6 +13,8 @@ import {
   CalendarDays,
   User,
   CheckCircle2,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAppStore } from '@/store/app-store';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -33,6 +36,15 @@ interface Message {
   content: string;
   timestamp: Date;
   actionLabel?: string;
+  pendingExpense?: {
+    description: string;
+    amount: number;
+    category: string;
+    splitType: string;
+    groupId: string | null;
+    splits?: any[];
+    emailSplits?: any[];
+  };
 }
 
 interface Group {
@@ -49,7 +61,7 @@ const QUICK_ACTIONS = [
 ];
 
 export function AIAssistantView() {
-  const { user } = useAppStore();
+  const { user, setView } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -83,6 +95,76 @@ export function AIAssistantView() {
     }
   }, [messages]);
 
+  const confirmExpense = useCallback(async (msgId: string, expense: Message['pendingExpense']) => {
+    if (!expense) return;
+    try {
+      let groupId: string | undefined;
+      if (expense.groupId) {
+        const matched = groups.find((g) => g.name.toLowerCase() === expense.groupId!.toLowerCase());
+        groupId = matched?.id;
+      }
+      const body: any = {
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        splitType: expense.splitType === 'single' ? 'equal' : expense.splitType,
+      };
+      if (groupId) { body.groupId = groupId; }
+      if (expense.splitType === 'exact' && expense.splits) {
+        const nonMeSplits = expense.splits.filter((s: any) => s.name !== 'me').map((s: any) => ({ amount: s.amount || 0 }));
+        if (nonMeSplits.length > 0) body.splits = nonMeSplits;
+      } else if (expense.splitType === 'percentage' && expense.splits) {
+        const nonMeSplits = expense.splits.filter((s: any) => s.name !== 'me').map((s: any) => ({ percentage: s.percentage || 0 }));
+        if (nonMeSplits.length > 0) body.splits = nonMeSplits;
+      } else if (expense.splitType === 'share' && expense.splits) {
+        body.splitType = 'equal';
+        body.splits = expense.splits.map((s: any) => ({ share: s.share || 1 }));
+      } else if (expense.splitType === 'equal' && expense.splits) {
+        const nonMeSplits = expense.splits.filter((s: any) => s.name !== 'me').map((s: any) => ({ share: 1 }));
+        if (nonMeSplits.length > 0) body.splits = nonMeSplits;
+      }
+      if (expense.emailSplits && expense.emailSplits.length > 0) {
+        body.nonUserSplits = expense.emailSplits.map((es: any) => ({
+          email: es.email,
+          name: es.name || es.email.split('@')[0],
+          amount: es.amount,
+          percentage: es.percentage,
+          share: es.share || 1,
+        }));
+      }
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.success('Expense added: ' + expense.description + ' - ₹' + expense.amount);
+        setMessages((prev) => prev.map((m) =>
+          m.id === msgId
+            ? { ...m, pendingExpense: undefined, actionLabel: 'Added: ' + expense.description + ' - ₹' + expense.amount }
+            : m
+        ));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to add expense.');
+        setMessages((prev) => prev.map((m) =>
+          m.id === msgId ? { ...m, pendingExpense: undefined } : m
+        ));
+      }
+    } catch {
+      toast.error('Network error. Could not add expense.');
+      setMessages((prev) => prev.map((m) =>
+        m.id === msgId ? { ...m, pendingExpense: undefined } : m
+      ));
+    }
+  }, [groups]);
+
+  const dismissExpense = useCallback((msgId: string) => {
+    setMessages((prev) =>
+      prev.map((m) => m.id === msgId ? { ...m, pendingExpense: undefined } : m)
+    );
+  }, []);
+
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || loading) return;
 
@@ -113,38 +195,33 @@ export function AIAssistantView() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.error) {
-          const errMsg = data.code === 'NOT_CONFIGURED'
-            ? 'AI is not configured. Please set a valid GROQ_API_KEY in Vercel environment variables.'
-            : (data.error || 'Something went wrong.');
-          const aiMsg: Message = {
-            id: `ai-${Date.now()}`,
-            role: 'assistant',
-            content: errMsg,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, aiMsg]);
-        } else {
-          const aiMsg: Message = {
-            id: `ai-${Date.now()}`,
-            role: 'assistant',
-            content: data.text || 'No response.',
-            timestamp: new Date(),
-            actionLabel: data.createExpense ? `Added: ${data.createExpense.description} - ₹${data.createExpense.amount}` : undefined,
-          };
-          setMessages((prev) => [...prev, aiMsg]);
-        }
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.code === 'NOT_CONFIGURED'
+      const data = await res.json().catch(() => ({ error: 'Failed to get response' }));
+      if (data.error) {
+        const errMsg = data.code === 'NOT_CONFIGURED'
           ? 'AI is not configured. Please set a valid GROQ_API_KEY in Vercel environment variables.'
-          : (errData.error || 'Something went wrong. Please try again.');
+          : (data.error || 'Something went wrong.');
         const aiMsg: Message = {
           id: `ai-${Date.now()}`,
           role: 'assistant',
           content: errMsg,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      } else if (data.createExpense) {
+        const ce = data.createExpense;
+        const aiMsg: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: data.text || `I have prepared an expense: ₹${ce.amount} (${ce.splitType} split). Review and confirm to add it!`,
+          timestamp: new Date(),
+          pendingExpense: ce,
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      } else {
+        const aiMsg: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: data.text || 'No response.',
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMsg]);
@@ -177,7 +254,7 @@ export function AIAssistantView() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900">AI Assistant</h3>
-            <p className="text-xs text-gray-500">Ask about your expenses</p>
+            <p className="text-xs text-gray-500">Ask anything or add expenses</p>
           </div>
         </div>
         <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
@@ -261,7 +338,54 @@ export function AIAssistantView() {
                     </p>
                   ))}
                 </div>
-                {msg.actionLabel && (
+                {/* Pending expense approval card */}
+                {msg.pendingExpense && (
+                  <div className="mt-2 p-3 bg-white border-2 border-emerald-200 rounded-xl shadow-sm space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">Confirm Expense</p>
+                        <div className="text-xs text-gray-600 space-y-0.5 mt-1">
+                          <p><strong>{msg.pendingExpense.description}</strong> - ₹{msg.pendingExpense.amount}</p>
+                          <p>Category: {msg.pendingExpense.category} | Split: {msg.pendingExpense.splitType}</p>
+                          {msg.pendingExpense.groupId && (
+                            <p>Group: {msg.pendingExpense.groupId}</p>
+                          )}
+                          {msg.pendingExpense.splits && msg.pendingExpense.splits.length > 0 && (
+                            <p className="text-gray-400">
+                              With: {msg.pendingExpense.splits.map((s: any) => s.name).join(', ')}
+                            </p>
+                          )}
+                          {msg.pendingExpense.emailSplits && msg.pendingExpense.emailSplits.length > 0 && (
+                            <p className="text-gray-400">
+                              Email: {msg.pendingExpense.emailSplits.map((s: any) => s.email).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                        onClick={() => confirmExpense(msg.id, msg.pendingExpense)}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Confirm & Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs"
+                        onClick={() => dismissExpense(msg.id)}
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" /> Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Confirmed expense indicator */}
+                {msg.actionLabel && !msg.pendingExpense && (
                   <div className="flex items-center gap-1.5 mt-1.5 ml-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                     <span className="text-xs text-emerald-600 font-medium">{msg.actionLabel}</span>
@@ -294,7 +418,7 @@ export function AIAssistantView() {
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               ref={inputRef}
-              placeholder="Ask about your expenses..."
+              placeholder="Ask anything or say 'add 500 for food'..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={loading}

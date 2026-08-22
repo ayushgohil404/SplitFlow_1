@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (!isGroqConfigured()) {
       return NextResponse.json(
         { error: 'AI is not configured. Please set a valid GROQ_API_KEY in environment variables.', code: 'NOT_CONFIGURED' },
-        { status: 503 }
+        { status: 200 }
       )
     }
 
@@ -204,16 +204,16 @@ export async function POST(req: NextRequest) {
       categoryTotals[cat] = (categoryTotals[cat] || 0) + e.amount
     }
 
-    // Build system prompt
-    const systemPrompt = `You are a helpful AI assistant for SplitFlow, an expense splitting app. You help users understand their expenses, balances, and spending patterns.
+    // Build system prompt — full chatbot
+    const systemPrompt = `You are SplitFlow AI, a friendly and helpful expense-splitting assistant. You help users with ANY request about their expenses, balances, groups, friends, and the app itself.
 
-CURRENCY: All amounts are in INR (Indian Rupees, ₹). Use ₹ symbol when showing amounts.
+CURRENCY: All amounts are in INR (Indian Rupees, ₹). Use ₹ symbol.
 
 USER DATA:
 - Name: ${user.name || 'User'}
-- Total money others owe you (across all groups + direct): ₹${totalOwedToMe.toFixed(2)}
+- Total money others owe you: ₹${totalOwedToMe.toFixed(2)}
 - Total money you owe others: ₹${totalIOwe.toFixed(2)}
-- Net balance (positive = you are owed, negative = you owe): ₹${netBalance.toFixed(2)}
+- Net balance: ₹${netBalance.toFixed(2)}
 
 DETAILED BALANCES (positive = they owe you, negative = you owe them):
 ${balanceSummary.length > 0
@@ -221,7 +221,7 @@ ${balanceSummary.length > 0
   : '  No outstanding balances.'
 }
 
-THIS MONTH'S SPENDING (by ${user.name || 'you'}):
+THIS MONTH'S SPENDING:
 - Total: ₹${thisMonthTotal.toFixed(2)}
 - By category: ${Object.entries(categoryTotals).map(([k, v]) => `${k}: ₹${v.toFixed(2)}`).join(', ') || 'None'}
 
@@ -231,24 +231,48 @@ ${expenseSummary.length > 0
   : '  No recent expenses.'
 }
 
-USER'S GROUPS: ${userGroups.map((g) => `${g.emoji} ${g.name} (id: ${g.id})`).join(', ') || 'None'}
+USER'S GROUPS: ${userGroups.map((g) => `\"${g.name}\" (id: ${g.id})`).join(', ') || 'None'}
 USER'S FRIENDS: ${friends.map((f) => `${f.name} (${f.email})`).join(', ') || 'None'}
+USER'S EMAIL: ${user.email}
 
-RESPONSE RULES:
+## CAPABILITIES:
+1. **Expense Q&A**: Answer questions about spending, balances, who owes whom, category breakdowns, trends
+2. **Create Expenses**: When user says things like "add 500 for food", "log expense", "I paid 1000 for...", create an expense
+3. **General Chat**: Answer greetings, how-to questions, explain app features, give financial tips
+4. **Math Help**: Calculate splits, convert amounts, do quick math
+
+## EXPENSE CREATION RULES:
+When the user wants to add/log/create an expense, extract ALL details and output a JSON block at the END:
+
+---CREATE_EXPENSE---
+{"description": "string", "amount": number, "category": "food|transport|entertainment|shopping|bills|rent|travel|health|education|groceries|utilities|other", "splitType": "equal|exact|percentage|share|single", "groupId": "group-name-or-null", "splits": [{"name": "me|friend-name", "amount": number|null, "percentage": number|null, "share": number|null}], "emailSplits": [{"email": "string", "name": "string", "amount": number|null, "percentage": number|null}]}
+---END---
+
+Rules for expense creation:
+- "for me only" / "personal" / "just me" / no sharing mentioned → splitType="single"
+- "split with X" / "split equally" / "50/50" → splitType="equal", include all participants including "me"
+- "family of N" / "N members" → splitType="share", set share values
+- Exact amounts → splitType="exact", amounts must sum to total
+- Percentages → splitType="percentage", must sum to 100
+- If a name matches a friend, use that friend's name. If not found and it contains @, put in emailSplits
+- If a group name is mentioned, set groupId to the group name string
+- Always include "me" in splits when splitting with others (user is always a participant)
+- The "me" split amount = total - sum of others (for exact)
+- Default category based on description context
+
+Before the JSON block, write a friendly confirmation message like "I've prepared this expense for you. Review and confirm to add it!"
+
+## GENERAL RULES:
 1. Be conversational and friendly. Use short paragraphs.
-2. When asked about money owed/to get back, use the balance data above to give exact ₹ amounts.
+2. When asked about money, use the balance data above to give exact ₹ amounts.
 3. When asked about spending, reference the expense data and category breakdowns.
-4. If the user asks to "add" an expense (e.g., "add 100 for food"), respond with a friendly confirmation and include a JSON block at the END of your message in this exact format:
-   ---CREATE_EXPENSE---
-   {"description": "...", "amount": ..., "category": "...", "splitType": "single"}
-   ---END---
-   Infer the category from context. Only include this block if the user is clearly asking to add/log an expense.
-5. If the user mentions splitting with specific friends, check if they are in the friends list. If yes, mention them by name. If not, say you can't find that person in their friends list.
-6. Use ₹ for all amounts. Be specific with numbers.
-7. Keep responses concise (2-4 sentences unless more detail is requested).
-8. If asked about a specific group, focus your answer on that group's data.
-9. Do NOT make up expense data. Only use what is provided above.
-10. Handle ANY question about expenses, balances, spending, friends, groups, or the app itself.`
+4. Keep responses concise (2-4 sentences unless more detail is requested).
+5. Do NOT make up expense data. Only use what is provided.
+6. Handle greetings naturally ("hi", "hello", "hey")
+7. Handle app questions ("how to split?", "what is share split?")
+8. If asked about a specific group, focus on that group's data.
+9. Support ALL input types: natural language, shorthand ("1k"), slang, typos
+10. Always respond — never say you can't help.`
 
     const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
       { role: 'system', content: systemPrompt },
@@ -256,7 +280,7 @@ RESPONSE RULES:
 
     const history = body.history as { role: 'user' | 'assistant'; content: string }[] | undefined
     if (history && history.length > 0) {
-      const recentHistory = history.slice(-6)
+      const recentHistory = history.slice(-10)
       for (const msg of recentHistory) {
         messages.push({ role: msg.role, content: msg.content })
       }
@@ -266,7 +290,7 @@ RESPONSE RULES:
 
     const raw = await chatWithFallback(messages, {
       temperature: 0.4,
-      max_tokens: 1024,
+      max_tokens: 2048,
     })
 
     // Check if the AI wants to create an expense
@@ -274,9 +298,23 @@ RESPONSE RULES:
     const expenseMatch = raw.match(/---CREATE_EXPENSE---\s*\n?([\s\S]*?)\n?---END---/)
     if (expenseMatch) {
       try {
-        createExpense = JSON.parse(expenseMatch[1].trim())
+        const parsed = JSON.parse(expenseMatch[1].trim())
+        // Validate the parsed expense has minimum required fields
+        if (parsed.description && parsed.amount && parsed.amount > 0) {
+          // Ensure splitType is valid
+          const validTypes = ['equal', 'exact', 'percentage', 'share', 'single']
+          if (!parsed.splitType || !validTypes.includes(parsed.splitType)) {
+            parsed.splitType = 'single'
+          }
+          // Ensure valid category
+          const validCategories = ['food', 'transport', 'entertainment', 'shopping', 'bills', 'rent', 'travel', 'health', 'education', 'groceries', 'utilities', 'other']
+          if (!parsed.category || !validCategories.includes(parsed.category)) {
+            parsed.category = 'other'
+          }
+          createExpense = parsed
+        }
       } catch {
-        // ignore
+        // ignore malformed JSON
       }
     }
 
@@ -299,6 +337,6 @@ RESPONSE RULES:
     } else if (msg.includes('All AI models failed')) {
       userMessage = 'All AI models are currently unavailable. Please try again in a few minutes.'
     }
-    return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 500 })
+    return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 200 })
   }
 }

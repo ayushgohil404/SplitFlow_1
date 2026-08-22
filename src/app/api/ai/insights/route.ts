@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!isGroqConfigured()) {
-      return NextResponse.json({ error: 'AI service not configured', code: 'NOT_CONFIGURED' }, { status: 503 })
+      return NextResponse.json({ error: 'AI service not configured', code: 'NOT_CONFIGURED' }, { status: 200 })
     }
 
     const body = await req.json()
@@ -107,17 +107,16 @@ export async function POST(req: NextRequest) {
       })),
     }
 
-    const systemPrompt = `You are a financial insights assistant for SplitFlow, an expense splitting app. Analyze the provided expense data and generate actionable insights.
+    const systemPrompt = `You are a financial insights assistant for SplitFlow. Analyze the provided expense data and generate actionable insights.
 
-You must return ONLY valid JSON with this schema:
+Return ONLY valid JSON:
 {
-  "insights": "string - detailed markdown-formatted analysis with sections for: top spending categories, spending patterns, unusual patterns, spending trends, member comparisons, and money-saving suggestions. Use markdown formatting (headers, bullet points, bold).",
-  "summary": "string - a concise 2-3 sentence summary of the key findings"
+  "insights": "detailed markdown analysis with sections: top categories, patterns, unusual items, trends, member comparisons, savings tips. Use headers, bullets, bold.",
+  "summary": "2-3 sentence summary"
 }
 
-Be specific with numbers. Reference actual amounts and categories. If there are interesting patterns (e.g., one person paying much more, certain categories dominating), highlight them. Provide practical money-saving tips relevant to the group's spending patterns.
-
-Do NOT wrap the JSON in markdown code blocks. Return raw JSON only.`
+Be specific with numbers. Reference actual amounts and categories. Provide practical tips.
+Do NOT wrap in markdown code blocks. Return raw JSON only.`
 
     const raw = await chatWithFallback(
       [
@@ -127,14 +126,30 @@ Do NOT wrap the JSON in markdown code blocks. Return raw JSON only.`
       { temperature: 0.3, max_tokens: 2048 }
     )
 
-    const parsed = extractJSON(raw) as { insights: string; summary: string }
+    let parsed: { insights?: string; summary?: string }
+    try {
+      parsed = extractJSON(raw) as typeof parsed
+    } catch {
+      // AI returned invalid JSON — return the raw text as insights
+      return NextResponse.json({
+        insights: raw || 'Unable to generate structured insights.',
+        summary: 'AI response could not be parsed.',
+      })
+    }
 
     return NextResponse.json({
       insights: parsed.insights ?? 'Unable to generate insights.',
       summary: parsed.summary ?? 'No summary available.',
     })
-  } catch (error) {
-    console.error('Error generating insights:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Error generating insights:', error?.message || error)
+    const msg = error?.message || ''
+    let userMsg = 'Failed to generate insights. Please try again later.'
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
+    } else if (msg.includes('All AI models failed')) {
+      userMsg = 'AI models are currently unavailable. Please try again later.'
+    }
+    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 200 })
   }
 }
