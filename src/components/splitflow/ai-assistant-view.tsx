@@ -12,12 +12,12 @@ import {
   Users,
   CalendarDays,
   User,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -32,6 +32,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  actionLabel?: string;
 }
 
 interface Group {
@@ -43,8 +44,8 @@ interface Group {
 const QUICK_ACTIONS = [
   { label: 'Analyze my spending', icon: TrendingUp, prompt: 'Analyze my spending patterns and give me insights on where my money is going.' },
   { label: 'Suggest savings', icon: PiggyBank, prompt: 'Suggest ways I can save money based on my recent expenses.' },
-  { label: 'Who owes me the most?', icon: Users, prompt: 'Tell me who owes me the most money across all groups.' },
-  { label: 'Summarize this month', icon: CalendarDays, prompt: 'Give me a summary of all my expenses this month.' },
+  { label: 'Who owes me?', icon: Users, prompt: 'Tell me who owes me the most money and my total to get back.' },
+  { label: 'This month summary', icon: CalendarDays, prompt: 'Give me a summary of all my expenses this month.' },
 ];
 
 export function AIAssistantView() {
@@ -97,28 +98,41 @@ export function AIAssistantView() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai/insights', {
+      // Build conversation history (exclude system messages, just user/assistant pairs)
+      const history = messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          groupId: selectedGroupId !== 'all' ? selectedGroupId : undefined,
           query: text.trim(),
+          groupId: selectedGroupId !== 'all' ? selectedGroupId : undefined,
+          history,
         }),
       });
 
-      let aiContent = 'Sorry, I could not process your request.';
       if (res.ok) {
         const data = await res.json();
-        aiContent = data.insights || data.text || data.message || 'No response.';
+        const aiMsg: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: data.text || 'No response.',
+          timestamp: new Date(),
+          actionLabel: data.createExpense ? `Added: ${data.createExpense.description} - ₹${data.createExpense.amount}` : undefined,
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        const aiMsg: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: errData.error || 'Something went wrong. Please try again.',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
       }
-
-      const aiMsg: Message = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: aiContent,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
     } catch {
       const errorMsg: Message = {
         id: `err-${Date.now()}`,
@@ -131,7 +145,7 @@ export function AIAssistantView() {
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [loading, selectedGroupId]);
+  }, [loading, selectedGroupId, messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,10 +187,10 @@ export function AIAssistantView() {
                 <Sparkles className="w-8 h-8 text-emerald-500" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Hi, {user?.name || 'there'}! 👋
+                Hi, {user?.name || 'there'}!
               </h3>
               <p className="text-sm text-gray-500 mb-6 max-w-sm">
-                I can help you analyze spending, find who owes you, and suggest savings. Try a quick action or ask anything!
+                I can help you analyze spending, check who owes you, and log expenses. Try a quick action or ask anything!
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
                 {QUICK_ACTIONS.map((qa) => (
@@ -213,22 +227,30 @@ export function AIAssistantView() {
                   )}
                 </AvatarFallback>
               </Avatar>
-              <div
-                className={`max-w-[75%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {msg.content.split('\n').map((line, i) => (
-                  <p key={i} className={line.trim() === '' ? 'h-2' : ''}>
-                    {line.startsWith('#') ? (
-                      <span className="font-bold">{line.replace(/^#+\s*/, '')}</span>
-                    ) : (
-                      line
-                    )}
-                  </p>
-                ))}
+              <div className="max-w-[75%]">
+                <div
+                  className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {msg.content.split('\n').map((line, i) => (
+                    <p key={i} className={line.trim() === '' ? 'h-2' : ''}>
+                      {line.startsWith('#') ? (
+                        <span className="font-bold">{line.replace(/^#+\s*/, '')}</span>
+                      ) : (
+                        line
+                      )}
+                    </p>
+                  ))}
+                </div>
+                {msg.actionLabel && (
+                  <div className="flex items-center gap-1.5 mt-1.5 ml-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-xs text-emerald-600 font-medium">{msg.actionLabel}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
