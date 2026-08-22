@@ -24,3 +24,32 @@ Stage Summary:
 - All UI improvements focused on: error handling, validation feedback, tooltips/help, clear empty states, mobile responsiveness
 - Build: `next build` passes cleanly
 - Server: Running on port 3000, serving responses
+
+---
+Task ID: 2
+Agent: main
+Task: Add direct expenses, friend system, email splitting, history view
+
+Work Log:
+- Updated Prisma schema: made groupId optional on Expense and Settlement, added NonUserSplit model (email-based expense participants with auto-link on signup), added Friendship model (requester/addressee with pending/accepted/declined states), added BalanceCache groupId optional
+- Pushed schema to Render PostgreSQL (prisma db push succeeded)
+- Created /api/friends (GET list friends + pending, POST send request by email, DELETE remove)
+- Created /api/friends/accept (POST accept/decline, auto-links non-user splits on accept)
+- Modified /api/expenses (POST now supports groupId=null for direct expenses, nonUserSplits array for email participants, auto-detects registered users by email)
+- Created /api/expenses/history (GET all user expenses with search, filter by group/direct, category filter, pagination)
+- Updated /api/user/balance to include direct expense balances and non-user email balances
+- Updated /api/settlements to support groupId=null for direct settlements
+- Updated /api/groups POST to default currency to INR
+- Rewrote add-expense-view.tsx: added Direct Split / Group Expense toggle, friend selector chips, email participant input with add/remove, non-user warning badge, equal split preview for direct mode
+- Created history-view.tsx: grouped by date, search, filter (all/group/direct), category filter, pagination, email participant badges, direct/group badges
+- Rewrote friends-view.tsx: friend request sent/received sections, accept/decline buttons, add friend by email dialog, group-by-group balance breakdown, non-friend direct balances section
+- Updated app-shell.tsx: added History nav item with Clock icon
+- Updated app-store.ts: added 'history' to View type
+- Fixed multiple Turbopack JSX parsing issues with template literals
+- Build passes cleanly, pushed to GitHub
+
+Stage Summary:
+- 4 new features: direct expenses, friend system, email splitting, history view
+- 3 new DB tables: Friendship, NonUserSplit (schema pushed to Render PG)
+- 14 files changed, 1867 insertions, 297 deletions
+- Pushed to GitHub: main branch, Vercel will auto-deploy
