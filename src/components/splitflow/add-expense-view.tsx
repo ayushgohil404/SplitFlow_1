@@ -88,6 +88,8 @@ export function AddExpenseView() {
   // AI NLP input
   const [nlpInput, setNlpInput] = useState('');
   const [nlpLoading, setNlpLoading] = useState(false);
+  // Stores parsed friend split amounts (name → value) from AI parse, applied after useEffect
+  const [pendingFriendSplitValues, setPendingFriendSplitValues] = useState<Record<string, string>>({});
 
   // Form fields
   const [description, setDescription] = useState('');
@@ -198,6 +200,8 @@ export function AddExpenseView() {
         if (data.category) setCategory(data.category);
         if (data.date) setDate(data.date);
 
+        const sType = data.splitType as string;
+
         // Determine mode: switch to direct if there are email splits
         const emailSplits = data.emailSplits as { email: string; name?: string; amount?: number; percentage?: number }[] | undefined;
         const namedSplits = data.splits as { name: string; amount?: number | null; percentage?: number | null }[] | undefined;
@@ -227,9 +231,10 @@ export function AddExpenseView() {
             setEmailSplitAmounts({});
           }
 
-          // Try to match named splits (non-'me') to friends
+          // Also match named splits (non-'me') to friends and store their amounts
           if (hasNamedSplits) {
             const nonMeSplits = namedSplits.filter((s) => s.name !== 'me');
+            const friendAmtMap: Record<string, string> = {};
             for (const ns of nonMeSplits) {
               const friendMatch = friends.find(
                 (f) => f.name?.toLowerCase() === ns.name?.toLowerCase() || f.email?.toLowerCase() === ns.name?.toLowerCase()
@@ -237,19 +242,36 @@ export function AddExpenseView() {
               if (friendMatch && !selectedFriends.includes(friendMatch.id)) {
                 setSelectedFriends((prev) => [...prev, friendMatch.id]);
               }
+              // Store the amount to apply after useEffect creates splits
+              if (ns.amount != null || ns.percentage != null) {
+                friendAmtMap[ns.name.toLowerCase()] = String(ns.amount ?? ns.percentage);
+              }
+            }
+            if (Object.keys(friendAmtMap).length > 0) {
+              setPendingFriendSplitValues(friendAmtMap);
             }
           }
         } else if (hasNamedSplits) {
           // No emails, just named people — try to match to friends in direct mode
           setMode('direct');
           const nonMeSplits = namedSplits.filter((s) => s.name !== 'me');
+          const friendAmtMap: Record<string, string> = {};
+          let matchedAny = false;
           for (const ns of nonMeSplits) {
             const friendMatch = friends.find(
               (f) => f.name?.toLowerCase() === ns.name?.toLowerCase() || f.email?.toLowerCase() === ns.name?.toLowerCase()
             );
             if (friendMatch && !selectedFriends.includes(friendMatch.id)) {
               setSelectedFriends((prev) => [...prev, friendMatch.id]);
+              matchedAny = true;
             }
+            // Store the amount to apply after useEffect creates splits
+            if (ns.amount != null || ns.percentage != null) {
+              friendAmtMap[ns.name.toLowerCase()] = String(ns.amount ?? ns.percentage);
+            }
+          }
+          if (Object.keys(friendAmtMap).length > 0) {
+            setPendingFriendSplitValues(friendAmtMap);
           }
           // For named people not found as friends, add as email participants if they look like emails
           for (const ns of nonMeSplits) {
@@ -259,8 +281,7 @@ export function AddExpenseView() {
           }
         }
 
-        // Handle split type and populate split values
-        const sType = data.splitType as string;
+        // Handle split type
         if (sType === 'exact' || sType === 'percentage') {
           setSplitType(sType as 'exact' | 'percentage');
           // For exact/percentage with named friends, populate the split values
@@ -522,7 +543,20 @@ export function AddExpenseView() {
 
   useEffect(() => {
     if (mode === 'direct' && (splitType === 'exact' || splitType === 'percentage' || splitType === 'share')) {
-      setSplits(directParticipants.map((p) => ({ userId: p.id, value: '', share: 1 })));
+      const newSplits = directParticipants.map((p) => {
+        // Check if AI parse left a pending value for this friend (by name match)
+        const friend = friends.find((f) => f.id === p.id);
+        const friendName = friend?.name?.toLowerCase();
+        const pendingValue = friendName && pendingFriendSplitValues[friendName]
+          ? pendingFriendSplitValues[friendName]
+          : '';
+        return { userId: p.id, value: pendingValue, share: 1 };
+      });
+      setSplits(newSplits);
+      // Clear pending after applying
+      if (Object.keys(pendingFriendSplitValues).length > 0) {
+        setPendingFriendSplitValues({});
+      }
     }
   }, [mode, splitType, selectedFriends.length]);
 

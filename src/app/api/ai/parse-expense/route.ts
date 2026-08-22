@@ -45,6 +45,9 @@ CRITICAL RULES:
    - If split is "equal": include all participants with amount=null, percentage=null
    - If split is "exact": include each person's exact amount. All amounts must add up to total.
    - If split is "percentage": include each person's percentage. All percentages must add up to 100.
+   - "split me X and other for [name]" means: me gets X, [name] gets (total - X)
+   - "split me X and [name]" means: me gets X, [name] gets (total - X)
+   - "split [name] X" means: [name] pays X, me pays (total - X)
 
 4. Default currency is INR unless another currency is specified.
 5. Category should be inferred from context.
@@ -66,7 +69,13 @@ Input: "500 for dinner split equally with raj@gmail.com and priya@gmail.com"
 Output: {"description":"Dinner","amount":500,"splitType":"equal","currency":"INR","category":"food","splits":[{"name":"me","amount":null,"percentage":null}],"emailSplits":[{"email":"raj@gmail.com","name":"raj","amount":null,"percentage":null},{"email":"priya@gmail.com","name":"priya","amount":null,"percentage":null}]}
 
 Input: "Bought coffee for ₹200"
-Output: {"description":"Coffee","amount":200,"splitType":"single","currency":"INR","category":"food"}`
+Output: {"description":"Coffee","amount":200,"splitType":"single","currency":"INR","category":"food"}
+
+Input: "100 paid by me and split me 30 and meet"
+Output: {"description":"Expense","amount":100,"splitType":"exact","currency":"INR","category":"other","splits":[{"name":"me","amount":30,"percentage":null},{"name":"meet","amount":70,"percentage":null}]}
+
+Input: "100 paid by me and split me 30 and other for meet"
+Output: {"description":"Expense","amount":100,"splitType":"exact","currency":"INR","category":"other","splits":[{"name":"me","amount":30,"percentage":null},{"name":"meet","amount":70,"percentage":null}]}`
 
 export async function POST(req: NextRequest) {
   try {
