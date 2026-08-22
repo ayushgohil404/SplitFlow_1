@@ -74,8 +74,8 @@ export default function InvitePage() {
       if (data.error) {
         setError(data.error);
       } else {
-        setActionResult({ type: action });
-        if (action === 'accepted' && data.group) {
+        setActionResult({ type: action === 'accept' ? 'accepted' : 'declined' });
+        if (action === 'accept' && data.group) {
           setTimeout(() => router.push('/'), 1500);
         }
       }

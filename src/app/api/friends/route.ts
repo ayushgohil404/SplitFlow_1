@@ -91,10 +91,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { email, userId: targetUserId } = body as { email?: string; userId?: string }
 
-    let targetUser = null
+    let targetUser: { id: string; name: string | null; email: string } | null = null
 
     if (targetUserId) {
       targetUser = await db.user.findUnique({ where: { id: targetUserId } })
+      if (!targetUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
     } else if (email?.trim()) {
       targetUser = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } })
       if (!targetUser) {
@@ -105,10 +108,6 @@ export async function POST(req: NextRequest) {
       }
     } else {
       return NextResponse.json({ error: 'email or userId is required' }, { status: 400 })
-    }
-
-    if (!targetUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Can't add yourself

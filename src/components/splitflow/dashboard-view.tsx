@@ -34,9 +34,7 @@ interface BalanceData {
 interface ActivityItem {
   id: string;
   type: string;
-  description: string;
-  amount: number;
-  groupName: string;
+  message: string;
   createdAt: string;
   user: { name: string };
 }
@@ -330,12 +328,9 @@ export function DashboardView() {
                       <TrendingUp className="w-4 h-4 text-emerald-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">{act.description}</p>
-                      <p className="text-xs text-gray-500">{act.groupName} · {act.user?.name}</p>
+                      <p className="text-sm text-gray-900 truncate">{act.message}</p>
+                      <p className="text-xs text-gray-500">{act.user?.name} · {act.createdAt ? new Date(act.createdAt).toLocaleDateString() : ''}</p>
                     </div>
-                    <span className="text-sm font-medium text-gray-700 shrink-0">
-                      ₹{act.amount?.toFixed(2)}
-                    </span>
                   </div>
                 ))}
               </div>

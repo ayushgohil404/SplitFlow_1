@@ -112,11 +112,24 @@ export function SettleView() {
     setDetailLoading(true);
     setSimplified([]);
     try {
-      const res = await fetch(`/api/groups/${groupId}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [groupRes, settleRes] = await Promise.all([
+        fetch(`/api/groups/${groupId}`),
+        fetch(`/api/settlements?groupId=${groupId}`),
+      ]);
+      if (groupRes.ok) {
+        const data = await groupRes.json();
         setBalances(data.balances || []);
-        setSettlements(data.settlements || []);
+      }
+      if (settleRes.ok) {
+        const sData = await settleRes.json();
+        setSettlements((sData.settlements || []).map((s: any) => ({
+          id: s.id,
+          from: { name: s.fromUser?.name || 'Someone' },
+          to: { name: s.toUser?.name || 'Someone' },
+          amount: Number(s.amount),
+          note: s.note || '',
+          createdAt: s.createdAt,
+        })));
       }
     } catch {
       // silent
@@ -174,8 +187,8 @@ export function SettleView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupId: selectedGroupId,
-          fromId: payFrom,
-          toId: payTo,
+          fromUserId: payFrom,
+          toUserId: payTo,
           amount: numAmount,
           note: payNote.trim(),
         }),

@@ -231,11 +231,14 @@ export function GroupDetailView() {
       const res = await fetch(`/api/groups/${selectedGroupId}/members`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId }),
+        body: JSON.stringify({ userId: memberId }),
       });
       if (res.ok) {
         toast.success('Member removed');
         fetchGroup();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to remove member');
       }
     } catch {
       toast.error('Failed to remove member');

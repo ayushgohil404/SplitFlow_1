@@ -385,10 +385,15 @@ export function AddExpenseView() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.category) {
+        if (data.error) {
+          toast.error(data.error || 'Failed to categorize');
+        } else if (data.category) {
           setCategory(data.category);
           toast.success(`Categorized as ${data.category}`);
         }
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to categorize');
       }
     } catch {
       toast.error('Failed to categorize');
@@ -494,9 +499,13 @@ export function AddExpenseView() {
       toast.error('Please select a group');
       valid = false;
     }
-    if (mode === 'direct' && selectedFriends.length === 0 && emailParticipants.length === 0) {
+    if (mode === 'direct' && selectedFriends.length === 0 && emailParticipants.length === 0 && splitType !== 'equal') {
       toast.error('Select at least one friend or add an email to split with');
       valid = false;
+    }
+    // For equal split with no participants, auto-switch to owner-only (no splits needed)
+    if (mode === 'direct' && selectedFriends.length === 0 && emailParticipants.length === 0 && splitType === 'equal') {
+      // Personal expense — submit without splits
     }
     return valid;
   };
@@ -526,10 +535,15 @@ export function AddExpenseView() {
             userId: s.userId,
             share: s.share || 1,
           }));
-        } else if (splitType !== 'equal') {
+        } else if (splitType === 'exact') {
           body.splits = splits.map((s) => ({
             userId: s.userId,
-            value: parseFloat(s.value) || 0,
+            amount: parseFloat(s.value) || 0,
+          }));
+        } else if (splitType === 'percentage') {
+          body.splits = splits.map((s) => ({
+            userId: s.userId,
+            percentage: parseFloat(s.value) || 0,
           }));
         }
       } else {

@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
         groupId,
         type: 'settlement_created',
         message: `${fromUser?.name ?? 'Someone'} paid ${toUser?.name ?? 'someone'} ₹${amount.toFixed(2)}`,
-        metadata: { settlementId: settlement.id, amount, fromUserId, toUserId },
+        metadata: JSON.stringify({ settlementId: settlement.id, amount, fromUserId, toUserId }),
       },
     })
 

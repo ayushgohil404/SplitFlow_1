@@ -20,9 +20,7 @@ import { useSocket } from '@/hooks/use-socket';
 interface ActivityItem {
   id: string;
   type: string;
-  description: string;
-  amount: number;
-  groupName: string;
+  message: string;
   groupId: string;
   createdAt: string;
   user: { id: string; name: string; email: string };
@@ -178,17 +176,8 @@ export function ActivityView() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900">
-                          <span className="font-medium">{act.user?.name || 'Someone'}</span>{' '}
-                          <span className="text-gray-500">{act.description}</span>
+                          <span className="text-gray-500">{act.message}</span>
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-gray-400">{act.groupName}</span>
-                          {act.amount > 0 && (
-                            <span className="text-xs font-medium text-gray-600">
-                              ₹{act.amount.toFixed(2)}
-                            </span>
-                          )}
-                        </div>
                       </div>
                       <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
                         <Icon className="w-4 h-4 text-gray-400" />

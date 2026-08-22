@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
     const invite = await db.invite.findUnique({
       where: { code },
       include: {
-        group: true,
+        group: { include: { _count: { select: { members: true } } } },
         inviter: { select: { name: true, image: true } },
       },
     })
