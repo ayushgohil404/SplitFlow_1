@@ -98,8 +98,8 @@ export function AddExpenseView() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [groupId, setGroupId] = useState(selectedGroupId || '');
   const [paidById, setPaidById] = useState(user?.id || '');
-  const [splitType, setSplitType] = useState<'equal' | 'exact' | 'percentage'>('equal');
-  const [splits, setSplits] = useState<{ userId: string; value: string }[]>([]);
+  const [splitType, setSplitType] = useState<'equal' | 'share' | 'exact' | 'percentage'>('equal');
+  const [splits, setSplits] = useState<{ userId: string; value: string; share: number }[]>([]);
   const [note, setNote] = useState('');
 
   // Direct expense: selected friends + email participants
@@ -161,7 +161,7 @@ export function AddExpenseView() {
             email: m.user?.email || m.email || '',
           }));
           setMembers(memberList);
-          setSplits(memberList.map((m: Member) => ({ userId: m.id, value: '' })));
+          setSplits(memberList.map((m: Member) => ({ userId: m.id, value: '', share: 1 })));
           const me = memberList.find((m: Member) => m.id === user?.id);
           if (me) setPaidById(me.id);
         }
@@ -301,6 +301,10 @@ export function AddExpenseView() {
     setSplits((prev) => prev.map((s) => (s.userId === userId ? { ...s, value } : s)));
   };
 
+  const updateSplitShare = (userId: string, share: number) => {
+    setSplits((prev) => prev.map((s) => (s.userId === userId ? { ...s, share: Math.max(1, share) } : s)));
+  };
+
   // Validate form
   const validate = () => {
     let valid = true;
@@ -346,7 +350,14 @@ export function AddExpenseView() {
 
       if (mode === 'group') {
         body.groupId = groupId;
-        if (splitType !== 'equal') {
+        if (splitType === 'share') {
+          // Send share values — backend handles proportional calculation
+          body.splitType = 'equal';
+          body.splits = splits.map((s) => ({
+            userId: s.userId,
+            share: s.share || 1,
+          }));
+        } else if (splitType !== 'equal') {
           body.splits = splits.map((s) => ({
             userId: s.userId,
             value: parseFloat(s.value) || 0,
@@ -356,6 +367,13 @@ export function AddExpenseView() {
         // Direct expense
         if (splitType === 'equal') {
           body.splits = selectedFriends.map((id) => ({ userId: id, share: 1 }));
+          body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
+        } else if (splitType === 'share') {
+          body.splitType = 'equal';
+          body.splits = splits.map((s) => ({
+            userId: s.userId,
+            share: s.share || 1,
+          }));
           body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
         } else if (splitType === 'exact') {
           body.splits = splits.map((s) => ({
@@ -403,8 +421,8 @@ export function AddExpenseView() {
   ];
 
   useEffect(() => {
-    if (mode === 'direct' && splitType !== 'equal') {
-      setSplits(directParticipants.map((p) => ({ userId: p.id, value: '' })));
+    if (mode === 'direct' && (splitType === 'exact' || splitType === 'percentage' || splitType === 'share')) {
+      setSplits(directParticipants.map((p) => ({ userId: p.id, value: '', share: 1 })));
     }
   }, [mode, splitType, selectedFriends.length]);
 
@@ -717,6 +735,7 @@ export function AddExpenseView() {
                     </TooltipTrigger>
                     <TooltipContent className="text-xs max-w-xs">
                       <strong>Equal:</strong> Split evenly among all participants<br/>
+                      <strong>By Share:</strong> Split by family/group size (e.g., 4 members vs 3 members = 4:3 ratio)<br/>
                       <strong>Exact:</strong> Enter specific amounts per person<br/>
                       <strong>Percentage:</strong> Enter percentage each person pays
                     </TooltipContent>
@@ -724,7 +743,7 @@ export function AddExpenseView() {
                 </TooltipProvider>
               </div>
               <div className="flex gap-2">
-                {(['equal', 'exact', 'percentage'] as const).map((type) => (
+                {(['equal', 'share', 'exact', 'percentage'] as const).map((type) => (
                   <Button
                     key={type}
                     type="button"
@@ -737,14 +756,108 @@ export function AddExpenseView() {
                     onClick={() => setSplitType(type)}
                     size="sm"
                   >
-                    {type === 'equal' ? 'Equal' : type === 'exact' ? 'Exact ₹' : 'Percentage %'}
+                    {type === 'equal' ? 'Equal' : type === 'share' ? 'By Share 👨‍👩‍👧‍👦' : type === 'exact' ? 'Exact ₹' : 'Percentage %'}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* Split Details for Group mode */}
-            {mode === 'group' && splitType !== 'equal' && members.length > 0 && (
+            {/* Share split details — family/group size (both modes) */}
+            {splitType === 'share' && (
+              <div className="space-y-3 p-4 bg-emerald-50/70 rounded-lg border border-emerald-100">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">
+                    Family / Group Size 👨‍👩‍👧‍👦
+                  </Label>
+                  {(() => {
+                    const allParticipants = mode === 'group'
+                      ? members.map((m) => ({ id: m.id, name: m.name }))
+                      : directParticipants;
+                    const totalShares = allParticipants.reduce((sum, p) => {
+                      const s = splits.find((sp) => sp.userId === p.id);
+                      return sum + (s?.share || 1);
+                    }, 0);
+                    const numAmount = parseFloat(amount) || 0;
+                    const ratioStr = allParticipants
+                      .map((p) => {
+                        const s = splits.find((sp) => sp.userId === p.id);
+                        return s?.share || 1;
+                      })
+                      .join(' : ');
+                    return (
+                      <span className="text-xs text-emerald-700 font-medium bg-emerald-100 px-2 py-1 rounded-full">
+                        Ratio: {ratioStr} = {totalShares} total shares
+                      </span>
+                    );
+                  })()}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Set how many people each participant represents. The expense will be split proportionally.
+                </p>
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {(mode === 'group' ? members : directParticipants).map((p) => {
+                    const split = splits.find((s) => s.userId === p.id);
+                    const shareCount = split?.share || 1;
+                    const allParticipants = mode === 'group' ? members : directParticipants;
+                    const totalShares = allParticipants.reduce((sum, pp) => {
+                      const s = splits.find((sp) => sp.userId === pp.id);
+                      return sum + (s?.share || 1);
+                    }, 0);
+                    const numAmount = parseFloat(amount) || 0;
+                    const shareAmount = totalShares > 0
+                      ? Math.round((numAmount * shareCount) / totalShares * 100) / 100
+                      : 0;
+                    const sharePct = totalShares > 0
+                      ? Math.round((shareCount / totalShares) * 1000) / 10
+                      : 0;
+                    return (
+                      <div key={p.id} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-700 w-28 truncate shrink-0">{p.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => updateSplitShare(p.id, shareCount - 1)}
+                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                            disabled={shareCount <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={shareCount}
+                            onChange={(e) => updateSplitShare(p.id, parseInt(e.target.value) || 1)}
+                            className="w-10 h-7 text-center text-sm font-medium border border-gray-200 rounded-md bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateSplitShare(p.id, shareCount + 1)}
+                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-400 shrink-0">{shareCount === 1 ? 'person' : 'people'}</span>
+                        <div className="flex-1" />
+                        <span className="text-sm font-semibold text-emerald-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+                        <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {emailParticipants.length > 0 && splitType === 'share' && (
+                  <div className="mt-2 pt-2 border-t border-emerald-200">
+                    <p className="text-xs text-amber-600">
+                      Email participants are counted as 1 share each.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Split Details for Group mode (exact/percentage) */}
+            {mode === 'group' && splitType !== 'equal' && splitType !== 'share' && members.length > 0 && (
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
@@ -773,7 +886,7 @@ export function AddExpenseView() {
             )}
 
             {/* Split Details for Direct mode (exact/percentage with friends) */}
-            {mode === 'direct' && splitType !== 'equal' && directParticipants.length > 0 && (
+            {mode === 'direct' && splitType !== 'equal' && splitType !== 'share' && directParticipants.length > 0 && (
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}

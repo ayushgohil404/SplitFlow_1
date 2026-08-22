@@ -243,7 +243,7 @@ export function HistoryView() {
                             </span>
                             <span className="text-xs text-gray-300">·</span>
                             <span className="text-xs text-gray-400">
-                              Split {splitType === 'equal' ? `equally` : exp.splitType} with {splitCount}
+                              Split {exp.splitType === 'equal' ? `equally` : exp.splitType} with {splitCount}
                             </span>
                           </div>
                           {(exp.nonUserSplits && exp.nonUserSplits.length > 0) && (

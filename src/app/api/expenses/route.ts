@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       description: string
       amount: number
       category?: string
-      splitType: 'equal' | 'exact' | 'percentage'
+      splitType: 'equal' | 'exact' | 'percentage' | 'share'
       splits?: { userId: string; amount?: number; percentage?: number; share?: number }[]
       nonUserSplits?: { email: string; name?: string; amount?: number; percentage?: number; share?: number }[]
       note?: string
@@ -227,25 +227,49 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Recalculate equal splits if email users were converted to real users
+      // Recalculate splits if email users were converted to real users
       if (splitType === 'equal' && emailSplits.length > 0) {
         // Remove the placeholder zero split
         userSplits = userSplits.filter((s) => s.amount > 0)
-        const totalParticipants = userSplits.length + finalEmailSplits.length
-        const perPerson = Math.round((amount / totalParticipants) * 100) / 100
-        const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * totalParticipants
 
-        userSplits.forEach((s, i) => {
-          s.amount = i === 0 ? perPerson + remainder / 100 : perPerson
-          s.percentage = Math.round((100 / totalParticipants) * 100) / 100
-          s.share = 1
-        })
+        // Check if using share-based splitting (any share != 1 or shares differ from count)
+        const hasCustomShares = emailSplits.some((es) => (es.share ?? 1) !== 1) ||
+          userSplits.some((s) => (s.share ?? 1) !== 1)
 
-        finalEmailSplits.forEach((s) => {
-          s.amount = perPerson
-          s.percentage = Math.round((100 / totalParticipants) * 100) / 100
-          s.share = 1
-        })
+        if (hasCustomShares) {
+          // Share-based proportional recalculation
+          const allShares = [
+            ...userSplits.map((s) => s.share || 1),
+            ...finalEmailSplits.map((s) => s.share || 1),
+          ]
+          const totalShares = allShares.reduce((sum, sh) => sum + sh, 0)
+
+          userSplits.forEach((s) => {
+            s.amount = Math.round((amount * (s.share || 1)) / totalShares * 100) / 100
+            s.percentage = Math.round(((s.share || 1) / totalShares) * 10000) / 100
+          })
+          finalEmailSplits.forEach((s) => {
+            s.amount = Math.round((amount * (s.share || 1)) / totalShares * 100) / 100
+            s.percentage = Math.round(((s.share || 1) / totalShares) * 10000) / 100
+          })
+        } else {
+          // Standard equal recalculation
+          const totalParticipants = userSplits.length + finalEmailSplits.length
+          const perPerson = Math.round((amount / totalParticipants) * 100) / 100
+          const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * totalParticipants
+
+          userSplits.forEach((s, i) => {
+            s.amount = i === 0 ? perPerson + remainder / 100 : perPerson
+            s.percentage = Math.round((100 / totalParticipants) * 100) / 100
+            s.share = 1
+          })
+
+          finalEmailSplits.forEach((s) => {
+            s.amount = perPerson
+            s.percentage = Math.round((100 / totalParticipants) * 100) / 100
+            s.share = 1
+          })
+        }
       }
     }
 
