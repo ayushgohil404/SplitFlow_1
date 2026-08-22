@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
             },
           },
           nonUserSplits: true,
-          paidByUser: {
+          paidBy: {
             select: { id: true, name: true, image: true },
           },
           group: {
@@ -127,13 +127,18 @@ export async function POST(req: NextRequest) {
       userSplits = [{ userId: user.id, amount: 0, percentage: 0, share: 0 }]
     } else if (splitType === 'equal') {
       if (splits && splits.length > 0) {
-        userSplits = splits.map((s) => ({
+        // Include owner in direct splits if not already present
+        const allParticipantSplits = !groupId && !splits.some((s) => s.userId === user.id)
+          ? [{ userId: user.id, amount: 0, percentage: 0, share: 1 }, ...splits]
+          : splits
+
+        userSplits = allParticipantSplits.map((s) => ({
           userId: s.userId,
           amount: s.amount ?? 0,
           percentage: 0,
           share: s.share ?? 1,
         }))
-        const totalShares = userSplits.reduce((sum, s) => sum + s.share, 0)
+        const totalShares = userSplits.reduce((sum, s) => sum + s.share, 0) || 1
         for (const s of userSplits) {
           s.amount = Math.round((amount * s.share) / totalShares * 100) / 100
           s.percentage = Math.round((s.share / totalShares) * 10000) / 100
@@ -174,10 +179,11 @@ export async function POST(req: NextRequest) {
 
       // Process user splits
       if (splits && splits.length > 0) {
+        const safeAmount = amount || 1
         userSplits = splits.map((s) => ({
           userId: s.userId,
-          amount: s.amount!,
-          percentage: Math.round(((s.amount! / amount) * 100) * 100) / 100,
+          amount: s.amount ?? 0,
+          percentage: Math.round(((s.amount ?? 0) / safeAmount) * 100 * 100) / 100,
           share: 0,
         }))
       } else if (!groupId) {
@@ -196,7 +202,7 @@ export async function POST(req: NextRequest) {
             userSplits.push({
               userId: existingUser.id,
               amount: es.amount ?? 0,
-              percentage: Math.round(((es.amount! / amount) * 100) * 100) / 100,
+              percentage: Math.round(((es.amount ?? 0) / (amount || 1)) * 100 * 100) / 100,
               share: 0,
             })
           } else {
@@ -204,7 +210,7 @@ export async function POST(req: NextRequest) {
               email: es.email.trim().toLowerCase(),
               name: es.name || es.email.split('@')[0],
               amount: es.amount ?? 0,
-              percentage: Math.round(((es.amount! / amount) * 100) * 100) / 100,
+              percentage: Math.round(((es.amount ?? 0) / (amount || 1)) * 100 * 100) / 100,
               share: 0,
             })
           }
@@ -225,8 +231,8 @@ export async function POST(req: NextRequest) {
       if (splits && splits.length > 0) {
         userSplits = splits.map((s) => ({
           userId: s.userId,
-          amount: Math.round(amount * (s.percentage! / 100) * 100) / 100,
-          percentage: s.percentage!,
+          amount: Math.round(amount * ((s.percentage ?? 0) / 100) * 100) / 100,
+          percentage: s.percentage ?? 0,
           share: 0,
         }))
       } else if (!groupId) {
@@ -242,16 +248,16 @@ export async function POST(req: NextRequest) {
           if (existingUser) {
             userSplits.push({
               userId: existingUser.id,
-              amount: Math.round(amount * (es.percentage! / 100) * 100) / 100,
-              percentage: es.percentage!,
+              amount: Math.round(amount * ((es.percentage ?? 0) / 100) * 100) / 100,
+              percentage: es.percentage ?? 0,
               share: 0,
             })
           } else {
             finalEmailSplits.push({
               email: es.email.trim().toLowerCase(),
               name: es.name || es.email.split('@')[0],
-              amount: Math.round(amount * (es.percentage! / 100) * 100) / 100,
-              percentage: es.percentage!,
+              amount: Math.round(amount * ((es.percentage ?? 0) / 100) * 100) / 100,
+              percentage: es.percentage ?? 0,
               share: 0,
             })
           }
@@ -297,10 +303,9 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Recalculate splits if email users were converted to real users
+      // Recalculate splits for all participants (owner + friends + emails)
       if (splitType === 'equal' && emailSplits.length > 0) {
-        // Remove the placeholder zero split
-        userSplits = userSplits.filter((s) => s.amount > 0)
+        // Don't filter out zero-amount splits — recalculate for all participants
 
         // Check if using share-based splitting (any share != 1 or shares differ from count)
         const hasCustomShares = emailSplits.some((es) => (es.share ?? 1) !== 1) ||
@@ -349,7 +354,7 @@ export async function POST(req: NextRequest) {
         groupId: groupId || null,
         description: description.trim(),
         amount,
-        category: category ?? null,
+        category: category ?? undefined,
         splitType,
         note: note?.trim() ?? null,
         date: date ? new Date(date) : new Date(),
@@ -383,7 +388,7 @@ export async function POST(req: NextRequest) {
           },
         },
         nonUserSplits: true,
-        paidByUser: {
+        paidBy: {
           select: { id: true, name: true, image: true },
         },
         group: {

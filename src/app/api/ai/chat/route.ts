@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
         ...(groupId ? { groupId } : {}),
       },
       include: {
-        paidByUser: { select: { name: true } },
+        paidBy: { select: { name: true } },
         splits: { include: { user: { select: { name: true } } } },
         group: { select: { name: true } },
       },
@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
       amount: e.amount,
       category: e.category,
       date: e.date.toISOString().split('T')[0],
-      paidBy: e.paidByUser.name,
+      paidBy: e.paidBy?.name || 'Unknown',
       group: e.group?.name || 'Direct',
       splitWith: e.splits.map((s) => s.user.name).filter(Boolean),
     }))

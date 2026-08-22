@@ -62,7 +62,7 @@ interface ExpenseItem {
   date: string;
   splitType: string;
   createdBy: string;
-  paidByUser: { id: string; name: string; image: string | null };
+  paidBy: { id: string; name: string; image: string | null };
   group: { id: string; name: string; emoji: string } | null;
   splits: { userId: string; userName: string; amount: number }[];
   nonUserSplits: { email: string; name: string; amount: number }[];
@@ -239,7 +239,7 @@ export function HistoryView() {
                               </Badge>
                             )}
                             <span className="text-xs text-gray-400">
-                              {exp.paidByUser?.name || 'You'} paid
+                              {exp.paidBy?.name || 'You'} paid
                             </span>
                             <span className="text-xs text-gray-300">·</span>
                             <span className="text-xs text-gray-400">

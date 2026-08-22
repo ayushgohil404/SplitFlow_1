@@ -24,7 +24,7 @@ export async function GET(
             },
           },
         },
-        paidByUser: {
+        paidBy: {
           select: { id: true, name: true, image: true },
         },
         group: {
@@ -105,8 +105,9 @@ export async function PATCH(
         const existingSplits = await db.expenseSplit.findMany({
           where: { expenseId: id },
         })
-        const perPerson = Math.round((currentAmount / existingSplits.length) * 100) / 100
-        const remainder = Math.round(currentAmount * 100) - Math.round(perPerson * 100) * existingSplits.length
+        const splitCount = existingSplits.length || 1
+        const perPerson = Math.round((currentAmount / splitCount) * 100) / 100
+        const remainder = Math.round(currentAmount * 100) - Math.round(perPerson * 100) * splitCount
         finalSplits = existingSplits.map((s, i) => ({
           userId: s.userId,
           amount: i === 0 ? perPerson + remainder / 100 : perPerson,
@@ -126,17 +127,18 @@ export async function PATCH(
           s.percentage = Math.round((s.share / totalShares) * 10000) / 100
         }
       } else if (currentSplitType === 'exact' && splits) {
+        const safeAmount = currentAmount || 1
         finalSplits = splits.map((s) => ({
           userId: s.userId,
-          amount: s.amount!,
-          percentage: Math.round(((s.amount! / currentAmount) * 100) * 100) / 100,
+          amount: s.amount ?? 0,
+          percentage: Math.round(((s.amount ?? 0) / safeAmount) * 100 * 100) / 100,
           share: 0,
         }))
       } else if (currentSplitType === 'percentage' && splits) {
         finalSplits = splits.map((s) => ({
           userId: s.userId,
-          amount: Math.round(currentAmount * (s.percentage! / 100) * 100) / 100,
-          percentage: s.percentage!,
+          amount: Math.round(currentAmount * ((s.percentage ?? 0) / 100) * 100) / 100,
+          percentage: s.percentage ?? 0,
           share: 0,
         }))
       } else {
@@ -148,7 +150,7 @@ export async function PATCH(
             splits: {
               include: { user: { select: { id: true, name: true, image: true } } },
             },
-            paidByUser: { select: { id: true, name: true, image: true } },
+            paidBy: { select: { id: true, name: true, image: true } },
           },
         })
         return NextResponse.json({ expense })
@@ -175,7 +177,7 @@ export async function PATCH(
         splits: {
           include: { user: { select: { id: true, name: true, image: true } } },
         },
-        paidByUser: { select: { id: true, name: true, image: true } },
+        paidBy: { select: { id: true, name: true, image: true } },
       },
     })
 

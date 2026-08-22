@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 interface Split {
@@ -117,9 +118,22 @@ export function ExpenseDetailDialog({
 
         {loading ? (
           <div className="space-y-3 py-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" />
-            ))}
+            <div className="grid grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="w-7 h-7 rounded-full" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-14" />
+              </div>
+            ))}</div>
           </div>
         ) : expense ? (
           <div className="space-y-4">

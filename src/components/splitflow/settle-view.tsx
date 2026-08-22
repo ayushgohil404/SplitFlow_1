@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -240,7 +241,16 @@ export function SettleView() {
 
       {/* Group balances list */}
       {loading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="h-8 w-20 rounded-lg" />
+          </CardContent></Card>
+        ))}</div>
       ) : !hasAnyBalance ? (
         <Card>
           <CardContent className="p-12 text-center">
@@ -317,7 +327,16 @@ export function SettleView() {
           </div>
 
           {detailLoading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="h-5 w-16" />
+              </CardContent></Card>
+            ))}</div>
           ) : balances.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">

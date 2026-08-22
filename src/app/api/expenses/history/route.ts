@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
           },
         },
         nonUserSplits: true,
-        paidByUser: {
+        paidBy: {
           select: { id: true, name: true, image: true },
         },
         group: {
