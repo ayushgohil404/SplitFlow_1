@@ -15,7 +15,6 @@ import {
   UserPlus,
   Shield,
   Calendar,
-  Settings,
   Scale,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +33,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -498,7 +504,16 @@ export function GroupDetailView() {
               </div>
               <div className="space-y-2">
                 <Label>Currency</Label>
-                <Input value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)} className="w-32" />
+                <Select value={editCurrency} onValueChange={setEditCurrency}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                    <SelectItem value="INR">INR (₹)</SelectItem>
+                    <SelectItem value="JPY">JPY (¥)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 onClick={handleSaveSettings}

@@ -7,7 +7,6 @@ import {
   Loader2,
   Plus,
   Camera,
-  ArrowLeft,
   Info,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';

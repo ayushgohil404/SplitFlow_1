@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Github, Chrome, Sparkles, Wallet, Users, Shield, Bot, Camera, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
 
 export function AuthPage() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
@@ -15,10 +14,11 @@ export function AuthPage() {
     try {
       import('next-auth/react').then(({ signIn }) => {
         signIn(provider, { callbackUrl: '/' });
+      }).catch(() => {
+        setOauthLoading(null);
       });
     } catch {
       setOauthLoading(null);
-      toast.error(`${provider === 'github' ? 'GitHub' : 'Google'} login failed. Check your OAuth configuration.`);
     }
     // Reset loading after 10s as fallback (in case redirect doesn't happen)
     setTimeout(() => setOauthLoading(null), 10000);
@@ -136,7 +136,7 @@ export function AuthPage() {
                 </Button>
 
                 <p className="text-[11px] text-gray-400 text-center leading-relaxed pt-2">
-                  By signing in, you agree to our terms. Your data stays on your server.
+                  By continuing, you agree to our Terms of Service and Privacy Policy.
                 </p>
               </CardContent>
             </Card>

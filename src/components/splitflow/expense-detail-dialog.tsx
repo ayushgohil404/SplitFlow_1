@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Edit3,
   Trash2,
   Calendar,
   User,

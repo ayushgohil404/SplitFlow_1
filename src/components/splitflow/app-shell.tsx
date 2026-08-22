@@ -14,8 +14,6 @@ import {
   Menu,
   LogOut,
   ArrowLeft,
-  X,
-  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -139,20 +137,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </nav>
 
-        {/* Help section at bottom of nav */}
-        <div className="mt-6 px-3">
-          <div className="rounded-lg bg-emerald-50/70 border border-emerald-100 p-3">
-            <div className="flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-              <div className="text-xs text-emerald-700">
-                <p className="font-medium mb-1">Quick Tip</p>
-                <p className="text-emerald-600 leading-relaxed">
-                  Use &quot;Add Expense&quot; button above or try AI Assistant for natural language expense entry.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </ScrollArea>
 
       {/* User info */}

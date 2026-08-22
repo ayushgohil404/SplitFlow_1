@@ -11,25 +11,24 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary]', error, errorInfo);
+    console.error('[SplitFlow Error]', error, errorInfo);
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false });
   };
 
   render() {
@@ -44,20 +43,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
-          <p className="text-sm text-gray-500 mb-2 max-w-md">
-            An unexpected error occurred. This has been logged and we&apos;ll fix it.
+          <p className="text-sm text-gray-500 mb-6 max-w-sm leading-relaxed">
+            We hit an unexpected issue. Don&apos;t worry — your data is safe. Try again or refresh the page.
           </p>
-          {this.state.error?.message && (
-            <p className="text-xs text-gray-400 font-mono bg-gray-50 rounded-lg px-3 py-2 mb-4 max-w-md break-all">
-              {this.state.error.message}
-            </p>
-          )}
           <div className="flex gap-3">
             <Button variant="outline" onClick={this.handleReset} className="gap-2">
               <RefreshCw className="w-4 h-4" /> Try Again
             </Button>
-            <Button onClick={() => window.location.reload()} className="gap-2">
-              Reload Page
+            <Button onClick={() => window.location.reload()} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              Refresh Page
             </Button>
           </div>
         </div>
