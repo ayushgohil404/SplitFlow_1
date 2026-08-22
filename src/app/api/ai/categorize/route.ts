@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import { getGroq, CHAT_MODEL } from '@/lib/groq'
+import { chatWithFallback, isGroqConfigured } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -31,7 +31,7 @@ You must return ONLY valid JSON with this schema:
 
 Be confident in your categorization. Use common sense. "groceries" is for grocery/supermarket purchases. "food" is for restaurants, cafes, takeout. "transport" is for rides, gas, parking. "utilities" is for electricity, water, internet, phone bills.
 
-Do NOT wrap the JSON in markdown code blocks. Return raw JSON only.`
+Return raw JSON only.`
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,8 +40,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    if (!isGroqConfigured()) {
+      return NextResponse.json(
+        { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
+        { status: 503 }
+      )
     }
 
     const body = await req.json()
@@ -51,16 +54,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'description is required' }, { status: 400 })
     }
 
-    const response = await getGroq().chat.completions.create({
-      model: CHAT_MODEL,
-      messages: [
+    const raw = await chatWithFallback(
+      [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: description },
       ],
-      temperature: 0.1,
-    })
+      { temperature: 0.1, max_tokens: 100 }
+    )
 
-    const raw = response.choices?.[0]?.message?.content ?? ''
     const parsed = extractJSON(raw) as { category: string; emoji: string; confidence: number }
 
     return NextResponse.json({
@@ -68,8 +69,13 @@ export async function POST(req: NextRequest) {
       emoji: parsed.emoji ?? '📝',
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
     })
-  } catch (error) {
-    console.error('Error categorizing expense:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Error categorizing expense:', error?.message || error)
+    const msg = error?.message || ''
+    let userMsg = 'Failed to categorize. Try selecting manually.'
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
+    }
+    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 500 })
   }
 }

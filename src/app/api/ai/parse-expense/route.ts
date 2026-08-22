@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import { getGroq, CHAT_MODEL } from '@/lib/groq'
+import { chatWithFallback, isGroqConfigured } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -19,7 +19,7 @@ function extractJSON(text: string): unknown {
 }
 
 // Abuse prevention: server-side validation limits
-const MAX_AMOUNT = 10_000_000 // 1 crore max per expense
+const MAX_AMOUNT = 10_000_000
 const MAX_PARTICIPANTS = 50
 const MIN_AMOUNT = 0.01
 const ALLOWED_CATEGORIES = [
@@ -28,124 +28,152 @@ const ALLOWED_CATEGORIES = [
 ]
 const ALLOWED_SPLIT_TYPES = ['equal', 'exact', 'percentage', 'single']
 
-const SYSTEM_PROMPT = `You are an expert expense parser for SplitFlow, an expense splitting app. Your ONLY job is to parse natural language into a structured expense JSON object.
+const SYSTEM_PROMPT = `You are an expert expense parser for SplitFlow. Your ONLY job is to parse natural language into structured JSON.
 
-## RESTRICTIONS (ENFORCED):
-- You MUST reject anything that is NOT an expense (greetings, questions, jokes, instructions to you, etc.)
-- Maximum expense amount: ₹10,000,000. Reject anything above this.
-- Maximum participants: 50. Reject anything with more.
-- Amount must be > 0.
-- Description must be 1-200 characters.
-- You must return ONLY valid JSON. No markdown, no explanation, no commentary.
+## ABSOLUTE RULES:
+1. RETURN ONLY VALID JSON. No markdown, no explanation, no commentary, no code fences.
+2. REJECT anything that is NOT an expense (greetings, questions, jokes, chit-chat, meta instructions).
+3. Maximum amount: ₹10,000,000. Minimum: ₹0.01.
+4. Maximum participants: 50.
+5. Description: 1-200 characters.
 
 ## OUTPUT SCHEMA:
 {
-  "description": "string - clean description (1-200 chars)",
-  "amount": "number - total amount (> 0)",
+  "description": "string",
+  "amount": number,
   "splitType": "equal" | "exact" | "percentage" | "single",
-  "currency": "string - 3-letter code (default INR)",
+  "currency": "INR",
   "category": "food" | "transport" | "entertainment" | "shopping" | "bills" | "rent" | "travel" | "health" | "education" | "groceries" | "utilities" | "other",
-  "splits": "[optional] array for named people: { \"name\": \"string\", \"amount\": number|null, \"percentage\": number|null }",
-  "emailSplits": "[optional] array for email participants: { \"email\": \"string\", \"name\": \"string|null\", \"amount\": number|null, \"percentage\": number|null }"
+  "groupId": "string | null",
+  "splits": "[{\"name\": \"string\", \"amount\": number|null, \"percentage\": number|null}]",
+  "emailSplits": "[{\"email\": \"string\", \"name\": \"string|null\", \"amount\": number|null, \"percentage\": number|null}]"
 }
 
 ## PARTICIPANT RULES:
-1. If identified by EMAIL (contains @): put in "emailSplits". Set "email" field. Set "name" to mentioned name or part before @.
-2. If identified by NAME only (no @): put in "splits". "me" = the user writing the expense.
-3. Both arrays can coexist in one parse.
+1. EMAIL (contains @) → put in "emailSplits" array. Set email field. Set name = mentioned name or part before @.
+2. NAME ONLY (no @) → put in "splits" array. "me" = the user writing.
+3. Both arrays can coexist.
+
+## GROUP HANDLING:
+- "add to group X" / "in group X" / "for group X" / "group expense X" → set groupId to the group name (exact string as mentioned)
+- If a group is mentioned but no splits specified → splitType="equal", splits=[{"name":"me"}], and groupId=group name
+- "for me only" / "only me" / "just me" / "personal" → splitType="single", no splits, no emailSplits
+- "for all" / "everyone" / "split with all" / "all members" → splitType="equal", splits=[{"name":"me"}], groupId=group name if mentioned
 
 ## SPLIT TYPE RULES:
-- No split mentioned → splitType="single", omit splits and emailSplits
-- "equal" → all participants with amount=null, percentage=null
-- "exact" → each person's exact amount. MUST sum to total.
-- "percentage" → each person's percentage. MUST sum to 100.
-- "split me X and [name/email]" → me gets X, other gets (total - X), type=exact
-- "split me X and other for [name]" → me gets X, [name] gets (total - X), type=exact
-- "split [name] X" → [name] pays X, me pays (total - X), type=exact
-- "split X/Y" or "split X:Y" → percentages, type=percentage
-- "split equally with ..." → type=equal, include all names
+- No split mentioned / "for me only" / "only me" / "personal" / "I paid" (no sharing) → splitType="single", omit splits/emailSplits
+- "equal" / "equally" / "50/50" / "half" / "split evenly" → all participants with amount=null, percentage=null
+- Exact amounts specified → splitType="exact", each person's exact amount. MUST sum to total.
+- Percentages specified → splitType="percentage", must sum to 100.
+- "split me X and [name/email]" → me gets X, other gets (total-X), type=exact
+- "split me X and other for [name]" → me gets X, [name] gets (total-X), type=exact
+- "split [name] X" → [name] pays X, me pays (total-X), type=exact
+- "split X/Y" or "ratio X:Y" → percentages proportional, type=percentage
 - "paid by [name]" → that person paid (default: me)
+- "me X% and [name] Y%" → percentage split
+- "I bear X" / "my share X" → me gets X amount
+- "with [name1] and [name2]" + no amounts → equal split among all including me
 
 ## AMOUNT EXTRACTION:
-- Support: ₹1000, 1000, 1k, 1.5k, 1000 rs, 1000 rupees, Rs.1000
-- "k" = thousand, "l" or "lakh" = 100000
-- If multiple amounts mentioned, the FIRST or LARGEST realistic one is the total
-- Ignore amounts that clearly refer to quantities (e.g., "3 tickets for 500" → amount=500)
+- Support: ₹1000, 1000, 1k, 1.5k, 2.5l, 1000 rs, 1000 rupees, Rs.1000, INR 1000, Rs 1000, 1,000
+- "k" = thousand, "l" / "lakh" = 100000, "cr" / "crore" = 10000000
+- If multiple amounts mentioned, the FIRST or LARGEST realistic one is total
+- Ignore amounts that are quantities ("3 tickets for 500" → amount=500)
+- Handle typos: "rs", "inr", "ruppes", "ruppee"
 
 ## CATEGORY INFERENCE:
-- food/dining/lunch/dinner/coffee/tea/pizza/burger/biryani/restaurant/swiggy/zomato → food
-- uber/ola/cab/bus/train/flight/fuel/petrol/parking/toll → transport
-- movie/netflix/spotify/game/concert/party → entertainment
-- amazon/flipkart/clothes/shoes/mall → shopping
-- electricity/wifi/internet/water/gas → utilities
-- medicine/doctor/hospital/pharmacy/medical → health
-- tuition/course/book/school/college/coaching → education
-- rent/flat/house/room → rent
-- groceries/vegetables/fruits/milk → groceries
-- bill/payment/recharge/phone → bills
-- trip/hotel/flight/visa → travel
+- food/dining/lunch/dinner/coffee/tea/pizza/burger/biryani/restaurant/swiggy/zomato/dominos/mcdonalds/chai/snack/breakfast/meal/thali/biryani/paneer/chicken/biryani/dosa/idli/samosa/chowmin/noodles/pasta/bread/milk/ice cream/cake/chocolate/biscuit/chips/falooda/juice/shake/smoothie/brew/cafe/maggi → food
+- uber/ola/cab/bus/train/flight/fuel/petrol/diesel/parking/toll/auto/rickshaw/metro/taxi/bike/scooter/petrol pump → transport
+- movie/netflix/spotify/game/concert/party/club/pub/bar/amusement/park/zoo/museum → entertainment
+- amazon/flipkart/clothes/shoes/mall/tshirt/jeans/watch/glasses/bag/laptop/phone/headphones → shopping
+- electricity/wifi/internet/water/gas/mobile/recharge/dth/broadband → utilities
+- medicine/doctor/hospital/pharmacy/medical/clinic/health/checkup/dental/eye/test/x-ray → health
+- tuition/course/book/school/college/coaching/udemy/coursera/workshop/seminar/exam → education
+- rent/flat/house/room/pg/hostel/accommodation/lease/maintenance → rent
+- groceries/vegetables/fruits/milk/atta/rice/dal/oil/sugar/salt/sabji/mandi/kirana → groceries
+- bill/payment/recharge/phone/insurance/emi/loan/tax/emi → bills
+- trip/hotel/flight/visa/ticket/tourism/resort/camp/trek → travel
 - Anything unclear → other
 
 ## DESCRIPTION RULES:
-- Extract a clean, short description (2-6 words preferred)
+- Clean, short description (2-6 words preferred)
 - Capitalize first letter
-- Remove filler words ("paid by me", "split between")
+- Remove filler words ("paid by me", "split between", "add expense")
 - If no specific item mentioned, use "Expense" as description
 
-## EXAMPLES:
+## EXAMPLES (follow these patterns exactly):
 
-Input: "100 paid by me and split me 30 and meet123@gmail.com"
-Output: {"description":"Expense","amount":100,"splitType":"exact","currency":"INR","category":"other","splits":[{"name":"me","amount":30,"percentage":null}],"emailSplits":[{"email":"meet123@gmail.com","name":"meet123","amount":70,"percentage":null}]}
+"100 paid by me and split me 30 and meet123@gmail.com"
+→ {"description":"Expense","amount":100,"splitType":"exact","currency":"INR","category":"other","groupId":null,"splits":[{"name":"me","amount":30,"percentage":null}],"emailSplits":[{"email":"meet123@gmail.com","name":"meet123","amount":70,"percentage":null}]}
 
-Input: "100 paid by me and split me 30 and meet"
-Output: {"description":"Expense","amount":100,"splitType":"exact","currency":"INR","category":"other","splits":[{"name":"me","amount":30,"percentage":null},{"name":"meet","amount":70,"percentage":null}]}
+"100 paid by me and split me 30 and meet"
+→ {"description":"Expense","amount":100,"splitType":"exact","currency":"INR","category":"other","groupId":null,"splits":[{"name":"me","amount":30,"percentage":null},{"name":"meet","amount":70,"percentage":null}]}
 
-Input: "Paid 1500 for pizza with Alex and Sam, split equally"
-Output: {"description":"Pizza","amount":1500,"splitType":"equal","currency":"INR","category":"food","splits":[{"name":"me","amount":null,"percentage":null},{"name":"Alex","amount":null,"percentage":null},{"name":"Sam","amount":null,"percentage":null}]}
+"Paid 1500 for pizza with Alex and Sam, split equally"
+→ {"description":"Pizza","amount":1500,"splitType":"equal","currency":"INR","category":"food","groupId":null,"splits":[{"name":"me","amount":null,"percentage":null},{"name":"Alex","amount":null,"percentage":null},{"name":"Sam","amount":null,"percentage":null}]}
 
-Input: "Lunch 900 split 60/40 between me and john@gmail.com"
-Output: {"description":"Lunch","amount":900,"splitType":"percentage","currency":"INR","category":"food","splits":[{"name":"me","amount":null,"percentage":60}],"emailSplits":[{"email":"john@gmail.com","name":"john","amount":null,"percentage":40}]}
+"Lunch 900 split 60/40 between me and john@gmail.com"
+→ {"description":"Lunch","amount":900,"splitType":"percentage","currency":"INR","category":"food","groupId":null,"splits":[{"name":"me","amount":null,"percentage":60}],"emailSplits":[{"email":"john@gmail.com","name":"john","amount":null,"percentage":40}]}
 
-Input: "500 for dinner split equally with raj@gmail.com and priya@gmail.com"
-Output: {"description":"Dinner","amount":500,"splitType":"equal","currency":"INR","category":"food","splits":[{"name":"me","amount":null,"percentage":null}],"emailSplits":[{"email":"raj@gmail.com","name":"raj","amount":null,"percentage":null},{"email":"priya@gmail.com","name":"priya","amount":null,"percentage":null}]}
+"500 for dinner split equally with raj@gmail.com and priya@gmail.com"
+→ {"description":"Dinner","amount":500,"splitType":"equal","currency":"INR","category":"food","groupId":null,"splits":[{"name":"me","amount":null,"percentage":null}],"emailSplits":[{"email":"raj@gmail.com","name":"raj","amount":null,"percentage":null},{"email":"priya@gmail.com","name":"priya","amount":null,"percentage":null}]}
 
-Input: "Bought coffee for 200"
-Output: {"description":"Coffee","amount":200,"splitType":"single","currency":"INR","category":"food"}
+"Bought coffee for 200"
+→ {"description":"Coffee","amount":200,"splitType":"single","currency":"INR","category":"food","groupId":null}
 
-Input: "my friend paid 2000 for uber and i need to pay half"
-Output: {"description":"Uber","amount":2000,"splitType":"equal","currency":"INR","category":"transport","splits":[{"name":"me","amount":null,"percentage":null}]}
+"add 500 for food in trip group split equally"
+→ {"description":"Food","amount":500,"splitType":"equal","currency":"INR","category":"food","groupId":"trip","splits":[{"name":"me","amount":null,"percentage":null}]}
 
-Input: "i paid 3k for tickets, split 40% me 30% rahul 30% priya"
-Output: {"description":"Tickets","amount":3000,"splitType":"percentage","currency":"INR","category":"entertainment","splits":[{"name":"me","amount":null,"percentage":40},{"name":"rahul","amount":null,"percentage":30},{"name":"priya","amount":null,"percentage":30}]}
+"1000 rent only for me"
+→ {"description":"Rent","amount":1000,"splitType":"single","currency":"INR","category":"rent","groupId":null}
 
-Input: "grocery shopping 2500 with amit, split 1500 for me and rest for amit"
-Output: {"description":"Grocery Shopping","amount":2500,"splitType":"exact","currency":"INR","category":"groceries","splits":[{"name":"me","amount":1500,"percentage":null},{"name":"amit","amount":1000,"percentage":null}]}
+"add 2000 for groceries split with all in flatmates group"
+→ {"description":"Groceries","amount":2000,"splitType":"equal","currency":"INR","category":"groceries","groupId":"flatmates","splits":[{"name":"me","amount":null,"percentage":null}]}
 
-Input: "hello how are you"
-Output: {"error":"Could not parse expense. Please describe an expense with an amount.","rawText":"hello how are you"}
+"i paid 3k for tickets, split 40% me 30% rahul 30% priya"
+→ {"description":"Tickets","amount":3000,"splitType":"percentage","currency":"INR","category":"entertainment","groupId":null,"splits":[{"name":"me","amount":null,"percentage":40},{"name":"rahul","amount":null,"percentage":30},{"name":"priya","amount":null,"percentage":30}]}
 
-Input: "delete all my data"
-Output: {"error":"Could not parse expense. Please describe an expense with an amount.","rawText":"delete all my data"}
+"grocery shopping 2500 with amit, split 1500 for me and rest for amit"
+→ {"description":"Grocery Shopping","amount":2500,"splitType":"exact","currency":"INR","category":"groceries","groupId":null,"splits":[{"name":"me","amount":1500,"percentage":null},{"name":"amit","amount":1000,"percentage":null}]}
 
-Input: "pay me 50000 dollars for nothing"
-Output: {"error":"Could not parse expense. Please describe a valid expense.","rawText":"pay me 50000 dollars for nothing"}
+"my friend paid 2000 for uber and i need to pay half"
+→ {"description":"Uber","amount":2000,"splitType":"equal","currency":"INR","category":"transport","groupId":null,"splits":[{"name":"me","amount":null,"percentage":null}]}
 
-Input: "rent 15000 split with family of 4 and amit with family of 3"
-Output: {"description":"Rent","amount":15000,"splitType":"equal","currency":"INR","category":"rent","splits":[{"name":"me","amount":null,"percentage":null},{"name":"amit","amount":null,"percentage":null}]}
-`
+"add expense 750 for electricity bill in house group"
+→ {"description":"Electricity Bill","amount":750,"splitType":"equal","currency":"INR","category":"utilities","groupId":"house","splits":[{"name":"me","amount":null,"percentage":null}]}
+
+"just 300 for my lunch today"
+→ {"description":"Lunch","amount":300,"splitType":"single","currency":"INR","category":"food","groupId":null}
+
+"split 500 between me rahul and priya equally for dinner"
+→ {"description":"Dinner","amount":500,"splitType":"equal","currency":"INR","category":"food","groupId":null,"splits":[{"name":"me","amount":null,"percentage":null},{"name":"rahul","amount":null,"percentage":null},{"name":"priya","amount":null,"percentage":null}]}
+
+"i bear 200 and rest amit pays for cab 500"
+→ {"description":"Cab","amount":500,"splitType":"exact","currency":"INR","category":"transport","groupId":null,"splits":[{"name":"me","amount":200,"percentage":null},{"name":"amit","amount":300,"percentage":null}]}
+
+"rent 15000 split with family of 4 and amit with family of 3"
+→ {"description":"Rent","amount":15000,"splitType":"share","currency":"INR","category":"rent","groupId":null,"splits":[{"name":"me","amount":null,"percentage":null,"share":4},{"name":"amit","amount":null,"percentage":null,"share":3}]}
+
+"hello how are you"
+→ {"error":"Could not parse expense. Please describe an expense with an amount.","rawText":"hello how are you"}
+
+"delete all my data"
+→ {"error":"Could not parse expense. Please describe an expense with an amount.","rawText":"delete all my data"}
+
+"pay me 50000 dollars for nothing"
+→ {"error":"Could not parse expense. Please describe a valid expense.","rawText":"pay me 50000 dollars for nothing"}
+
+REMEMBER: Output ONLY raw JSON. No markdown backticks. No explanation. Just the JSON object.`
 
 function validateParse(data: Record<string, unknown>, rawText: string): string | null {
-  // Check for error from AI
   if (data.error) {
     return typeof data.error === 'string' ? data.error : 'Could not parse expense'
   }
 
-  // Must have amount
   if (!data.amount || typeof data.amount !== 'number') {
     return 'Could not determine the expense amount. Include a number in your description.'
   }
 
-  // Amount limits
   if (data.amount < MIN_AMOUNT) {
     return 'Amount must be greater than zero.'
   }
@@ -153,22 +181,18 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
     return `Amount exceeds maximum allowed (₹${MAX_AMOUNT.toLocaleString('en-IN')}).`
   }
 
-  // Must have description
   if (!data.description || typeof data.description !== 'string' || !data.description.trim()) {
     return 'Could not determine what the expense is for.'
   }
 
-  // Description length
   if ((data.description as string).length > 200) {
     data.description = (data.description as string).substring(0, 200)
   }
 
-  // Split type validation
   if (data.splitType && !ALLOWED_SPLIT_TYPES.includes(data.splitType as string)) {
     data.splitType = 'equal'
   }
 
-  // Category validation
   if (data.category && !ALLOWED_CATEGORIES.includes(data.category as string)) {
     data.category = 'other'
   }
@@ -182,9 +206,7 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
       if (!s.name || typeof s.name !== 'string') {
         return 'Invalid participant data.'
       }
-      // Sanitize name
       s.name = String(s.name).trim().substring(0, 100)
-      // Validate amount/percentage
       if (s.amount != null && typeof s.amount !== 'number') s.amount = null
       if (s.percentage != null && typeof s.percentage !== 'number') s.percentage = null
     }
@@ -199,10 +221,8 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
       if (!s.email || typeof s.email !== 'string' || !s.email.includes('@')) {
         return 'Invalid email participant data.'
       }
-      // Sanitize email
       s.email = String(s.email).trim().toLowerCase().substring(0, 200)
       s.name = s.name ? String(s.name).trim().substring(0, 100) : s.email.split('@')[0]
-      // Validate amount/percentage
       if (s.amount != null && typeof s.amount !== 'number') s.amount = null
       if (s.percentage != null && typeof s.percentage !== 'number') s.percentage = null
     }
@@ -220,14 +240,12 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
       if (s.amount != null) sum += s.amount as number
     }
     if (allSplits.length > 0 && Math.abs(sum - total) > 1) {
-      // Try to auto-fix: adjust last non-me split
       const nonMe = allSplits.filter((s) => s.name !== 'me')
       const meSplit = allSplits.find((s) => s.name === 'me')
       if (nonMe.length === 1 && meSplit) {
         const meAmt = meSplit.amount as number
         nonMe[0].amount = Math.round((total - meAmt) * 100) / 100
       } else if (nonMe.length > 1) {
-        // Recalculate: sum of non-me = total - me amount
         const meAmt = meSplit?.amount ?? 0
         const remaining = total - (meAmt as number)
         const perPerson = Math.round((remaining / nonMe.length) * 100) / 100
@@ -253,7 +271,7 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
     }
   }
 
-  return null // no error
+  return null
 }
 
 export async function POST(req: NextRequest) {
@@ -263,8 +281,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    if (!isGroqConfigured()) {
+      return NextResponse.json(
+        { error: 'AI is not configured. Please set a valid GROQ_API_KEY in environment variables.', code: 'NOT_CONFIGURED' },
+        { status: 503 }
+      )
     }
 
     const body = await req.json()
@@ -274,7 +295,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'text is required' }, { status: 400 })
     }
 
-    // Input length limit to prevent abuse
     if (text.length > 1000) {
       return NextResponse.json(
         { error: 'Input too long. Please keep your description under 1000 characters.' },
@@ -282,16 +302,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const response = await getGroq().chat.completions.create({
-      model: CHAT_MODEL,
-      messages: [
+    const raw = await chatWithFallback(
+      [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: text },
       ],
-      temperature: 0.1,
-    })
+      { temperature: 0.1, max_tokens: 1024 }
+    )
 
-    const raw = response.choices?.[0]?.message?.content ?? ''
     console.log('[AI Parse] Raw response:', raw.substring(0, 500))
 
     let parsed: Record<string, unknown>
@@ -305,24 +323,28 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Server-side validation
     const validationError = validateParse(parsed, text)
     if (validationError) {
       console.log('[AI Parse] Validation error:', validationError)
       return NextResponse.json({ error: validationError, rawText: text }, { status: 200 })
     }
 
-    // Ensure amount is a number
     if (typeof parsed.amount === 'string') {
       parsed.amount = parseFloat(parsed.amount as string)
     }
 
     return NextResponse.json(parsed)
-  } catch (error) {
-    console.error('[AI Parse] Exception:', error)
-    return NextResponse.json(
-      { error: 'AI is temporarily unavailable. Please try again or fill the form manually.' },
-      { status: 200 }
-    )
+  } catch (error: any) {
+    console.error('[AI Parse] Exception:', error?.message || error)
+    const msg = error?.message || ''
+    let userMessage = 'AI is temporarily unavailable. Please try again or fill the form manually.'
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+      userMessage = 'AI API key is invalid or expired. Please update GROQ_API_KEY in your Vercel environment settings.'
+    } else if (msg.includes('rate limit') || msg.includes('429')) {
+      userMessage = 'AI is rate limited. Please wait a moment and try again.'
+    } else if (msg.includes('All AI models failed')) {
+      userMessage = 'AI models are currently unavailable. Please try again in a few minutes or fill the form manually.'
+    }
+    return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 200 })
   }
 }

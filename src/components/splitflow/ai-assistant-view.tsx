@@ -115,20 +115,36 @@ export function AIAssistantView() {
 
       if (res.ok) {
         const data = await res.json();
-        const aiMsg: Message = {
-          id: `ai-${Date.now()}`,
-          role: 'assistant',
-          content: data.text || 'No response.',
-          timestamp: new Date(),
-          actionLabel: data.createExpense ? `Added: ${data.createExpense.description} - ₹${data.createExpense.amount}` : undefined,
-        };
-        setMessages((prev) => [...prev, aiMsg]);
+        if (data.error) {
+          const errMsg = data.code === 'NOT_CONFIGURED'
+            ? 'AI is not configured. Please set a valid GROQ_API_KEY in Vercel environment variables.'
+            : (data.error || 'Something went wrong.');
+          const aiMsg: Message = {
+            id: `ai-${Date.now()}`,
+            role: 'assistant',
+            content: errMsg,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, aiMsg]);
+        } else {
+          const aiMsg: Message = {
+            id: `ai-${Date.now()}`,
+            role: 'assistant',
+            content: data.text || 'No response.',
+            timestamp: new Date(),
+            actionLabel: data.createExpense ? `Added: ${data.createExpense.description} - ₹${data.createExpense.amount}` : undefined,
+          };
+          setMessages((prev) => [...prev, aiMsg]);
+        }
       } else {
         const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.code === 'NOT_CONFIGURED'
+          ? 'AI is not configured. Please set a valid GROQ_API_KEY in Vercel environment variables.'
+          : (errData.error || 'Something went wrong. Please try again.');
         const aiMsg: Message = {
           id: `ai-${Date.now()}`,
           role: 'assistant',
-          content: errData.error || 'Something went wrong. Please try again.',
+          content: errMsg,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMsg]);

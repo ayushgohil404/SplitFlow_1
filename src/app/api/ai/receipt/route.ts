@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import { getGroq, VISION_MODEL } from '@/lib/groq'
+import { getGroq, VISION_MODEL, isGroqConfigured } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -18,7 +18,7 @@ function extractJSON(text: string): unknown {
   }
 }
 
-const SYSTEM_PROMPT = `You are a receipt scanning assistant for SplitFlow, an expense splitting app. Analyze the receipt image and extract structured data.
+const SYSTEM_PROMPT = `You are a receipt scanning assistant for SplitFlow. Analyze the receipt image and extract structured data.
 
 You must return ONLY valid JSON with this schema:
 {
@@ -36,10 +36,10 @@ Rules:
 - Parse the date if visible. Use YYYY-MM-DD format.
 - List individual line items if they are clearly readable.
 - Extract tax amount if shown separately.
-- Include a rawText field with a plain transcription of the key information on the receipt.
+- Include a rawText field with a plain transcription of the key information.
 - If the image is not a receipt or is unreadable, return { "error": "Could not read receipt", "rawText": "description of what you see" }
 
-Do NOT wrap the JSON in markdown code blocks. Return raw JSON only.`
+Return raw JSON only.`
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,8 +48,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    if (!isGroqConfigured()) {
+      return NextResponse.json(
+        { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
+        { status: 503 }
+      )
     }
 
     const formData = await req.formData()
@@ -64,7 +67,9 @@ export async function POST(req: NextRequest) {
     const mimeType = file.type || 'image/jpeg'
     const dataUrl = `data:${mimeType};base64,${base64}`
 
-    const response = await getGroq().chat.completions.create({
+    // Receipt scanning needs vision model — no text fallback
+    const groq = getGroq()
+    const response = await groq.chat.completions.create({
       model: VISION_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -97,8 +102,13 @@ export async function POST(req: NextRequest) {
       tax: parsed.tax ?? undefined,
       rawText: parsed.rawText ?? null,
     })
-  } catch (error) {
-    console.error('Error reading receipt:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Error reading receipt:', error?.message || error)
+    const msg = error?.message || ''
+    let userMsg = 'Failed to scan receipt. Try entering details manually.'
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
+    }
+    return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 500 })
   }
 }

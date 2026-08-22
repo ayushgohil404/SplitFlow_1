@@ -183,177 +183,188 @@ export function AddExpenseView() {
   const handleNlpSubmit = async () => {
     if (!nlpInput.trim()) return;
     setNlpLoading(true);
+    // Clear pending values from previous parse
+    setPendingFriendSplitValues({});
     try {
       const res = await fetch('/api/ai/parse-expense', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: nlpInput }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.error) {
-          console.log('[AI Parse] Error response:', data);
+      const data = await res.json();
+
+      // Handle HTTP errors and AI errors uniformly
+      if (!res.ok && res.status !== 200) {
+        toast.error(data.error || 'Could not parse expense. Try being more specific.');
+        return;
+      }
+      if (data.error) {
+        console.log('[AI Parse] Error response:', data);
+        if (data.code === 'NOT_CONFIGURED') {
+          toast.error('AI is not configured. Please set a valid GROQ_API_KEY in Vercel environment variables.');
+        } else if (data.code === 'AI_ERROR') {
+          toast.error(data.error);
+        } else {
           toast.error(data.error || 'Could not parse expense. Try a different phrasing.');
+        }
+        return;
+      }
+
+      // Set basic fields
+      if (data.description) { setDescription(data.description); setDescError(''); }
+      if (data.amount) { setAmount(String(data.amount)); setAmountError(''); }
+      if (data.category) setCategory(data.category);
+      if (data.date) setDate(data.date);
+
+      const sType = data.splitType as string;
+      const isExactOrPct = sType === 'exact' || sType === 'percentage';
+
+      // Handle group selection from AI parse
+      if (data.groupId && typeof data.groupId === 'string') {
+        const groupName = data.groupId.toLowerCase();
+        const matchedGroup = groups.find((g) => g.name.toLowerCase() === groupName);
+        if (matchedGroup) {
+          setMode('group');
+          setGroupId(matchedGroup.id);
+          // Don't process friend/email splits for group expenses
+          if (isExactOrPct) {
+            setSplitType(sType as 'exact' | 'percentage');
+          } else if (sType === 'equal' || sType === 'share') {
+            setSplitType(sType === 'share' ? 'share' : 'equal');
+          } else if (sType === 'single') {
+            setSplitType('equal');
+          }
+          toast.success(`Expense parsed for group "${matchedGroup.name}"! Review and submit.`);
           return;
         }
+        // Group name not found — fall through to direct mode
+      }
 
-        // Set basic fields
-        if (data.description) { setDescription(data.description); setDescError(''); }
-        if (data.amount) { setAmount(String(data.amount)); setAmountError(''); }
-        if (data.category) setCategory(data.category);
-        if (data.date) setDate(data.date);
+      // Determine mode: switch to direct if there are email splits or named non-me splits
+      const emailSplits = data.emailSplits as { email: string; name?: string; amount?: number; percentage?: number }[] | undefined;
+      const namedSplits = data.splits as { name: string; amount?: number | null; percentage?: number | null; share?: number }[] | undefined;
+      const hasEmails = emailSplits && emailSplits.length > 0;
+      const hasNamedSplits = namedSplits && namedSplits.some((s) => s.name !== 'me');
 
-        const sType = data.splitType as string;
+      // Handle "single" / "only me" / personal expenses — no participants
+      if (sType === 'single' && !hasEmails && !hasNamedSplits) {
+        setMode('direct');
+        setSelectedFriends([]);
+        setEmailParticipants([]);
+        setEmailSplitAmounts({});
+        setPendingFriendSplitValues({});
+        setSplitType('equal');
+        toast.success('Expense parsed! No split needed — just submit.');
+        return;
+      }
 
-        // Determine mode: switch to direct if there are email splits
-        const emailSplits = data.emailSplits as { email: string; name?: string; amount?: number; percentage?: number }[] | undefined;
-        const namedSplits = data.splits as { name: string; amount?: number | null; percentage?: number | null }[] | undefined;
-        const hasEmails = emailSplits && emailSplits.length > 0;
-        const hasNamedSplits = namedSplits && namedSplits.some((s) => s.name !== 'me');
-        const isExactOrPct = sType === 'exact' || sType === 'percentage';
-
-        // Extract "me" split value for exact/percentage modes
-        if (isExactOrPct) {
-          const meSplit = namedSplits?.find((s) => s.name === 'me');
-          if (meSplit && (meSplit.amount != null || meSplit.percentage != null)) {
-            setUserSplitValue(String(meSplit.amount ?? meSplit.percentage));
-          } else if (data.amount) {
-            // AI didn't include "me" — calculate remainder from other splits
-            const totalAmt = parseFloat(String(data.amount));
-            let othersTotal = 0;
-            if (sType === 'exact') {
-              for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) {
-                othersTotal += ns.amount ?? 0;
-              }
-              for (const es of (emailSplits || [])) {
-                othersTotal += es.amount ?? 0;
-              }
-            } else {
-              for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) {
-                othersTotal += ns.percentage ?? 0;
-              }
-              for (const es of (emailSplits || [])) {
-                othersTotal += es.percentage ?? 0;
-              }
-            }
-            const myValue = sType === 'exact'
-              ? Math.round((totalAmt - othersTotal) * 100) / 100
-              : Math.round((100 - othersTotal) * 100) / 100;
-            if (myValue > 0) {
-              setUserSplitValue(String(myValue));
-            } else {
-              setUserSplitValue('');
-            }
+      // Extract "me" split value for exact/percentage modes
+      if (isExactOrPct) {
+        const meSplit = namedSplits?.find((s) => s.name === 'me');
+        if (meSplit && (meSplit.amount != null || meSplit.percentage != null)) {
+          setUserSplitValue(String(meSplit.amount ?? meSplit.percentage));
+        } else if (data.amount) {
+          const totalAmt = parseFloat(String(data.amount));
+          let othersTotal = 0;
+          if (sType === 'exact') {
+            for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) othersTotal += ns.amount ?? 0;
+            for (const es of (emailSplits || [])) othersTotal += es.amount ?? 0;
           } else {
-            setUserSplitValue('');
+            for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) othersTotal += ns.percentage ?? 0;
+            for (const es of (emailSplits || [])) othersTotal += es.percentage ?? 0;
           }
+          const myValue = sType === 'exact'
+            ? Math.round((totalAmt - othersTotal) * 100) / 100
+            : Math.round((100 - othersTotal) * 100) / 100;
+          setUserSplitValue(myValue > 0 ? String(myValue) : '');
         } else {
           setUserSplitValue('');
         }
-
-        if (hasEmails) {
-          // Switch to direct mode for email participants
-          setMode('direct');
-
-          // Add email participants and store their split amounts
-          const newEmailParts: EmailParticipant[] = emailSplits.map((es) => ({
-            email: es.email,
-            name: es.name || es.email.split('@')[0],
-          }));
-          setEmailParticipants(newEmailParts);
-
-          // Store email split amounts for exact/percentage
-          if (isExactOrPct) {
-            const amtMap: Record<string, string> = {};
-            for (const es of emailSplits) {
-              if (es.amount != null) amtMap[es.email] = String(es.amount);
-              else if (es.percentage != null) amtMap[es.email] = String(es.percentage);
-            }
-            setEmailSplitAmounts(amtMap);
-          } else {
-            setEmailSplitAmounts({});
-          }
-
-          // Also match named splits (non-'me') to friends and store their amounts
-          if (hasNamedSplits) {
-            const nonMeSplits = namedSplits.filter((s) => s.name !== 'me');
-            const friendAmtMap: Record<string, string> = {};
-            for (const ns of nonMeSplits) {
-              const friendMatch = friends.find(
-                (f) => f.name?.toLowerCase() === ns.name?.toLowerCase() || f.email?.toLowerCase() === ns.name?.toLowerCase()
-              );
-              if (friendMatch) {
-                if (!selectedFriends.includes(friendMatch.id)) {
-                  setSelectedFriends((prev) => [...prev, friendMatch.id]);
-                }
-                // Store amount keyed by friend ID for reliable lookup
-                if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
-                  friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
-                }
-              } else {
-                // Named person not a friend — add as email participant
-                if (ns.name && !emailSplits.some((es) => es.email.toLowerCase() === ns.name!.toLowerCase())) {
-                  const newEp = ns.name?.includes('@')
-                    ? { email: ns.name.toLowerCase(), name: ns.name.split('@')[0] }
-                    : { email: '', name: ns.name };
-                  if (newEp.email) {
-                    setEmailParticipants((prev) => [...prev, newEp as EmailParticipant]);
-                    if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
-                      setEmailSplitAmounts((prev) => ({ ...prev, [newEp.email]: String(ns.amount ?? ns.percentage) }));
-                    }
-                  }
-                }
-              }
-            }
-            if (Object.keys(friendAmtMap).length > 0) {
-              setPendingFriendSplitValues(friendAmtMap);
-            }
-          }
-        } else if (hasNamedSplits) {
-          // No emails, just named people — try to match to friends in direct mode
-          setMode('direct');
-          const nonMeSplits = namedSplits.filter((s) => s.name !== 'me');
-          const friendAmtMap: Record<string, string> = {};
-          for (const ns of nonMeSplits) {
-            const friendMatch = friends.find(
-              (f) => f.name?.toLowerCase() === ns.name?.toLowerCase() || f.email?.toLowerCase() === ns.name?.toLowerCase()
-            );
-            if (friendMatch) {
-              if (!selectedFriends.includes(friendMatch.id)) {
-                setSelectedFriends((prev) => [...prev, friendMatch.id]);
-              }
-              // Store amount keyed by friend ID for reliable lookup
-              if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
-                friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
-              }
-            }
-          }
-          if (Object.keys(friendAmtMap).length > 0) {
-            setPendingFriendSplitValues(friendAmtMap);
-          }
-          // For named people not found as friends, add as email participants if they look like emails
-          for (const ns of nonMeSplits) {
-            if (ns.name?.includes('@') && !emailParticipants.some((ep) => ep.email === ns.name.toLowerCase())) {
-              setEmailParticipants((prev) => [...prev, { email: ns.name.toLowerCase(), name: ns.name.split('@')[0] }]);
-            }
-          }
-        }
-
-        // Handle split type
-        if (isExactOrPct) {
-          setSplitType(sType as 'exact' | 'percentage');
-        } else if (sType === 'equal') {
-          setSplitType('equal');
-        } else if (sType === 'single') {
-          setSplitType('equal');
-        }
-
-        toast.success('Expense parsed! Review the details and submit.');
       } else {
-        toast.error('Could not parse expense. Try being more specific.');
+        setUserSplitValue('');
       }
-    } catch {
-      toast.error('AI is currently unavailable. Please fill the form manually.');
+
+      // Switch to direct mode when we have participants to add
+      if (hasEmails || hasNamedSplits) {
+        setMode('direct');
+      }
+
+      // Process email splits
+      if (hasEmails) {
+        const newEmailParts: EmailParticipant[] = emailSplits.map((es) => ({
+          email: es.email,
+          name: es.name || es.email.split('@')[0],
+        }));
+        setEmailParticipants(newEmailParts);
+
+        if (isExactOrPct) {
+          const amtMap: Record<string, string> = {};
+          for (const es of emailSplits) {
+            if (es.amount != null) amtMap[es.email] = String(es.amount);
+            else if (es.percentage != null) amtMap[es.email] = String(es.percentage);
+          }
+          setEmailSplitAmounts(amtMap);
+        } else {
+          setEmailSplitAmounts({});
+        }
+      } else {
+        setEmailParticipants([]);
+        setEmailSplitAmounts({});
+      }
+
+      // Process named splits — match to friends or add as email participants
+      const friendAmtMap: Record<string, string> = {};
+      const nonMeSplits = (namedSplits || []).filter((s) => s.name !== 'me');
+
+      for (const ns of nonMeSplits) {
+        const friendMatch = friends.find(
+          (f) =>
+            f.name?.toLowerCase().trim() === ns.name?.toLowerCase().trim() ||
+            f.email?.toLowerCase().split('@')[0] === ns.name?.toLowerCase().trim() ||
+            f.email?.toLowerCase() === ns.name?.toLowerCase()
+        );
+        if (friendMatch) {
+          if (!selectedFriends.includes(friendMatch.id)) {
+            setSelectedFriends((prev) => [...prev, friendMatch.id]);
+          }
+          if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+            friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
+          }
+        } else if (ns.name?.includes('@')) {
+          // Named person looks like an email — add as email participant
+          const emailAddr = ns.name.toLowerCase();
+          if (!emailSplits?.some((es) => es.email.toLowerCase() === emailAddr)) {
+            setEmailParticipants((prev) => [...prev, { email: emailAddr, name: ns.name.split('@')[0] }]);
+            if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+              setEmailSplitAmounts((prev) => ({ ...prev, [emailAddr]: String(ns.amount ?? ns.percentage) }));
+            }
+          }
+        }
+        // If not a friend and not an email, we skip them — user can add manually
+        // (non-registered users need an email to track)
+      }
+
+      if (Object.keys(friendAmtMap).length > 0) {
+        setPendingFriendSplitValues(friendAmtMap);
+      } else {
+        setPendingFriendSplitValues({});
+      }
+
+      // Handle split type
+      if (isExactOrPct) {
+        setSplitType(sType as 'exact' | 'percentage');
+      } else if (sType === 'share') {
+        setSplitType('share');
+      } else if (sType === 'equal') {
+        setSplitType('equal');
+      } else if (sType === 'single') {
+        setSplitType('equal');
+      }
+
+      toast.success('Expense parsed! Review the details and submit.');
+    } catch (err: any) {
+      console.error('[AI Parse] Client error:', err);
+      toast.error('Network error. Please check your connection and try again.');
     } finally {
       setNlpLoading(false);
     }

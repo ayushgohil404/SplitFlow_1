@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
-import { getGroq, CHAT_MODEL } from '@/lib/groq'
+import { chatWithFallback, isGroqConfigured } from '@/lib/groq'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +10,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
+    if (!isGroqConfigured()) {
+      return NextResponse.json(
+        { error: 'AI is not configured. Please set a valid GROQ_API_KEY in environment variables.', code: 'NOT_CONFIGURED' },
+        { status: 503 }
+      )
     }
 
     const body = await req.json()
@@ -23,7 +26,6 @@ export async function POST(req: NextRequest) {
 
     // ---- Fetch user context data ----
 
-    // 1. Fetch all groups the user is part of
     const memberships = await db.groupMember.findMany({
       where: { userId: user.id },
       include: { group: { select: { id: true, name: true, emoji: true } } },
@@ -34,7 +36,6 @@ export async function POST(req: NextRequest) {
       emoji: m.group.emoji,
     }))
 
-    // 2. Fetch friends
     const friends = await db.user.findMany({
       where: {
         OR: [
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true, email: true },
     })
 
-    // 3. Calculate balances (owed to user / user owes)
+    // Calculate balances (owed to user / user owes)
     const balanceSummary: { name: string; amount: number; direction: 'owes_me' | 'i_owe' }[] = []
 
     // Group-based balances
@@ -59,21 +60,23 @@ export async function POST(req: NextRequest) {
       for (const m of members) {
         if (m.userId === user.id) continue
 
-        const theirSplitsInMyExpenses = await db.expenseSplit.findMany({
-          where: { userId: m.userId, expense: { groupId: gid, createdBy: user.id } },
-        })
-        const mySplitsInTheirExpenses = await db.expenseSplit.findMany({
-          where: { userId: user.id, expense: { groupId: gid, createdBy: m.userId } },
-        })
-        const settlementsFromThem = await db.settlement.findMany({
-          where: { groupId: gid, fromUserId: m.userId, toUserId: user.id, status: 'completed' },
-        })
-        const settlementsFromMe = await db.settlement.findMany({
-          where: { groupId: gid, fromUserId: user.id, toUserId: m.userId, status: 'completed' },
-        })
+        const [theirSplits, mySplits, settlementsFromThem, settlementsFromMe] = await Promise.all([
+          db.expenseSplit.findMany({
+            where: { userId: m.userId, expense: { groupId: gid, createdBy: user.id } },
+          }),
+          db.expenseSplit.findMany({
+            where: { userId: user.id, expense: { groupId: gid, createdBy: m.userId } },
+          }),
+          db.settlement.findMany({
+            where: { groupId: gid, fromUserId: m.userId, toUserId: user.id, status: 'completed' },
+          }),
+          db.settlement.findMany({
+            where: { groupId: gid, fromUserId: user.id, toUserId: m.userId, status: 'completed' },
+          }),
+        ])
 
-        const theyOweMe = theirSplitsInMyExpenses.reduce((s, x) => s + Number(x.amount), 0)
-        const iOweThem = mySplitsInTheirExpenses.reduce((s, x) => s + Number(x.amount), 0)
+        const theyOweMe = theirSplits.reduce((s, x) => s + Number(x.amount), 0)
+        const iOweThem = mySplits.reduce((s, x) => s + Number(x.amount), 0)
         const theyPaidMe = settlementsFromThem.reduce((s, x) => s + Number(x.amount), 0)
         const iPaidThem = settlementsFromMe.reduce((s, x) => s + Number(x.amount), 0)
 
@@ -93,7 +96,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Direct expense balances (no group)
+    // Direct expense balances
     const directExpenses = await db.expense.findMany({
       where: {
         groupId: null,
@@ -103,6 +106,8 @@ export async function POST(req: NextRequest) {
     })
 
     const directBalances: Record<string, number> = {}
+    const payerCache: Record<string, string> = {}
+
     for (const exp of directExpenses) {
       const isPayer = exp.createdBy === user.id
       for (const split of exp.splits) {
@@ -116,9 +121,11 @@ export async function POST(req: NextRequest) {
       if (!isPayer) {
         const mySplit = exp.splits.find((s) => s.userId === user.id)
         if (mySplit) {
-          const payerKey = exp.createdBy
-          const payer = await db.user.findUnique({ where: { id: payerKey }, select: { name: true } })
-          const pKey = payer?.name || payerKey
+          if (!payerCache[exp.createdBy]) {
+            const payer = await db.user.findUnique({ where: { id: exp.createdBy }, select: { name: true } })
+            payerCache[exp.createdBy] = payer?.name || exp.createdBy
+          }
+          const pKey = payerCache[exp.createdBy]
           if (!directBalances[pKey]) directBalances[pKey] = 0
           directBalances[pKey] -= Number(mySplit.amount)
         }
@@ -147,7 +154,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Net totals
     const totalOwedToMe = balanceSummary
       .filter((b) => b.direction === 'owes_me')
       .reduce((s, b) => s + b.amount, 0)
@@ -156,7 +162,7 @@ export async function POST(req: NextRequest) {
       .reduce((s, b) => s + Math.abs(b.amount), 0)
     const netBalance = Math.round((totalOwedToMe - totalIOwe) * 100) / 100
 
-    // 4. Fetch recent expenses (last 30)
+    // Recent expenses
     const recentExpenses = await db.expense.findMany({
       where: {
         OR: [
@@ -184,25 +190,21 @@ export async function POST(req: NextRequest) {
       splitWith: e.splits.map((s) => s.user.name).filter(Boolean),
     }))
 
-    // 5. Monthly totals
+    // Monthly totals
     const now = new Date()
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const thisMonthExpenses = await db.expense.findMany({
-      where: {
-        createdBy: user.id,
-        date: { gte: thisMonthStart },
-      },
+      where: { createdBy: user.id, date: { gte: thisMonthStart } },
     })
     const thisMonthTotal = thisMonthExpenses.reduce((s, e) => s + e.amount, 0)
 
-    // Category breakdown this month
     const categoryTotals: Record<string, number> = {}
     for (const e of thisMonthExpenses) {
       const cat = e.category || 'other'
       categoryTotals[cat] = (categoryTotals[cat] || 0) + e.amount
     }
 
-    // ---- Build system prompt with user data ----
+    // Build system prompt
     const systemPrompt = `You are a helpful AI assistant for SplitFlow, an expense splitting app. You help users understand their expenses, balances, and spending patterns.
 
 CURRENCY: All amounts are in INR (Indian Rupees, ₹). Use ₹ symbol when showing amounts.
@@ -229,8 +231,8 @@ ${expenseSummary.length > 0
   : '  No recent expenses.'
 }
 
-USER'S GROUPS: ${userGroups.map((g) => `${g.emoji} ${g.name}`).join(', ') || 'None'}
-USER'S FRIENDS: ${friends.map((f) => f.name || f.email).join(', ') || 'None'}
+USER'S GROUPS: ${userGroups.map((g) => `${g.emoji} ${g.name} (id: ${g.id})`).join(', ') || 'None'}
+USER'S FRIENDS: ${friends.map((f) => `${f.name} (${f.email})`).join(', ') || 'None'}
 
 RESPONSE RULES:
 1. Be conversational and friendly. Use short paragraphs.
@@ -240,38 +242,32 @@ RESPONSE RULES:
    ---CREATE_EXPENSE---
    {"description": "...", "amount": ..., "category": "...", "splitType": "single"}
    ---END---
-   Infer the category from context (food, transport, entertainment, etc.). Only include this block if the user is clearly asking to add/log an expense.
+   Infer the category from context. Only include this block if the user is clearly asking to add/log an expense.
 5. If the user mentions splitting with specific friends, check if they are in the friends list. If yes, mention them by name. If not, say you can't find that person in their friends list.
 6. Use ₹ for all amounts. Be specific with numbers.
 7. Keep responses concise (2-4 sentences unless more detail is requested).
 8. If asked about a specific group, focus your answer on that group's data.
-9. Do NOT make up expense data. Only use what is provided above.`
+9. Do NOT make up expense data. Only use what is provided above.
+10. Handle ANY question about expenses, balances, spending, friends, groups, or the app itself.`
 
-    // Build messages array with conversation memory (last 6 messages for context)
     const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
       { role: 'system', content: systemPrompt },
     ]
 
-    // Add conversation history if provided
     const history = body.history as { role: 'user' | 'assistant'; content: string }[] | undefined
     if (history && history.length > 0) {
-      const recentHistory = history.slice(-6) // last 6 messages for context window
+      const recentHistory = history.slice(-6)
       for (const msg of recentHistory) {
         messages.push({ role: msg.role, content: msg.content })
       }
     }
 
-    // Add current query
     messages.push({ role: 'user', content: query })
 
-    const response = await getGroq().chat.completions.create({
-      model: CHAT_MODEL,
-      messages,
+    const raw = await chatWithFallback(messages, {
       temperature: 0.4,
       max_tokens: 1024,
     })
-
-    const raw = response.choices?.[0]?.message?.content ?? ''
 
     // Check if the AI wants to create an expense
     let createExpense = null
@@ -280,11 +276,10 @@ RESPONSE RULES:
       try {
         createExpense = JSON.parse(expenseMatch[1].trim())
       } catch {
-        // ignore parse errors
+        // ignore
       }
     }
 
-    // Clean the response text (remove the expense JSON block from display)
     const cleanResponse = raw
       .replace(/---CREATE_EXPENSE---[\s\S]*?---END---/g, '')
       .trim()
@@ -293,11 +288,17 @@ RESPONSE RULES:
       text: cleanResponse || 'I could not generate a response. Please try again.',
       createExpense,
     })
-  } catch (error) {
-    console.error('Error in AI chat:', error)
-    return NextResponse.json(
-      { error: 'Something went wrong. Please try again.' },
-      { status: 500 }
-    )
+  } catch (error: any) {
+    console.error('Error in AI chat:', error?.message || error)
+    const msg = error?.message || ''
+    let userMessage = 'Something went wrong. Please try again.'
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+      userMessage = 'AI API key is invalid or expired. Please update GROQ_API_KEY in your Vercel environment settings.'
+    } else if (msg.includes('rate limit') || msg.includes('429')) {
+      userMessage = 'AI is rate limited. Please wait a moment and try again.'
+    } else if (msg.includes('All AI models failed')) {
+      userMessage = 'All AI models are currently unavailable. Please try again in a few minutes.'
+    }
+    return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 500 })
   }
 }
