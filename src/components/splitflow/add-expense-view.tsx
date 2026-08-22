@@ -210,6 +210,46 @@ export function AddExpenseView() {
         const namedSplits = data.splits as { name: string; amount?: number | null; percentage?: number | null }[] | undefined;
         const hasEmails = emailSplits && emailSplits.length > 0;
         const hasNamedSplits = namedSplits && namedSplits.some((s) => s.name !== 'me');
+        const isExactOrPct = sType === 'exact' || sType === 'percentage';
+
+        // Extract "me" split value for exact/percentage modes
+        if (isExactOrPct) {
+          const meSplit = namedSplits?.find((s) => s.name === 'me');
+          if (meSplit && (meSplit.amount != null || meSplit.percentage != null)) {
+            setUserSplitValue(String(meSplit.amount ?? meSplit.percentage));
+          } else if (data.amount) {
+            // AI didn't include "me" — calculate remainder from other splits
+            const totalAmt = parseFloat(String(data.amount));
+            let othersTotal = 0;
+            if (sType === 'exact') {
+              for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) {
+                othersTotal += ns.amount ?? 0;
+              }
+              for (const es of (emailSplits || [])) {
+                othersTotal += es.amount ?? 0;
+              }
+            } else {
+              for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) {
+                othersTotal += ns.percentage ?? 0;
+              }
+              for (const es of (emailSplits || [])) {
+                othersTotal += es.percentage ?? 0;
+              }
+            }
+            const myValue = sType === 'exact'
+              ? Math.round((totalAmt - othersTotal) * 100) / 100
+              : Math.round((100 - othersTotal) * 100) / 100;
+            if (myValue > 0) {
+              setUserSplitValue(String(myValue));
+            } else {
+              setUserSplitValue('');
+            }
+          } else {
+            setUserSplitValue('');
+          }
+        } else {
+          setUserSplitValue('');
+        }
 
         if (hasEmails) {
           // Switch to direct mode for email participants
@@ -223,7 +263,7 @@ export function AddExpenseView() {
           setEmailParticipants(newEmailParts);
 
           // Store email split amounts for exact/percentage
-          if (sType === 'exact' || sType === 'percentage') {
+          if (isExactOrPct) {
             const amtMap: Record<string, string> = {};
             for (const es of emailSplits) {
               if (es.amount != null) amtMap[es.email] = String(es.amount);
@@ -242,12 +282,27 @@ export function AddExpenseView() {
               const friendMatch = friends.find(
                 (f) => f.name?.toLowerCase() === ns.name?.toLowerCase() || f.email?.toLowerCase() === ns.name?.toLowerCase()
               );
-              if (friendMatch && !selectedFriends.includes(friendMatch.id)) {
-                setSelectedFriends((prev) => [...prev, friendMatch.id]);
-              }
-              // Store the amount to apply after useEffect creates splits
-              if (ns.amount != null || ns.percentage != null) {
-                friendAmtMap[ns.name.toLowerCase()] = String(ns.amount ?? ns.percentage);
+              if (friendMatch) {
+                if (!selectedFriends.includes(friendMatch.id)) {
+                  setSelectedFriends((prev) => [...prev, friendMatch.id]);
+                }
+                // Store amount keyed by friend ID for reliable lookup
+                if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+                  friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
+                }
+              } else {
+                // Named person not a friend — add as email participant
+                if (ns.name && !emailSplits.some((es) => es.email.toLowerCase() === ns.name!.toLowerCase())) {
+                  const newEp = ns.name?.includes('@')
+                    ? { email: ns.name.toLowerCase(), name: ns.name.split('@')[0] }
+                    : { email: '', name: ns.name };
+                  if (newEp.email) {
+                    setEmailParticipants((prev) => [...prev, newEp as EmailParticipant]);
+                    if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+                      setEmailSplitAmounts((prev) => ({ ...prev, [newEp.email]: String(ns.amount ?? ns.percentage) }));
+                    }
+                  }
+                }
               }
             }
             if (Object.keys(friendAmtMap).length > 0) {
@@ -259,18 +314,18 @@ export function AddExpenseView() {
           setMode('direct');
           const nonMeSplits = namedSplits.filter((s) => s.name !== 'me');
           const friendAmtMap: Record<string, string> = {};
-          let matchedAny = false;
           for (const ns of nonMeSplits) {
             const friendMatch = friends.find(
               (f) => f.name?.toLowerCase() === ns.name?.toLowerCase() || f.email?.toLowerCase() === ns.name?.toLowerCase()
             );
-            if (friendMatch && !selectedFriends.includes(friendMatch.id)) {
-              setSelectedFriends((prev) => [...prev, friendMatch.id]);
-              matchedAny = true;
-            }
-            // Store the amount to apply after useEffect creates splits
-            if (ns.amount != null || ns.percentage != null) {
-              friendAmtMap[ns.name.toLowerCase()] = String(ns.amount ?? ns.percentage);
+            if (friendMatch) {
+              if (!selectedFriends.includes(friendMatch.id)) {
+                setSelectedFriends((prev) => [...prev, friendMatch.id]);
+              }
+              // Store amount keyed by friend ID for reliable lookup
+              if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+                friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
+              }
             }
           }
           if (Object.keys(friendAmtMap).length > 0) {
@@ -285,17 +340,12 @@ export function AddExpenseView() {
         }
 
         // Handle split type
-        if (sType === 'exact' || sType === 'percentage') {
+        if (isExactOrPct) {
           setSplitType(sType as 'exact' | 'percentage');
-          // For exact/percentage with named friends, populate the split values
-          if (hasNamedSplits && !hasEmails) {
-            // Will be populated by useEffect when selectedFriends changes
-          }
         } else if (sType === 'equal') {
           setSplitType('equal');
         } else if (sType === 'single') {
           setSplitType('equal');
-          // Single = just the user, no participants needed
         }
 
         toast.success('Expense parsed! Review the details and submit.');
@@ -570,21 +620,18 @@ export function AddExpenseView() {
   useEffect(() => {
     if (mode === 'direct' && (splitType === 'exact' || splitType === 'percentage' || splitType === 'share')) {
       const newSplits = directParticipants.map((p) => {
-        // Check if AI parse left a pending value for this friend (by name match)
+        // Check if AI parse left a pending value for this friend (by friend ID — most reliable)
+        const pendingById = pendingFriendSplitValues[p.id];
+        // Also check by name as fallback
         const friend = friends.find((f) => f.id === p.id);
         const friendName = friend?.name?.toLowerCase();
-        const pendingValue = friendName && pendingFriendSplitValues[friendName]
-          ? pendingFriendSplitValues[friendName]
-          : '';
+        const pendingByName = friendName ? pendingFriendSplitValues[friendName] : undefined;
+        const pendingValue = pendingById || pendingByName || '';
         return { userId: p.id, value: pendingValue, share: 1 };
       });
       setSplits(newSplits);
-      // Clear pending after applying
-      if (Object.keys(pendingFriendSplitValues).length > 0) {
-        setPendingFriendSplitValues({});
-      }
     }
-  }, [mode, splitType, selectedFriends.length]);
+  }, [mode, splitType, selectedFriends.length, pendingFriendSplitValues]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
