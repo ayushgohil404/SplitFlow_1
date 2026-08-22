@@ -1,23 +1,26 @@
-# SplitFlow - Work Log
+# SplitFlow Work Log
 
 ---
 Task ID: 1
-Agent: Main
-Task: Build SplitFlow - AI-Powered Expense Splitting Web App
+Agent: main
+Task: Make SplitFlow UI more reliable, easy to use for all users
 
 Work Log:
-- Designed complete Prisma schema with 10 models (User, Account, Session, VerificationToken, Group, GroupMember, Expense, ExpenseSplit, Settlement, Activity, BalanceCache)
-- Set up NextAuth.js with GitHub, Google OAuth + Demo (credentials) login
-- Created unified auth utility (auth-utils.ts) supporting both NextAuth and demo JWT sessions
-- Built 16 API routes: groups CRUD, group members, expenses CRUD, settlements, debt simplification, activity feed, user balance, and 4 AI endpoints
-- Built WebSocket mini-service on port 3003 for real-time updates
-- Created Zustand store for SPA routing with 9 views
-- Built 12 frontend components: auth-page, app-shell, dashboard, groups, group-detail, add-expense, settle, analytics, activity, ai-assistant, friends, expense-detail-dialog
-- Fixed multiple issues: malformed JSX comments, ternary chain breaks, socket.io SSR compatibility, NextAuth JWT format incompatibility, Prisma field name mismatches, API response data shape mismatches
-- Verified all core flows via agent-browser: login, group creation, group detail, add expense form, AI assistant
+- Audited all 12 existing component files - confirmed all were fully written from prior session
+- Rewrote `app-shell.tsx`: Added back navigation for detail views, tooltips on nav items, help tip card in sidebar, proper ARIA attributes, `aria-current="page"` for active nav, smoother page transitions (y instead of x), emerald dot indicator on active nav item
+- Rewrote `auth-page.tsx`: Added email validation with regex, error messages near fields, graceful OAuth fallback (shows toast if not configured), receipt scanning and more features in marketing section, better loading state, disabled button prevention
+- Rewrote `dashboard-view.tsx`: Added error state with retry button, improved empty state with 3-step onboarding guide, tooltips on balance cards showing "Across all groups" context, quick action buttons, better activity empty state with hint text
+- Rewrote `groups-view.tsx`: Added search/filter for 3+ groups, inline validation errors (name too short, required fields), invite code auto-uppercase, join error messages from API, better empty state with dual CTAs, improved emoji picker with scale animation
+- Rewrote `add-expense-view.tsx`: Added field-level validation (description required, amount > $0), info tooltips on split types and AI buttons, receipt file size validation (10MB), equal split preview in green info box, AI error messages that suggest alternatives, member loading state, date max constraint
+- Rewrote `settle-view.tsx`: Added payment amount validation, payer!=receiver check, tooltip on "Simplify" button explaining the feature, highlighted relevant balances for current user, detail loading state, settlement count comparison ("Reduce from X to Y transactions")
+- Created `error-boundary.tsx`: Global React error boundary with error message display, retry and reload buttons
+- Updated `page.tsx`: Wrapped AppShell in ErrorBoundary
+- Fixed Turbopack JSX comment parsing issue in dashboard-view.tsx
+- Added missing `Loader2` import to settle-view.tsx
+- Verified full production build passes cleanly (0 errors, all 20 routes)
+- Verified server starts and serves HTTP 200
 
 Stage Summary:
-- Fully functional Splitwise competitor with: OAuth login (GitHub/Google/Demo), group management, expense tracking, AI-powered NL expense entry, receipt scanning, smart categorization, spending insights, debt simplification, real-time WebSocket updates, analytics charts, activity feed
-- All code passes ESLint with zero errors
-- App renders correctly in browser with responsive design
-- Screenshots saved to /home/z/my-project/download/
+- All UI improvements focused on: error handling, validation feedback, tooltips/help, clear empty states, mobile responsiveness
+- Build: `next build` passes cleanly
+- Server: Running on port 3000, serving responses

@@ -235,7 +235,7 @@ export function DashboardView() {
         </motion.div>
       </div>
 
-      {/* Quick actions - show only when user has data */
+      {/* Quick actions */}
       {!isEmpty && (
         <motion.div variants={item} className="flex flex-wrap gap-2">
           <Button onClick={() => setView('add-expense')} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
