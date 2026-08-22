@@ -88,6 +88,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ expenses, total })
   } catch (error) {
     console.error('Error fetching expense history:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load expenses. Please refresh.' }, { status: 500 })
   }
 }

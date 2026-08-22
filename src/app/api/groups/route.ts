@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ groups });
   } catch (error) {
-    console.error('Error listing groups:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error listing groups:', error)
+    return NextResponse.json({ error: 'Failed to load groups. Please refresh.' }, { status: 500 })
   }
 }
 
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ group }, { status: 201 });
   } catch (error) {
-    console.error('Error creating group:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error creating group:', error)
+    return NextResponse.json({ error: 'Failed to create group. Please try again.' }, { status: 500 })
   }
 }

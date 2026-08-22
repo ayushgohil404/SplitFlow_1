@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching friends:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load friends. Please refresh.' }, { status: 500 })
   }
 }
 
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     }, { status: 201 })
   } catch (error) {
     console.error('Error sending friend request:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to send friend request. Please try again.' }, { status: 500 })
   }
 }
 
@@ -207,6 +207,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ message: 'Friend removed' })
   } catch (error) {
     console.error('Error removing friend:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to remove friend. Please try again.' }, { status: 500 })
   }
 }

@@ -7,7 +7,7 @@ export const CHAT_MODEL = 'llama-3.3-70b-versatile';
 const FALLBACK_CHAT_MODELS = [
   'llama-3.1-8b-instant',
   'llama3-70b-8192',
-  'mixtral-8x7b-32768',
+  'gemma2-9b-it',
 ];
 
 // Vision model for receipt scanning
@@ -29,7 +29,11 @@ export function getGroq(): Groq {
 }
 
 export function isGroqConfigured(): boolean {
-  return !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'gsk_placeholder';
+  const key = process.env.GROQ_API_KEY;
+  if (!key || key === 'gsk_placeholder') return false;
+  // Check if key looks valid (basic format check)
+  if (key.length < 10) return false;
+  return true;
 }
 
 /**
@@ -52,9 +56,16 @@ export async function chatWithFallback(
     fallbackModels = FALLBACK_CHAT_MODELS,
   } = options;
 
-  const groq = getGroq();
+  let groq: Groq;
+  try {
+    groq = getGroq();
+  } catch (initErr: any) {
+    throw new Error('GROQ_API_KEY is not configured. ' + (initErr.message || ''));
+  }
+
   const allModels = [primaryModel, ...fallbackModels];
   let lastError: Error | null = null;
+  const errors: string[] = [];
 
   for (const model of allModels) {
     try {
@@ -69,14 +80,23 @@ export async function chatWithFallback(
       throw new Error('Empty response from model');
     } catch (err: any) {
       lastError = err;
-      console.error(`[Groq] Model ${model} failed: ${err.message || err.status || 'unknown'}`);
+      const errInfo = `[Groq] Model ${model} failed: ${err.message || err.status || err.code || 'unknown'}`;
+      console.error(errInfo);
+      errors.push(errInfo);
       // Don't retry on auth errors
       if (err.status === 401 || err.status === 403) {
         throw new Error('AI API key is invalid or expired. Please update GROQ_API_KEY.');
+      }
+      // Don't retry on context length exceeded
+      if (err.message?.includes('context_length') || err.message?.includes('token limit')) {
+        throw new Error('Input too long for AI. Please use a shorter message.');
       }
       // Continue to next model
     }
   }
 
-  throw lastError || new Error('All AI models failed. Please try again later.');
+  // Log all errors for debugging
+  console.error('[Groq] All models failed. Errors:', errors.join(' | '));
+  const detail = (lastError as any)?.status || lastError?.message || 'unknown error';
+  throw new Error(`All AI models failed: ${detail}`);
 }

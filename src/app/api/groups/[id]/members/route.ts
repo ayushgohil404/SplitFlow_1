@@ -66,7 +66,7 @@ export async function POST(
     return NextResponse.json({ member }, { status: 201 })
   } catch (error) {
     console.error('Error adding member:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to add member. Please try again.' }, { status: 500 })
   }
 }
 
@@ -131,6 +131,6 @@ export async function DELETE(
     return NextResponse.json({ message: 'Member removed' })
   } catch (error) {
     console.error('Error removing member:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to remove member. Please try again.' }, { status: 500 })
   }
 }

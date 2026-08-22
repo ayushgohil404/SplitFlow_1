@@ -118,6 +118,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ settlements: simplified })
   } catch (error) {
     console.error('Error simplifying debts:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to simplify debts. Please try again.' }, { status: 500 })
   }
 }

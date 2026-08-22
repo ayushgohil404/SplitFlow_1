@@ -111,7 +111,7 @@ export async function GET(
     return NextResponse.json({ group, balances })
   } catch (error) {
     console.error('Error fetching group:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load group. Please refresh.' }, { status: 500 })
   }
 }
 
@@ -159,7 +159,7 @@ export async function PATCH(
     return NextResponse.json({ group })
   } catch (error) {
     console.error('Error updating group:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update group. Please try again.' }, { status: 500 })
   }
 }
 
@@ -190,6 +190,6 @@ export async function DELETE(
     return NextResponse.json({ message: 'Group deleted' })
   } catch (error) {
     console.error('Error deleting group:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to delete group. Please try again.' }, { status: 500 })
   }
 }

@@ -227,6 +227,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching user balance:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load balances. Please refresh.' }, { status: 500 })
   }
 }

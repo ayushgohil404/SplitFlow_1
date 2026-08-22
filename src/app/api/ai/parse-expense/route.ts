@@ -340,15 +340,20 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(parsed)
   } catch (error: any) {
-    console.error('[AI Parse] Exception:', error?.message || error)
+    console.error('[AI Parse] Exception:', error?.message || error, 'Status:', error?.status, 'Code:', error?.code)
     const msg = error?.message || ''
+    const status = error?.status || ''
     let userMessage = 'AI is temporarily unavailable. Please try again or fill the form manually.'
-    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+    if (msg.includes('API key') || msg.includes('not configured') || status === 401 || status === 403) {
       userMessage = 'AI API key is invalid or expired. Please update GROQ_API_KEY in your Vercel environment settings.'
-    } else if (msg.includes('rate limit') || msg.includes('429')) {
+    } else if (msg.includes('rate limit') || status === 429) {
       userMessage = 'AI is rate limited. Please wait a moment and try again.'
     } else if (msg.includes('All AI models failed')) {
       userMessage = 'AI models are currently unavailable. Please try again in a few minutes or fill the form manually.'
+    } else if (msg.includes('too long') || msg.includes('token limit') || msg.includes('context_length')) {
+      userMessage = 'Input is too long for AI. Please use a shorter description.'
+    } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+      userMessage = 'Could not reach AI service. Please check your connection and try again.'
     }
     return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 200 })
   }

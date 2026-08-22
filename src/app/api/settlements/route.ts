@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ settlements })
   } catch (error) {
     console.error('Error listing settlements:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load settlements. Please refresh.' }, { status: 500 })
   }
 }
 
@@ -115,6 +115,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ settlement }, { status: 201 })
   } catch (error) {
     console.error('Error creating settlement:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to record settlement. Please try again.' }, { status: 500 })
   }
 }

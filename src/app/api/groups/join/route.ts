@@ -57,6 +57,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ group })
   } catch (error) {
     console.error('Error joining group:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to join group. Please try again.' }, { status: 500 })
   }
 }

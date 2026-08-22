@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'groupId is required' }, { status: 400 })
   } catch (error) {
     console.error('Error listing expenses:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load expenses. Please refresh.' }, { status: 500 })
   }
 }
 
@@ -411,6 +411,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ expense }, { status: 201 })
   } catch (error) {
     console.error('Error creating expense:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errMsg = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: `Failed to create expense: ${errMsg}` }, { status: 500 })
   }
 }

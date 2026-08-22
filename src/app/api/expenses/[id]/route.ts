@@ -40,7 +40,7 @@ export async function GET(
     return NextResponse.json({ expense })
   } catch (error) {
     console.error('Error fetching expense:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load expense details. Please refresh.' }, { status: 500 })
   }
 }
 
@@ -184,7 +184,7 @@ export async function PATCH(
     return NextResponse.json({ expense })
   } catch (error) {
     console.error('Error updating expense:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update expense. Please try again.' }, { status: 500 })
   }
 }
 
@@ -210,6 +210,6 @@ export async function DELETE(
     return NextResponse.json({ message: 'Expense deleted' })
   } catch (error) {
     console.error('Error deleting expense:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to delete expense. Please try again.' }, { status: 500 })
   }
 }

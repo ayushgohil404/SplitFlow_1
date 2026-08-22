@@ -84,6 +84,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error accepting friend request:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to respond to friend request. Please try again.' }, { status: 500 })
   }
 }

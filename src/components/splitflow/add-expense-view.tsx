@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sparkles,
@@ -650,6 +650,89 @@ export function AddExpenseView() {
 
   // User's own share count (for direct share mode)
   const [ownerShare, setOwnerShare] = useState(1);
+
+  // Track previous split type for auto-fill when switching
+  const prevSplitTypeRef = useRef<'equal' | 'share' | 'exact' | 'percentage'>('equal');
+
+  // Auto-fill exact/percentage values when switching FROM share mode
+  useEffect(() => {
+    const prev = prevSplitTypeRef.current;
+    prevSplitTypeRef.current = splitType;
+
+    // Only auto-fill when switching FROM share TO exact or percentage
+    if (prev === 'share' && (splitType === 'exact' || splitType === 'percentage')) {
+      const numAmount = parseFloat(amount) || 0;
+      if (numAmount <= 0) return;
+
+      if (mode === 'direct') {
+        // Calculate total shares in direct mode
+        const totalShares =
+          ownerShare +
+          splits.reduce((sum, s) => sum + (s.share || 1), 0) +
+          emailParticipants.length;
+        if (totalShares <= 0) return;
+
+        if (splitType === 'exact') {
+          // Owner's exact amount
+          const ownerAmt = Math.round((numAmount * ownerShare) / totalShares * 100) / 100;
+          setUserSplitValue(String(ownerAmt));
+          // Friends' exact amounts
+          setSplits((prev) =>
+            prev.map((s) => {
+              const amt = Math.round((numAmount * (s.share || 1)) / totalShares * 100) / 100;
+              return { ...s, value: String(amt) };
+            })
+          );
+          // Email participants' exact amounts
+          const emailAmt = Math.round((numAmount * 1) / totalShares * 100) / 100;
+          setEmailSplitAmounts((prev) => {
+            const next: Record<string, string> = {};
+            emailParticipants.forEach((ep) => { next[ep.email] = String(emailAmt); });
+            return next;
+          });
+        } else {
+          // Percentage mode
+          const ownerPct = Math.round((ownerShare / totalShares) * 1000) / 10;
+          setUserSplitValue(String(ownerPct));
+          setSplits((prev) =>
+            prev.map((s) => {
+              const pct = Math.round(((s.share || 1) / totalShares) * 1000) / 10;
+              return { ...s, value: String(pct) };
+            })
+          );
+          const emailPct = Math.round((1 / totalShares) * 1000) / 10;
+          setEmailSplitAmounts((prev) => {
+            const next: Record<string, string> = {};
+            emailParticipants.forEach((ep) => { next[ep.email] = String(emailPct); });
+            return next;
+          });
+        }
+      } else if (mode === 'group' && members.length > 0) {
+        // Group mode: calculate from share values
+        const totalShares = members.reduce((sum, m) => {
+          const s = splits.find((sp) => sp.userId === m.id);
+          return sum + (s?.share || 1);
+        }, 0);
+        if (totalShares <= 0) return;
+
+        if (splitType === 'exact') {
+          setSplits((prev) =>
+            prev.map((s) => {
+              const amt = Math.round((numAmount * (s.share || 1)) / totalShares * 100) / 100;
+              return { ...s, value: String(amt) };
+            })
+          );
+        } else {
+          setSplits((prev) =>
+            prev.map((s) => {
+              const pct = Math.round(((s.share || 1) / totalShares) * 1000) / 10;
+              return { ...s, value: String(pct) };
+            })
+          );
+        }
+      }
+    }
+  }, [splitType, mode]);
 
   // Split participants for direct exact/percentage mode
   const directParticipants = [

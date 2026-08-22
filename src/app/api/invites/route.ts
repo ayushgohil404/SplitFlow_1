@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating invite:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create invite. Please try again.' }, { status: 500 })
   }
 }
 
@@ -112,6 +112,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ invites })
   } catch (error) {
     console.error('Error fetching invites:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to load invites. Please refresh.' }, { status: 500 })
   }
 }
