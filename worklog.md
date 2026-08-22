@@ -83,3 +83,24 @@ Stage Summary:
 - 16 source files changed, 54 insertions, 41 deletions
 - Zero TypeScript errors, clean production build
 - Pushed: https://github.com/ayushgohil404/SplitFlow_1.git (commit 2147faa)
+---
+Task ID: 1
+Agent: main
+Task: Fix AI errors, share→exact/% auto-fill, all error messages
+
+Work Log:
+- Updated Groq fallback models: replaced mixtral-8x7b-32768 with gemma2-9b-it
+- Added context_length, network, timeout error detection in groq.ts
+- Added key format validation (length check) in isGroqConfigured()
+- Improved error logging with status codes and error codes in all AI routes
+- Fixed TypeScript error: lastError.status type cast in groq.ts
+- Added share→exact/percentage auto-fill effect in add-expense-view.tsx using useRef to track previous splitType
+- Replaced all 15 'Internal server error' messages across 12 API route files with specific descriptive messages
+- Verified TypeScript compilation (0 errors in src/)
+- Pushed to GitHub (commit 2cfe362)
+
+Stage Summary:
+- AI errors: Better model fallback, improved error detection, descriptive messages
+- Share auto-fill: Proportional values auto-calculated when switching from share to exact/percentage
+- Error messages: All generic 'Internal server error' replaced with actionable messages
+- Deployed to Vercel via git push
