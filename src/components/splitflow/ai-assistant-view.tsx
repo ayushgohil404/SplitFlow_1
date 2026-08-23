@@ -296,7 +296,7 @@ export function AIAssistantView() {
             <Bot className="w-4 h-4 text-foreground" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">AI Assistant</h3>
+            <h3 className="text-sm font-semibold text-foreground">AI Assistant</h3>
             <p className="text-xs text-muted-foreground">Ask anything or add expenses</p>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function AIAssistantView() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-emerald-500" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 Hi, {user?.name || 'there'}!
               </h3>
               <p className="text-sm text-muted-foreground mb-6 max-w-sm">
@@ -336,7 +336,7 @@ export function AIAssistantView() {
                     className="flex items-center gap-2 px-3 py-2.5 text-left rounded-lg border border-border hover:border-emerald-300 hover:bg-primary/10/50 transition-colors text-sm"
                   >
                     <qa.icon className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-gray-700">{qa.label}</span>
+                    <span className="text-foreground">{qa.label}</span>
                   </button>
                 ))}
               </div>
@@ -352,7 +352,7 @@ export function AIAssistantView() {
                 <AvatarFallback
                   className={
                     msg.role === 'user'
-                      ? 'bg-muted text-gray-700'
+                      ? 'bg-muted text-foreground'
                       : 'bg-emerald-100 text-foreground'
                   }
                 >
@@ -368,7 +368,7 @@ export function AIAssistantView() {
                   className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-primary text-white'
-                      : 'bg-muted text-gray-800'
+                      : 'bg-muted text-foreground'
                   }`}
                 >
                   {msg.content.split('\n').map((line, i) => (
@@ -387,7 +387,7 @@ export function AIAssistantView() {
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">Confirm Expense</p>
+                        <p className="text-sm font-semibold text-foreground">Confirm Expense</p>
                         <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
                           <p><strong>{msg.pendingExpense.description}</strong> - ₹{msg.pendingExpense.amount}</p>
                           <p>Category: {msg.pendingExpense.category} | Split: {msg.pendingExpense.splitType}</p>

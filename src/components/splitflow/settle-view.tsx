@@ -268,7 +268,7 @@ export function SettleView() {
         <Card>
           <CardContent className="p-12 text-center">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">All settled up!</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-1">All settled up!</h3>
             <p className="text-sm text-muted-foreground">You don&apos;t owe anyone and no one owes you. Nice!</p>
           </CardContent>
         </Card>
@@ -291,7 +291,7 @@ export function SettleView() {
                   >
                     <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm">{gb.groupName}</p>
+                      <p className="font-medium text-foreground text-sm">{gb.groupName}</p>
                       {isActive && <p className="text-xs text-primary mt-0.5">Selected</p>}
                     </div>
                     <span
@@ -314,7 +314,7 @@ export function SettleView() {
       {selectedGroupId && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-gray-900">Detailed Balances</h3>
+            <h3 className="text-base font-semibold text-foreground">Detailed Balances</h3>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -374,7 +374,7 @@ export function SettleView() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900">
+                        <p className="text-sm text-foreground">
                           <span className="font-medium">{b.from?.name || 'Someone'}</span>
                           {' → '}
                           <span className="font-medium">{b.to?.name || 'Someone'}</span>
@@ -382,7 +382,7 @@ export function SettleView() {
                         {isYouOwe && <p className="text-xs text-destructive mt-0.5">You need to pay</p>}
                         {isOwedToYou && <p className="text-xs text-primary mt-0.5">Owed to you</p>}
                       </div>
-                      <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-foreground'}`}>
                         ₹{(Number(b.amount) || 0).toFixed(2)}
                       </span>
                     </CardContent>
@@ -405,7 +405,7 @@ export function SettleView() {
                 <div className="space-y-2">
                   {simplified.map((p, idx) => (
                     <div key={idx} className="flex items-center gap-3 p-2.5 bg-background rounded-lg border border-primary/20">
-                      <span className="text-sm flex-1 text-gray-900 font-medium">{p.fromUserId} → {p.toUserId}</span>
+                      <span className="text-sm flex-1 text-foreground font-medium">{p.fromUserId} → {p.toUserId}</span>
                       <span className="text-sm font-bold text-foreground">₹{(Number(p.amount) || 0).toFixed(2)}</span>
                     </div>
                   ))}
@@ -417,16 +417,16 @@ export function SettleView() {
           {/* Recent settlements */}
           {settlements.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Settlements</h4>
+              <h4 className="text-sm font-semibold text-foreground mb-2">Recent Settlements</h4>
               <div className="space-y-2">
                 {settlements.slice(0, 5).map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">{s.from?.name} paid {s.to?.name}</p>
+                      <p className="text-sm text-foreground">{s.from?.name} paid {s.to?.name}</p>
                       {s.note && <p className="text-xs text-muted-foreground">{s.note}</p>}
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">₹{(Number(s.amount) || 0).toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-foreground">₹{(Number(s.amount) || 0).toFixed(2)}</span>
                   </div>
                 ))}
               </div>

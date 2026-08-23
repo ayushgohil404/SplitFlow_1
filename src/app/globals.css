@@ -79,22 +79,22 @@
   --sidebar-ring: #059669;
 }
 
-/* Dark theme - premium macOS-inspired */
+/* Dark theme - bright readable text */
 .dark {
   --background: #0a0a0f;
-  --foreground: #e4e4e7;
+  --foreground: #fafafa;
   --card: #16161e;
-  --card-foreground: #e4e4e7;
+  --card-foreground: #fafafa;
   --popover: #16161e;
-  --popover-foreground: #e4e4e7;
+  --popover-foreground: #fafafa;
   --primary: #22d3a7;
   --primary-foreground: #042f2e;
   --secondary: #1e1e2a;
-  --secondary-foreground: #d4d4d8;
+  --secondary-foreground: #e4e4e7;
   --muted: #1c1c26;
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: #d4d4d8;
   --accent: #1e1e2a;
-  --accent-foreground: #d4d4d8;
+  --accent-foreground: #e4e4e7;
   --destructive: #f87171;
   --border: #27272a;
   --input: #27272a;
@@ -105,11 +105,11 @@
   --chart-4: #fbbf24;
   --chart-5: #f87171;
   --sidebar: #111118;
-  --sidebar-foreground: #e4e4e7;
+  --sidebar-foreground: #fafafa;
   --sidebar-primary: #22d3a7;
   --sidebar-primary-foreground: #042f2e;
   --sidebar-accent: #1e1e2a;
-  --sidebar-accent-foreground: #d4d4d8;
+  --sidebar-accent-foreground: #e4e4e7;
   --sidebar-border: #27272a;
   --sidebar-ring: #22d3a7;
 }
@@ -151,7 +151,7 @@
 }
 
 /* Dark mode subtle gradient on main bg */
-.dark .bg-muted/30 {
+.dark main.bg-muted/30, .dark [class*="bg-muted"] {
   background: linear-gradient(180deg, rgba(30,30,42,0.3) 0%, rgba(10,10,15,0.5) 100%);
 }
 

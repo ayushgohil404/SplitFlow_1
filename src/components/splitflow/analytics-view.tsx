@@ -255,7 +255,7 @@ export function AnalyticsView() {
       <Card>
         <CardContent className="p-5">
           <p className="text-sm text-muted-foreground">Total spending</p>
-          <p className="text-3xl font-bold text-gray-900">₹{totalSpent.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-foreground">₹{totalSpent.toFixed(2)}</p>
           <p className="text-sm text-muted-foreground mt-1">{filteredExpenses.length} expenses</p>
         </CardContent>
       </Card>
@@ -264,7 +264,7 @@ export function AnalyticsView() {
       {filteredExpenses.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <BarChart3 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <BarChart3 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No expenses to analyze</p>
           </CardContent>
         </Card>
@@ -388,8 +388,8 @@ export function AnalyticsView() {
               return (
                 <div key={m.name} className="space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-700 font-medium">{m.name}</span>
-                    <span className="text-gray-900 font-semibold">₹{m.total.toFixed(2)}</span>
+                    <span className="text-foreground font-medium">{m.name}</span>
+                    <span className="text-foreground font-semibold">₹{m.total.toFixed(2)}</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2.5">
                     <div

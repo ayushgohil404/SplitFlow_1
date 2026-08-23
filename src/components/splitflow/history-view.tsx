@@ -112,7 +112,7 @@ export function HistoryView() {
     <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Expense History</h2>
+        <h2 className="text-xl font-bold text-foreground">Expense History</h2>
         <p className="text-sm text-muted-foreground mt-1">All your expenses across groups and direct splits.</p>
       </div>
 
@@ -185,7 +185,7 @@ export function HistoryView() {
         </div>
       ) : expenses.length === 0 ? (
         <div className="rounded-xl border bg-background p-12 text-center">
-          <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <Receipt className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground font-medium">No expenses found</p>
           <p className="text-sm text-muted-foreground mt-1">
             {search || filter !== 'all' || category !== 'all'
@@ -223,7 +223,7 @@ export function HistoryView() {
                         <span className="text-lg">{CATEGORY_EMOJIS[cat] || '📋'}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{desc}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{desc}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {groupName ? (
                             <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded bg-muted text-muted-foreground inline-flex items-center">
@@ -237,7 +237,7 @@ export function HistoryView() {
                           <span className="text-xs text-muted-foreground">
                             {paidByName} paid
                           </span>
-                          <span className="text-xs text-gray-300">·</span>
+                          <span className="text-xs text-muted-foreground">·</span>
                           <span className="text-xs text-muted-foreground">
                             {splitType === 'equal' ? 'equal split' : splitType} with {splitCount}
                           </span>
@@ -250,7 +250,7 @@ export function HistoryView() {
                           </div>
                         )}
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 shrink-0">
+                      <span className="text-sm font-semibold text-foreground shrink-0">
                         {'₹'}{amount.toFixed(2)}
                       </span>
                     </div>

@@ -234,7 +234,7 @@ export function GroupsView() {
           <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
             <AlertCircle className="w-7 h-7 text-destructive" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load groups</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Failed to load groups</h3>
           <p className="text-sm text-muted-foreground mb-4">Something went wrong. Please try again.</p>
           <Button onClick={fetchGroups} variant="outline" className="gap-2">
             <RefreshCw className="w-4 h-4" /> Retry
@@ -263,7 +263,7 @@ export function GroupsView() {
         </div>
       ) : filteredGroups.length === 0 && searchQuery ? (
         <div className="text-center py-12">
-          <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <Search className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">No groups matching &quot;{searchQuery}&quot;</p>
           <Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
             Clear search
@@ -278,7 +278,7 @@ export function GroupsView() {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-emerald-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No groups yet</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-2">No groups yet</h3>
           <p className="text-sm text-muted-foreground mb-1 max-w-sm leading-relaxed">
             Create a group to start splitting expenses with friends, roommates, or travel buddies.
           </p>
@@ -311,7 +311,7 @@ export function GroupsView() {
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">{group.emoji || '👥'}</span>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">{group.name}</h3>
+                      <h3 className="font-semibold text-foreground truncate">{group.name}</h3>
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <Users className="w-3 h-3" />{group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
                       </p>
@@ -323,7 +323,7 @@ export function GroupsView() {
                   <div className="space-y-1.5 pt-2 border-t border-gray-100">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Total spent</span>
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-foreground">
                         ₹{(group.totalExpenses || 0).toFixed(2)}
                       </span>
                     </div>

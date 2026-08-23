@@ -143,7 +143,7 @@ export function ExpenseDetailDialog({
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Receipt className="w-3 h-3" />Amount
                 </p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-lg font-bold text-foreground">
                   ₹{(Number(expense.amount) || 0).toFixed(2)}
                 </p>
               </div>
@@ -151,7 +151,7 @@ export function ExpenseDetailDialog({
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Tag className="w-3 h-3" />Category
                 </p>
-                <p className="text-sm font-medium text-gray-900 capitalize">
+                <p className="text-sm font-medium text-foreground capitalize">
                   {catEmoji} {expense.category || 'General'}
                 </p>
               </div>
@@ -159,7 +159,7 @@ export function ExpenseDetailDialog({
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <User className="w-3 h-3" />Paid by
                 </p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {expense.paidBy?.name || 'Unknown'}
                 </p>
               </div>
@@ -167,7 +167,7 @@ export function ExpenseDetailDialog({
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="w-3 h-3" />Date
                 </p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {expense.date ? new Date(expense.date).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
@@ -194,10 +194,10 @@ export function ExpenseDetailDialog({
                         {split.userName?.charAt(0)?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 text-sm text-gray-700">
+                    <span className="flex-1 text-sm text-foreground">
                       {split.userName}
                     </span>
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-foreground">
                       ₹{(Number(split.amount) || 0).toFixed(2)}
                     </span>
                   </div>

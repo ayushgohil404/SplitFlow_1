@@ -311,7 +311,7 @@ export function GroupDetailView() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <span className="text-4xl sm:text-5xl">{group.emoji || '👥'}</span>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{group.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">{group.name}</h2>
               {group.description && (
                 <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
               )}
@@ -351,7 +351,7 @@ export function GroupDetailView() {
           {group.expenses.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <Receipt className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <Receipt className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground">No expenses yet</p>
               </CardContent>
             </Card>
@@ -366,12 +366,12 @@ export function GroupDetailView() {
                   <CardContent className="p-4 flex items-center gap-3">
                     <span className="text-xl">{CATEGORY_EMOJIS[exp.category] || '📋'}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{exp.description}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{exp.description}</p>
                       <p className="text-xs text-muted-foreground">
                         Paid by {exp.paidBy?.name} · {exp.date ? new Date(exp.date).toLocaleDateString() : ''}
                       </p>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 shrink-0">
+                    <span className="text-sm font-semibold text-foreground shrink-0">
                       ₹{(Number(exp.amount) || 0).toFixed(2)}
                     </span>
                   </CardContent>
@@ -401,7 +401,7 @@ export function GroupDetailView() {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
                       {member.role === 'admin' && (
                         <Badge variant="secondary" className="text-xs bg-primary/10 text-foreground">
                           <Shield className="w-3 h-3 mr-1" />Admin
@@ -435,7 +435,7 @@ export function GroupDetailView() {
           {(!group.balances || group.balances.length === 0) ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <Scale className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <Scale className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground">All settled up! No balances.</p>
               </CardContent>
             </Card>
@@ -454,7 +454,7 @@ export function GroupDetailView() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900">
+                        <p className="text-sm text-foreground">
                           <span className="font-medium">{bal.from?.name}</span>
                           {' → '}
                           <span className="font-medium">{bal.to?.name}</span>

@@ -258,7 +258,7 @@ export function FriendsView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Friends</h2>
+          <h2 className="text-xl font-bold text-foreground">Friends</h2>
           <p className="text-sm text-muted-foreground mt-1">Manage friends and balances.</p>
         </div>
         <Button
@@ -295,7 +295,7 @@ export function FriendsView() {
       {/* Pending Friend Requests */}
       {pendingReceived.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Clock className="w-4 h-4" />
             Pending Requests ({pendingReceived.length})
           </h3>
@@ -308,7 +308,7 @@ export function FriendsView() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{req.user.name || 'User'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{req.user.name || 'User'}</p>
                   <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
                 </div>
                 <div className="flex gap-1.5 shrink-0">
@@ -350,7 +350,7 @@ export function FriendsView() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-700 truncate">{req.user.name || 'User'}</p>
+                  <p className="text-sm text-foreground truncate">{req.user.name || 'User'}</p>
                   <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
                 </div>
                 <Badge variant="secondary" className="text-[10px]">Pending</Badge>
@@ -362,14 +362,14 @@ export function FriendsView() {
 
       {/* Friends List */}
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="text-sm font-semibold text-foreground">
           Your Friends ({friends.length})
         </h3>
 
         {friends.length === 0 && pendingReceived.length === 0 && pendingSent.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No friends yet</p>
               <p className="text-sm text-muted-foreground mt-1 mb-4">Add friends by email to start splitting expenses directly</p>
               <Button
@@ -404,7 +404,7 @@ export function FriendsView() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {friend.name || friend.email}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">{friend.email}</p>
@@ -436,7 +436,7 @@ export function FriendsView() {
                               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">By Group</p>
                               {breakdown.map((b: any) => (
                                 <div key={b.groupId} className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg">
-                                  <span className="text-sm text-gray-700">{b.groupEmoji} {b.groupName}</span>
+                                  <span className="text-sm text-foreground">{b.groupEmoji} {b.groupName}</span>
                                   <span className={`text-sm font-medium ${b.amount > 0 ? 'text-primary' : 'text-destructive'}`}>
                                     {b.amount > 0 ? '+' : ''}₹{(Number(b.amount) || 0).toFixed(2)}
                                   </span>
@@ -478,7 +478,7 @@ export function FriendsView() {
                   {d.isEmail ? <Mail className="w-5 h-5 text-muted-foreground" /> : <User className="w-5 h-5 text-muted-foreground" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{d.userName || 'Unknown'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{d.userName || 'Unknown'}</p>
                   <p className="text-xs text-muted-foreground">{d.isEmail ? 'Not yet a user' : 'Not friends'}</p>
                 </div>
                 <span className={`text-sm font-bold ${d.amount > 0 ? 'text-primary' : 'text-destructive'}`}>

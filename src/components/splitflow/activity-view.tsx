@@ -160,7 +160,7 @@ export function ActivityView() {
       ) : activities.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <Activity className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No activity yet</p>
             <p className="text-sm text-muted-foreground mt-1">Activity will appear here as you use SplitFlow.</p>
           </CardContent>
@@ -185,7 +185,7 @@ export function ActivityView() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900">
+                        <p className="text-sm text-foreground">
                           <span className="text-muted-foreground">{act.message}</span>
                         </p>
                       </div>

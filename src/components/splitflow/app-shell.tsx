@@ -41,7 +41,6 @@ import { AIAssistantView } from './ai-assistant-view';
 import { FriendsView } from './friends-view';
 import { HistoryView } from './history-view';
 import { ThemeToggle } from './theme-toggle';
-import { FloatingAIBubble } from './floating-ai-bubble';
 
 type NavItem = {
   view: View;
@@ -324,8 +323,6 @@ export function AppShell() {
         <span className="font-semibold text-sm hidden sm:inline">Add Expense</span>
       </button>
 
-      {/* Floating AI Bubble - bottom-left */}
-      <FloatingAIBubble />
     </div>
   );
 }

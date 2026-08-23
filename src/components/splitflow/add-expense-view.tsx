@@ -1240,7 +1240,7 @@ export function AddExpenseView() {
                           <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
                             <User className="w-3 h-3 text-foreground" />
                           </div>
-                          <span className="text-sm font-medium text-gray-700">You</span>
+                          <span className="text-sm font-medium text-foreground">You</span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
@@ -1295,7 +1295,7 @@ export function AddExpenseView() {
                       : 0;
                     return (
                       <div key={p.id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 w-28 truncate shrink-0">{p.name}</span>
+                        <span className="text-sm text-foreground w-28 truncate shrink-0">{p.name}</span>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
@@ -1374,7 +1374,7 @@ export function AddExpenseView() {
                     const split = splits.find((s) => s.userId === m.id);
                     return (
                       <div key={m.id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 w-32 truncate shrink-0">{m.name}</span>
+                        <span className="text-sm text-foreground w-32 truncate shrink-0">{m.name}</span>
                         <Input
                           type="number"
                           step={splitType === 'percentage' ? '1' : '0.01'}
@@ -1405,7 +1405,7 @@ export function AddExpenseView() {
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
                         <User className="w-3 h-3 text-foreground" />
                       </div>
-                      <span className="text-sm font-medium text-gray-700">You</span>
+                      <span className="text-sm font-medium text-foreground">You</span>
                     </div>
                     <Input
                       type="number"
@@ -1426,7 +1426,7 @@ export function AddExpenseView() {
                     const split = splits.find((s) => s.userId === p.id);
                     return (
                       <div key={p.id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 w-32 truncate shrink-0">{p.name}</span>
+                        <span className="text-sm text-foreground w-32 truncate shrink-0">{p.name}</span>
                         <Input
                           type="number"
                           step={splitType === 'percentage' ? '1' : '0.01'}
@@ -1445,7 +1445,7 @@ export function AddExpenseView() {
                     <div key={ep.email} className="flex items-center gap-3">
                       <div className="flex items-center gap-2 w-32 shrink-0">
                         <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span className="text-sm text-gray-700 truncate">{ep.name}</span>
+                        <span className="text-sm text-foreground truncate">{ep.name}</span>
                       </div>
                       <Input
                         type="number"
