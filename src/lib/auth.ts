@@ -20,22 +20,29 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         if (account?.provider === "github" || account?.provider === "google") {
-          let dbUser = await db.user.findUnique({ where: { email: user.email! } });
-          if (!dbUser) {
-            dbUser = await db.user.create({
-              data: {
-                email: user.email!,
-                name: user.name,
-                image: user.image,
-              },
-            });
-          } else if (user.image && !dbUser.image) {
-            dbUser = await db.user.update({
-              where: { id: dbUser.id },
-              data: { image: user.image },
-            });
+          try {
+            let dbUser = await db.user.findUnique({ where: { email: user.email! } });
+            if (!dbUser) {
+              dbUser = await db.user.create({
+                data: {
+                  email: user.email!,
+                  name: user.name,
+                  image: user.image,
+                },
+              });
+            } else if (user.image && !dbUser.image) {
+              dbUser = await db.user.update({
+                where: { id: dbUser.id },
+                data: { image: user.image },
+              });
+            }
+            token.id = dbUser.id;
+            token.dbSynced = true;
+          } catch (dbError) {
+            console.error("[auth] DB sync failed:", dbError);
+            token.id = user.id;
+            token.dbSynced = false;
           }
-          token.id = dbUser.id;
         }
       }
       return token;
@@ -43,6 +50,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.id) {
         (session.user as any).id = token.id;
+        (session.user as any).dbSynced = token.dbSynced;
       }
       return session;
     },

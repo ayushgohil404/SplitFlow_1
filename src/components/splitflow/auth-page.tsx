@@ -1,23 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Github, Chrome, Sparkles, Wallet, Users, Shield, Bot, Camera, Zap } from 'lucide-react';
+import { Github, Chrome, Sparkles, Wallet, Users, Shield, Bot, Camera, Zap, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function AuthPage() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    if (err) {
+      const messages: Record<string, string> = {
+        OAuthCallback: 'Authentication failed. The database may not be configured yet.',
+        OAuthAccountNotLinked: 'This account is not linked. Please try a different provider.',
+        SessionRequired: 'Please sign in to continue.',
+        Configuration: 'Authentication is not configured properly.',
+        AccessDenied: 'You denied the authentication request.',
+      };
+      setError(messages[err] || `Authentication error: ${err}`);
+      window.history.replaceState({}, '', '/app');
+    }
+  }, []);
 
   const handleOAuthLogin = (provider: 'github' | 'google') => {
+    setError('');
     setOauthLoading(provider);
     try {
       import('next-auth/react').then(({ signIn }) => {
         signIn(provider, { callbackUrl: '/app' });
       }).catch(() => {
+        setError('Failed to start sign-in. Please try again.');
         setOauthLoading(null);
       });
     } catch {
+      setError('Failed to start sign-in. Please try again.');
       setOauthLoading(null);
     }
     setTimeout(() => setOauthLoading(null), 10000);
@@ -104,6 +124,13 @@ export function AuthPage() {
                 <CardDescription>Sign in with your GitHub or Google account</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                {error && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                    <XCircle className="w-4 h-4 shrink-0" />
+                    <p>{error}</p>
+                  </div>
+                )}
+
                 <Button 
                   variant="outline" 
                   className="w-full h-11 text-sm gap-3" 
