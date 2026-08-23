@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import { chatWithFallback, isGroqConfigured } from '@/lib/groq'
+import { chatWithFallback, isGeminiConfigured } from '@/lib/groq'
 
 function extractJSON(text: string): unknown {
   try {
@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!isGroqConfigured()) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
+        { error: 'AI service not configured. Set GEMINI_API_KEY.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }
@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
     const msg = error?.message || ''
     let userMsg = 'Failed to categorize. Try selecting manually.'
     if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
-      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
-    } else if (msg.includes('All AI models failed')) {
+      userMsg = 'AI API key is invalid. Update GEMINI_API_KEY in Vercel settings.'
+    } else if (msg.includes('All Gemini models failed')) {
       userMsg = 'AI models unavailable. Try selecting manually.'
     }
     return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 200 })

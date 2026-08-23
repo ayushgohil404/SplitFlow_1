@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import { getGroq, VISION_MODEL, isGroqConfigured } from '@/lib/groq'
+import { isGeminiConfigured } from '@/lib/groq'
+
+// Gemini models that support vision (image input)
+const VISION_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+]
+
+const ENDPOINTS = ['v1beta', 'v1']
 
 function extractJSON(text: string): unknown {
   try {
@@ -41,6 +50,58 @@ Rules:
 
 Return raw JSON only.`
 
+async function callGeminiVision(base64: string, mimeType: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured')
+
+  let lastError: Error | null = null
+
+  for (const model of VISION_MODELS) {
+    for (const endpoint of ENDPOINTS) {
+      const url = `https://generativelanguage.googleapis.com/${endpoint}/models/${model}:generateContent?key=${apiKey}`
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            contents: [{
+              role: 'user',
+              parts: [
+                { text: 'Analyze this receipt image and extract all the information.' },
+                { inlineData: { mimeType, data: base64 } },
+              ],
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+          }),
+        })
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '')
+          lastError = new Error(`Gemini ${model} (${endpoint}) failed (${res.status}): ${text.slice(0, 150)}`)
+          if (res.status === 404) break // try next model
+          if (res.status === 401 || res.status === 403) throw lastError
+          continue
+        }
+
+        const data = await res.json()
+        const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+        if (content) return content
+
+        lastError = new Error(`Empty response from ${model}`)
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.message.includes('unauthorized') || err.message.includes('invalid'))) {
+          throw err
+        }
+        lastError = err instanceof Error ? err : new Error(String(err))
+      }
+    }
+  }
+
+  throw lastError || new Error('All vision models failed')
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -48,9 +109,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!isGroqConfigured()) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
+        { error: 'AI service not configured. Set GEMINI_API_KEY.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }
@@ -65,25 +126,8 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const base64 = Buffer.from(bytes).toString('base64')
     const mimeType = file.type || 'image/jpeg'
-    const dataUrl = `data:${mimeType};base64,${base64}`
 
-    const groq = getGroq()
-    const response = await groq.chat.completions.create({
-      model: VISION_MODEL,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analyze this receipt image and extract all the information.' },
-            { type: 'image_url', image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-      temperature: 0.1,
-    })
-
-    const raw = response.choices?.[0]?.message?.content ?? ''
+    const raw = await callGeminiVision(base64, mimeType)
 
     let parsed: Record<string, unknown>
     try {
@@ -114,9 +158,9 @@ export async function POST(req: NextRequest) {
     console.error('Error reading receipt:', error?.message || error)
     const msg = error?.message || ''
     let userMsg = 'Failed to scan receipt. Try entering details manually.'
-    if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
-      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
-    } else if (msg.includes('All AI models failed')) {
+    if (msg.includes('API key') || msg.includes('401') || msg.includes('403') || msg.includes('unauthorized') || msg.includes('invalid')) {
+      userMsg = 'AI API key is invalid. Update GEMINI_API_KEY in Vercel settings.'
+    } else if (msg.includes('All Gemini models failed') || msg.includes('All vision models failed')) {
       userMsg = 'Vision model unavailable. Try a different image or enter manually.'
     }
     return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 200 })

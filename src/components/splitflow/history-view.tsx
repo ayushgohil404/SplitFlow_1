@@ -1,24 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Search,
-  Filter,
   User,
   Receipt,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -34,12 +25,18 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   general: '📋',
 };
 
-const CATEGORIES = [
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'group', label: 'Groups' },
+  { value: 'direct', label: 'Direct' },
+];
+
+const CATEGORY_OPTIONS = [
   { value: 'all', label: 'All Categories' },
   { value: 'food', label: '🍕 Food' },
   { value: 'travel', label: '✈️ Travel' },
   { value: 'housing', label: '🏠 Housing' },
-  { value: 'entertainment', label: '🎉 Entertainment' },
+  { value: 'entertainment', label: '🎉 Fun' },
   { value: 'utilities', label: '💡 Utilities' },
   { value: 'shopping', label: '🛍️ Shopping' },
   { value: 'transport', label: '🚗 Transport' },
@@ -57,61 +54,59 @@ export function HistoryView() {
   const [page, setPage] = useState(0);
   const limit = 30;
 
-  const fetchHistory = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        limit: String(limit),
-        offset: String(page * limit),
-      });
-      if (filter !== 'all') params.set('filter', filter);
-      if (search.trim()) params.set('search', search.trim());
-      if (category && category !== 'all') params.set('category', category);
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          limit: String(limit),
+          offset: String(page * limit),
+        });
+        if (filter !== 'all') params.set('filter', filter);
+        if (search.trim()) params.set('search', search.trim());
+        if (category !== 'all') params.set('category', category);
 
-      const res = await fetch(`/api/expenses/history?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        const normalized = (data.expenses || []).map((e: any) => ({
-          ...e,
-          splits: Array.isArray(e.splits) ? e.splits : [],
-          nonUserSplits: Array.isArray(e.nonUserSplits) ? e.nonUserSplits : [],
-          paidBy: e.paidBy || null,
-          group: e.group || null,
-        }));
-        setExpenses(normalized);
-        setTotal(data.total || 0);
-      } else {
-        toast.error('Failed to load history');
+        const res = await fetch(`/api/expenses/history?${params}`);
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setExpenses(Array.isArray(data.expenses) ? data.expenses : []);
+          setTotal(typeof data.total === 'number' ? data.total : 0);
+        } else if (!cancelled) {
+          toast.error('Failed to load history');
+        }
+      } catch {
+        if (!cancelled) toast.error('Failed to load history');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {
-      toast.error('Failed to load history');
-    } finally {
-      setLoading(false);
     }
+    fetchData();
+    return () => { cancelled = true; };
   }, [filter, search, category, page]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
-
-  // Safe grouping with full null protection
-  const groupedExpenses: Record<string, any[]> = {};
-  for (const exp of expenses) {
-    try {
-      const dateKey = new Date(exp.date || Date.now()).toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-      if (!groupedExpenses[dateKey]) groupedExpenses[dateKey] = [];
-      groupedExpenses[dateKey].push(exp);
-    } catch {
-      // skip bad expense entries
+  // Group by date using useMemo to avoid re-computing on every render
+  const grouped = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    for (const exp of expenses) {
+      try {
+        const d = new Date(exp.date || Date.now());
+        const key = d.toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        if (!map[key]) map[key] = [];
+        map[key].push(exp);
+      } catch {
+        // skip
+      }
     }
-  }
+    return map;
+  }, [expenses]);
 
   const totalPages = Math.ceil(total / limit);
-  const totalAmount = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const totalAmount = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -123,59 +118,63 @@ export function HistoryView() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100">
-          <CardContent className="p-4">
-            <p className="text-xs text-emerald-600 font-medium">Total Expenses</p>
-            <p className="text-2xl font-bold text-emerald-700 mt-1">{expenses.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
-          <CardContent className="p-4">
-            <p className="text-xs text-blue-600 font-medium">Total Amount</p>
-            <p className="text-2xl font-bold text-blue-700 mt-1">₹{totalAmount.toFixed(2)}</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
+          <p className="text-xs text-emerald-600 font-medium">Total Expenses</p>
+          <p className="text-2xl font-bold text-emerald-700 mt-1">{expenses.length}</p>
+        </div>
+        <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+          <p className="text-xs text-blue-600 font-medium">Total Amount</p>
+          <p className="text-2xl font-bold text-blue-700 mt-1">
+            {'₹'}{(Number(totalAmount) || 0).toFixed(2)}
+          </p>
+        </div>
       </div>
 
       {/* Search & Filters */}
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search expenses..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                className="h-10 pl-9"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(0); }}>
-              <SelectTrigger className="h-9 flex-1">
-                <Filter className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Expenses</SelectItem>
-                <SelectItem value="group">Group Expenses</SelectItem>
-                <SelectItem value="direct">Direct Splits</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(0); }}>
-              <SelectTrigger className="h-9 flex-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-xl border bg-white p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search expenses..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            className="h-10 pl-9"
+          />
+        </div>
+        {/* Filter buttons - no Radix Select to avoid v2 compatibility issues */}
+        <div className="flex flex-wrap gap-1.5">
+          {FILTER_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={filter === opt.value ? 'default' : 'outline'}
+              size="sm"
+              className={filter === opt.value
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5'
+                : 'text-xs h-7 px-2.5'
+              }
+              onClick={() => { setFilter(opt.value); setPage(0); }}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORY_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={category === opt.value ? 'default' : 'outline'}
+              size="sm"
+              className={category === opt.value
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5'
+                : 'text-xs h-7 px-2.5'
+              }
+              onClick={() => { setCategory(opt.value); setPage(0); }}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       {/* Expense List */}
       {loading ? (
@@ -185,20 +184,18 @@ export function HistoryView() {
           ))}
         </div>
       ) : expenses.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No expenses found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              {search || filter !== 'all' || (category && category !== 'all')
-                ? 'Try adjusting your filters'
-                : 'Add your first expense to get started'}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border bg-white p-12 text-center">
+          <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">No expenses found</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {search || filter !== 'all' || category !== 'all'
+              ? 'Try adjusting your filters'
+              : 'Add your first expense to get started'}
+          </p>
+        </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(groupedExpenses).map(([dateKey, dayExpenses]) => (
+          {Object.entries(grouped).map(([dateKey, dayExpenses]) => (
             <div key={dateKey}>
               <div className="flex items-center gap-3 mb-3">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{dateKey}</p>
@@ -206,52 +203,57 @@ export function HistoryView() {
               </div>
               <div className="space-y-2">
                 {dayExpenses.map((exp: any) => {
-                  const splitCount = (exp.splits?.length || 0) + (exp.nonUserSplits?.length || 0);
+                  const splitCount = (Array.isArray(exp.splits) ? exp.splits.length : 0)
+                    + (Array.isArray(exp.nonUserSplits) ? exp.nonUserSplits.length : 0);
                   const amount = Number(exp.amount) || 0;
                   const desc = String(exp.description || 'Expense');
                   const cat = String(exp.category || 'other');
                   const splitType = String(exp.splitType || 'equal');
-                  const paidByName = exp.paidBy?.name || 'You';
+                  const paidByName = (exp.paidBy && exp.paidBy.name) ? String(exp.paidBy.name) : 'You';
+                  const groupName = (exp.group && exp.group.name) ? String(exp.group.name) : '';
+                  const groupEmoji = (exp.group && exp.group.emoji) ? String(exp.group.emoji) : '';
+                  const nonUserCount = Array.isArray(exp.nonUserSplits) ? exp.nonUserSplits.length : 0;
 
                   return (
-                    <Card key={exp.id || Math.random()} className="hover:shadow-sm transition-shadow">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                          <span className="text-lg">{CATEGORY_EMOJIS[cat] || '📋'}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{desc}</p>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            {exp.group ? (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                                {String(exp.group.emoji || '')} {String(exp.group.name || 'Group')}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-emerald-600 border-emerald-200">
-                                <User className="w-2.5 h-2.5 mr-0.5" /> Direct
-                              </Badge>
-                            )}
-                            <span className="text-xs text-gray-400">
-                              {paidByName} paid
+                    <div
+                      key={String(exp.id || Math.random())}
+                      className="rounded-xl border bg-white p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                        <span className="text-lg">{CATEGORY_EMOJIS[cat] || '📋'}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{desc}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {groupName ? (
+                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded bg-gray-100 text-gray-600 inline-flex items-center">
+                              {groupEmoji} {groupName}
                             </span>
-                            <span className="text-xs text-gray-300">·</span>
-                            <span className="text-xs text-gray-400">
-                              Split {splitType === 'equal' ? 'equally' : splitType} with {splitCount}
+                          ) : (
+                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded border border-emerald-200 text-emerald-600 inline-flex items-center">
+                              <User className="w-2.5 h-2.5 mr-0.5" /> Direct
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400">
+                            {paidByName} paid
+                          </span>
+                          <span className="text-xs text-gray-300">·</span>
+                          <span className="text-xs text-gray-400">
+                            {splitType === 'equal' ? 'equal split' : splitType} with {splitCount}
+                          </span>
+                        </div>
+                        {nonUserCount > 0 && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                              {nonUserCount} email participant{nonUserCount > 1 ? 's' : ''}
                             </span>
                           </div>
-                          {exp.nonUserSplits && exp.nonUserSplits.length > 0 && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-                                {exp.nonUserSplits.length} email participant{exp.nonUserSplits.length > 1 ? 's' : ''}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900 shrink-0">
-                          ₹{amount.toFixed(2)}
-                        </span>
-                      </CardContent>
-                    </Card>
+                        )}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 shrink-0">
+                        {'₹'}{amount.toFixed(2)}
+                      </span>
+                    </div>
                   );
                 })}
               </div>
