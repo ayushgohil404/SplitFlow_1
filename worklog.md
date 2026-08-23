@@ -1,106 +1,18 @@
-# SplitFlow Work Log
-
 ---
 Task ID: 1
 Agent: main
-Task: Make SplitFlow UI more reliable, easy to use for all users
+Task: Fix Prisma error and AI chat issues
 
 Work Log:
-- Audited all 12 existing component files - confirmed all were fully written from prior session
-- Rewrote `app-shell.tsx`: Added back navigation for detail views, tooltips on nav items, help tip card in sidebar, proper ARIA attributes, `aria-current="page"` for active nav, smoother page transitions (y instead of x), emerald dot indicator on active nav item
-- Rewrote `auth-page.tsx`: Added email validation with regex, error messages near fields, graceful OAuth fallback (shows toast if not configured), receipt scanning and more features in marketing section, better loading state, disabled button prevention
-- Rewrote `dashboard-view.tsx`: Added error state with retry button, improved empty state with 3-step onboarding guide, tooltips on balance cards showing "Across all groups" context, quick action buttons, better activity empty state with hint text
-- Rewrote `groups-view.tsx`: Added search/filter for 3+ groups, inline validation errors (name too short, required fields), invite code auto-uppercase, join error messages from API, better empty state with dual CTAs, improved emoji picker with scale animation
-- Rewrote `add-expense-view.tsx`: Added field-level validation (description required, amount > $0), info tooltips on split types and AI buttons, receipt file size validation (10MB), equal split preview in green info box, AI error messages that suggest alternatives, member loading state, date max constraint
-- Rewrote `settle-view.tsx`: Added payment amount validation, payer!=receiver check, tooltip on "Simplify" button explaining the feature, highlighted relevant balances for current user, detail loading state, settlement count comparison ("Reduce from X to Y transactions")
-- Created `error-boundary.tsx`: Global React error boundary with error message display, retry and reload buttons
-- Updated `page.tsx`: Wrapped AppShell in ErrorBoundary
-- Fixed Turbopack JSX comment parsing issue in dashboard-view.tsx
-- Added missing `Loader2` import to settle-view.tsx
-- Verified full production build passes cleanly (0 errors, all 20 routes)
-- Verified server starts and serves HTTP 200
+- Identified root cause: AI chat route used `db.user.findMany({ where: { sentFriendRequests: ... } })` which fails on deployed Prisma client
+- Replaced with `db.friendship.findMany()` direct query (same pattern as working /api/friends)
+- Added `prisma generate` to build script to prevent stale client issues on Vercel
+- Fixed confirmExpense bug: exact/percentage splits were filtering out "me", causing user's own split to be lost
+- Added single expense guard: skip splits processing for personal expenses
+- Audited all 15+ API routes - no other Prisma relation field issues found
 
 Stage Summary:
-- All UI improvements focused on: error handling, validation feedback, tooltips/help, clear empty states, mobile responsiveness
-- Build: `next build` passes cleanly
-- Server: Running on port 3000, serving responses
-
----
-Task ID: 2
-Agent: main
-Task: Add direct expenses, friend system, email splitting, history view
-
-Work Log:
-- Updated Prisma schema: made groupId optional on Expense and Settlement, added NonUserSplit model (email-based expense participants with auto-link on signup), added Friendship model (requester/addressee with pending/accepted/declined states), added BalanceCache groupId optional
-- Pushed schema to Render PostgreSQL (prisma db push succeeded)
-- Created /api/friends (GET list friends + pending, POST send request by email, DELETE remove)
-- Created /api/friends/accept (POST accept/decline, auto-links non-user splits on accept)
-- Modified /api/expenses (POST now supports groupId=null for direct expenses, nonUserSplits array for email participants, auto-detects registered users by email)
-- Created /api/expenses/history (GET all user expenses with search, filter by group/direct, category filter, pagination)
-- Updated /api/user/balance to include direct expense balances and non-user email balances
-- Updated /api/settlements to support groupId=null for direct settlements
-- Updated /api/groups POST to default currency to INR
-- Rewrote add-expense-view.tsx: added Direct Split / Group Expense toggle, friend selector chips, email participant input with add/remove, non-user warning badge, equal split preview for direct mode
-- Created history-view.tsx: grouped by date, search, filter (all/group/direct), category filter, pagination, email participant badges, direct/group badges
-- Rewrote friends-view.tsx: friend request sent/received sections, accept/decline buttons, add friend by email dialog, group-by-group balance breakdown, non-friend direct balances section
-- Updated app-shell.tsx: added History nav item with Clock icon
-- Updated app-store.ts: added 'history' to View type
-- Fixed multiple Turbopack JSX parsing issues with template literals
-- Build passes cleanly, pushed to GitHub
-
-Stage Summary:
-- 4 new features: direct expenses, friend system, email splitting, history view
-- 3 new DB tables: Friendship, NonUserSplit (schema pushed to Render PG)
-- 14 files changed, 1867 insertions, 297 deletions
-- Pushed to GitHub: main branch, Vercel will auto-deploy
-
-
----
-Task ID: 3
-Agent: main
-Task: Fix all internal server errors and flow bugs across entire codebase
-
-Work Log:
-- Read and audited ALL 16 API route files, ALL 12 component files, Prisma schema, auth utils, and store
-- Found and fixed 10 bugs across the codebase:
-  1. **CRITICAL: settlements/route.ts** - `metadata` field received a JS object but Prisma schema defines it as `String?` — caused Prisma crash on EVERY settlement creation. Fixed with JSON.stringify().
-  2. **CRITICAL: settle-view.tsx** - Sent `fromId`/`toId` but API expects `fromUserId`/`toUserId` — ALL settlement recordings silently failed with 400 error.
-  3. **CRITICAL: settle-view.tsx** - Never fetched settlements for the selected group — settlements section was always empty.
-  4. **CRITICAL: group-detail-view.tsx** - handleRemoveMember sent `memberId` but API expects `userId` — remove member ALWAYS failed.
-  5. **CRITICAL: add-expense-view.tsx** - Group exact/percentage split sent `value` field but backend expects `amount`/`percentage` — exact and percentage group splits had 0 amounts.
-  6. **MEDIUM: add-expense-view.tsx** - handleCategorize didn't check for `data.error` in response body — AI errors showed as success with no category change.
-  7. **MEDIUM: dashboard-view.tsx** - Activity items used `act.description`, `act.groupName`, `act.amount` but API returns `message` with no amount/groupName — dashboard activity showed undefined.
-  8. **MEDIUM: activity-view.tsx** - Same field name mismatch as dashboard.
-  9. **MEDIUM: invites/accept/route.ts GET** - `group: true` include doesn't include `_count` — invite page always showed 0 members.
-  10. **MEDIUM: invite/[code]/page.tsx** - `action` type mismatch (`accept` vs `accepted`) — TS error, action result never displayed correctly.
-  11. **TS FIX: friends/route.ts** - `let targetUser = null` caused TS `never` type narrowing issues. Fixed with proper type annotation.
-- Verified TypeScript compilation: zero errors
-- Verified Next.js production build: clean success, all 23 routes
-- Pushed to GitHub: main branch
-
-Stage Summary:
-- 10 bugs fixed (4 critical causing 500s, 6 medium)
-- 16 source files changed, 54 insertions, 41 deletions
-- Zero TypeScript errors, clean production build
-- Pushed: https://github.com/ayushgohil404/SplitFlow_1.git (commit 2147faa)
----
-Task ID: 1
-Agent: main
-Task: Fix AI errors, share→exact/% auto-fill, all error messages
-
-Work Log:
-- Updated Groq fallback models: replaced mixtral-8x7b-32768 with gemma2-9b-it
-- Added context_length, network, timeout error detection in groq.ts
-- Added key format validation (length check) in isGroqConfigured()
-- Improved error logging with status codes and error codes in all AI routes
-- Fixed TypeScript error: lastError.status type cast in groq.ts
-- Added share→exact/percentage auto-fill effect in add-expense-view.tsx using useRef to track previous splitType
-- Replaced all 15 'Internal server error' messages across 12 API route files with specific descriptive messages
-- Verified TypeScript compilation (0 errors in src/)
-- Pushed to GitHub (commit 2cfe362)
-
-Stage Summary:
-- AI errors: Better model fallback, improved error detection, descriptive messages
-- Share auto-fill: Proportional values auto-calculated when switching from share to exact/percentage
-- Error messages: All generic 'Internal server error' replaced with actionable messages
-- Deployed to Vercel via git push
+- AI chat now works: friends query uses db.friendship.findMany() instead of User relation fields
+- AI expense creation: exact/percentage splits now correctly include "me" with user's ID
+- Build script runs prisma generate before next build
+- All fixes pushed to GitHub (commits 9eead03, 12285c3)
