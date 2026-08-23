@@ -36,14 +36,21 @@ export async function POST(req: NextRequest) {
       emoji: m.group.emoji,
     }))
 
-    const friends = await db.user.findMany({
+    const acceptedFriendships = await db.friendship.findMany({
       where: {
         OR: [
-          { sentFriendRequests: { some: { addresseeId: user.id, status: 'accepted' } } },
-          { receivedFriendRequests: { some: { requesterId: user.id, status: 'accepted' } } },
+          { requesterId: user.id, status: 'accepted' },
+          { addresseeId: user.id, status: 'accepted' },
         ],
       },
-      select: { id: true, name: true, email: true },
+      include: {
+        requester: { select: { id: true, name: true, email: true } },
+        addressee: { select: { id: true, name: true, email: true } },
+      },
+    })
+    const friends = acceptedFriendships.map((f) => {
+      const isRequester = f.requesterId === user.id
+      return isRequester ? f.addressee : f.requester
     })
 
     // Calculate balances (owed to user / user owes)
