@@ -79,39 +79,39 @@
   --sidebar-ring: #059669;
 }
 
-/* ─── Dark theme - high contrast ─── */
+/* Dark theme - premium macOS-inspired */
 .dark {
-  --background: #0b1120;
-  --foreground: #f1f5f9;
-  --card: #141d2f;
-  --card-foreground: #f1f5f9;
-  --popover: #141d2f;
-  --popover-foreground: #f1f5f9;
-  --primary: #34d399;
-  --primary-foreground: #052e16;
-  --secondary: #1c2a3f;
-  --secondary-foreground: #e2e8f0;
-  --muted: #1c2a3f;
-  --muted-foreground: #cbd5e1;
-  --accent: #1c2a3f;
-  --accent-foreground: #e2e8f0;
-  --destructive: #fb7185;
-  --border: #243049;
-  --input: #243049;
-  --ring: #34d399;
-  --chart-1: #34d399;
+  --background: #0a0a0f;
+  --foreground: #e4e4e7;
+  --card: #16161e;
+  --card-foreground: #e4e4e7;
+  --popover: #16161e;
+  --popover-foreground: #e4e4e7;
+  --primary: #22d3a7;
+  --primary-foreground: #042f2e;
+  --secondary: #1e1e2a;
+  --secondary-foreground: #d4d4d8;
+  --muted: #1c1c26;
+  --muted-foreground: #a1a1aa;
+  --accent: #1e1e2a;
+  --accent-foreground: #d4d4d8;
+  --destructive: #f87171;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #22d3a7;
+  --chart-1: #22d3a7;
   --chart-2: #38bdf8;
   --chart-3: #a78bfa;
   --chart-4: #fbbf24;
-  --chart-5: #fb7185;
-  --sidebar: #111827;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #34d399;
-  --sidebar-primary-foreground: #052e16;
-  --sidebar-accent: #1c2a3f;
-  --sidebar-accent-foreground: #e2e8f0;
-  --sidebar-border: #243049;
-  --sidebar-ring: #34d399;
+  --chart-5: #f87171;
+  --sidebar: #111118;
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: #22d3a7;
+  --sidebar-primary-foreground: #042f2e;
+  --sidebar-accent: #1e1e2a;
+  --sidebar-accent-foreground: #d4d4d8;
+  --sidebar-border: #27272a;
+  --sidebar-ring: #22d3a7;
 }
 
 @layer base {
@@ -139,8 +139,23 @@
   background: #94a3b8;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #27272a;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3f3f46;
+}
+
+/* Dark mode premium card glow */
+.dark .bg-card {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Dark mode subtle gradient on main bg */
+.dark .bg-muted/30 {
+  background: linear-gradient(180deg, rgba(30,30,42,0.3) 0%, rgba(10,10,15,0.5) 100%);
+}
+
+/* Dark mode input focus ring glow */
+.dark input:focus, .dark textarea:focus, .dark select:focus {
+  box-shadow: 0 0 0 2px rgba(34,211,167,0.15);
 }

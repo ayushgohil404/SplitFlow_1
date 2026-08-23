@@ -67,12 +67,12 @@ export function FloatingAIBubble() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, messages }),
+        body: JSON.stringify({ query: userMsg }),
       });
       const data = await res.json();
       setIsTyping(false);
-      if (data.reply) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+      if (data.text) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.text }]);
       } else {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.error || 'Sorry, I could not process that.' }]);
       }
