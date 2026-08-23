@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Friend request not found' }, { status: 404 })
     }
 
-    // Only the addressee can accept/decline
     if (friendship.addresseeId !== user.id) {
       return NextResponse.json({ error: 'Not authorized to respond to this request' }, { status: 403 })
     }
@@ -43,7 +42,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Friend request declined' })
     }
 
-    // Accept
     const updated = await db.friendship.update({
       where: { id: friendshipId },
       data: { status: 'accepted' },
@@ -53,7 +51,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create activity for both users
     await db.activity.createMany({
       data: [
         {
@@ -69,7 +66,6 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    // Link any non-user splits: if this friend had expenses where this email was used as non-user
     await db.nonUserSplit.updateMany({
       where: {
         email: friendship.requester.email?.toLowerCase(),

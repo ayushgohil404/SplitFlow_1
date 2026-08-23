@@ -98,7 +98,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
-    // Check if target is admin
     if (targetMember.role === 'admin') {
       const adminCount = await db.groupMember.count({
         where: { groupId: id, role: 'admin' },

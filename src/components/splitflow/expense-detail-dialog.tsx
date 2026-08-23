@@ -137,7 +137,7 @@ export function ExpenseDetailDialog({
           </div>
         ) : expense ? (
           <div className="space-y-4">
-            {/* Info grid */}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -181,7 +181,7 @@ export function ExpenseDetailDialog({
 
             <Separator />
 
-            {/* Split breakdown */}
+
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                 Split Breakdown ({expense.splitType || 'equal'})
@@ -207,7 +207,7 @@ export function ExpenseDetailDialog({
 
             <Separator />
 
-            {/* Actions */}
+
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"

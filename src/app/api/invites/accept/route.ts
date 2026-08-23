@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'code and action are required' }, { status: 400 })
     }
 
-    // Find the invite
     const invite = await db.invite.findUnique({
       where: { code },
       include: {
@@ -44,7 +43,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Invite declined' })
     }
 
-    // Accept: add user to group
     const alreadyMember = await db.groupMember.findUnique({
       where: { groupId_userId: { groupId: invite.groupId, userId: user.id } },
     })
@@ -58,7 +56,6 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Log activity
       await db.activity.create({
         data: {
           userId: user.id,
@@ -69,7 +66,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Update invite
     await db.invite.update({
       where: { id: invite.id },
       data: {

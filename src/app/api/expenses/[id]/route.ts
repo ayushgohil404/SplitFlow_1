@@ -93,7 +93,6 @@ export async function PATCH(
     if (isRecurring !== undefined) updateData.isRecurring = isRecurring
     if (recurringFrequency !== undefined) updateData.recurringFrequency = recurringFrequency ?? null
 
-    // Handle split updates
     if (splits || splitType === 'equal') {
       const currentSplitType = splitType ?? existing.splitType
       const currentAmount = amount ?? existing.amount
@@ -154,7 +153,6 @@ export async function PATCH(
         return NextResponse.json({ expense })
       }
 
-      // Delete existing splits and recreate
       await db.expenseSplit.deleteMany({ where: { expenseId: id } })
 
       await db.expenseSplit.createMany({

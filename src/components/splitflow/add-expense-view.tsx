@@ -77,21 +77,17 @@ type ExpenseMode = 'group' | 'direct';
 export function AddExpenseView() {
   const { selectedGroupId, navigateToGroup, setView, user } = useAppStore();
 
-  // Expense mode
   const [mode, setMode] = useState<ExpenseMode>(selectedGroupId ? 'group' : 'direct');
 
-  // Data
   const [groups, setGroups] = useState<Group[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
-  // AI NLP input
   const [nlpInput, setNlpInput] = useState('');
   const [nlpLoading, setNlpLoading] = useState(false);
   const [pendingFriendSplitValues, setPendingFriendSplitValues] = useState<Record<string, string>>({});
 
-  // Form fields
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState('');
@@ -104,7 +100,6 @@ export function AddExpenseView() {
   const [splits, setSplits] = useState<{ userId: string; value: string; share: number }[]>([]);
   const [note, setNote] = useState('');
 
-  // Direct expense: selected friends + email participants
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [emailParticipants, setEmailParticipants] = useState<EmailParticipant[]>([]);
   const [emailSplitAmounts, setEmailSplitAmounts] = useState<Record<string, string>>({});
@@ -112,17 +107,13 @@ export function AddExpenseView() {
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
 
-  // Receipt upload
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
 
-  // AI categorize
   const [categorizeLoading, setCategorizeLoading] = useState(false);
 
-  // Submitting
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch groups
   useEffect(() => {
     async function fetchData() {
       try {
@@ -148,7 +139,6 @@ export function AddExpenseView() {
     fetchData();
   }, [selectedGroupId]);
 
-  // Fetch group members when group changes
   useEffect(() => {
     if (mode !== 'group' || !groupId) return;
     setMembersLoading(true);
@@ -176,7 +166,6 @@ export function AddExpenseView() {
     fetchMembers();
   }, [groupId, mode, user?.id]);
 
-  // AI parse expense
   const handleNlpSubmit = async () => {
     if (!nlpInput.trim()) return;
     setNlpLoading(true);
@@ -189,7 +178,6 @@ export function AddExpenseView() {
       });
       const data = await res.json();
 
-      // Handle HTTP errors and AI errors uniformly
       if (!res.ok && res.status !== 200) {
         toast.error(data.error || 'Could not parse expense. Try being more specific.');
         return;
@@ -206,7 +194,6 @@ export function AddExpenseView() {
         return;
       }
 
-      // Set basic fields
       if (data.description) { setDescription(data.description); setDescError(''); }
       if (data.amount) { setAmount(String(data.amount)); setAmountError(''); }
       if (data.category) setCategory(data.category);
@@ -215,7 +202,6 @@ export function AddExpenseView() {
       const sType = data.splitType as string;
       const isExactOrPct = sType === 'exact' || sType === 'percentage';
 
-      // Handle group selection from AI parse
       if (data.groupId && typeof data.groupId === 'string') {
         const groupName = data.groupId.toLowerCase();
         const matchedGroup = groups.find((g) => g.name.toLowerCase() === groupName);
@@ -234,13 +220,11 @@ export function AddExpenseView() {
         }
       }
 
-      // Determine mode: switch to direct if there are email splits or named non-me splits
       const emailSplits = data.emailSplits as { email: string; name?: string; amount?: number; percentage?: number }[] | undefined;
       const namedSplits = data.splits as { name: string; amount?: number | null; percentage?: number | null; share?: number }[] | undefined;
       const hasEmails = emailSplits && emailSplits.length > 0;
       const hasNamedSplits = namedSplits && namedSplits.some((s) => s.name !== 'me');
 
-      // Handle "single" / "only me" / personal expenses — no participants
       if (sType === 'single' && !hasEmails && !hasNamedSplits) {
         setMode('direct');
         setSelectedFriends([]);
@@ -252,7 +236,6 @@ export function AddExpenseView() {
         return;
       }
 
-      // Extract "me" split value for exact/percentage modes
       if (isExactOrPct) {
         const meSplit = namedSplits?.find((s) => s.name === 'me');
         if (meSplit && (meSplit.amount != null || meSplit.percentage != null)) {
@@ -278,12 +261,10 @@ export function AddExpenseView() {
         setUserSplitValue('');
       }
 
-      // Switch to direct mode when we have participants to add
       if (hasEmails || hasNamedSplits) {
         setMode('direct');
       }
 
-      // Process email splits
       if (hasEmails) {
         const newEmailParts: EmailParticipant[] = emailSplits.map((es) => ({
           email: es.email,
@@ -306,7 +287,6 @@ export function AddExpenseView() {
         setEmailSplitAmounts({});
       }
 
-      // Process named splits — match to friends or add as email participants
       const friendAmtMap: Record<string, string> = {};
       const nonMeSplits = (namedSplits || []).filter((s) => s.name !== 'me');
 
@@ -343,7 +323,6 @@ export function AddExpenseView() {
         setPendingFriendSplitValues({});
       }
 
-      // Handle split type
       if (isExactOrPct) {
         setSplitType(sType as 'exact' | 'percentage');
       } else if (sType === 'share') {
@@ -367,7 +346,6 @@ export function AddExpenseView() {
     }
   };
 
-  // AI categorize
   const handleCategorize = async () => {
     if (!description.trim()) {
       toast.error('Enter a description first');
@@ -399,7 +377,6 @@ export function AddExpenseView() {
     }
   };
 
-  // Receipt upload
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -430,7 +407,6 @@ export function AddExpenseView() {
     }
   };
 
-  // Add email participant
   const addEmailParticipant = () => {
     if (!newEmail.trim()) return;
     const email = newEmail.trim().toLowerCase();
@@ -448,26 +424,22 @@ export function AddExpenseView() {
     setNewName('');
   };
 
-  // Remove email participant
   const removeEmail = (email: string) => {
     setEmailParticipants(emailParticipants.filter((p) => p.email !== email));
     setEmailSplitAmounts((prev) => { const n = { ...prev }; delete n[email]; return n; });
   };
 
-  // Toggle friend selection
   const toggleFriend = (friendId: string) => {
     setSelectedFriends((prev) =>
       prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
     );
   };
 
-  // Total participants in direct mode
   const totalDirectParticipants = 1 + selectedFriends.length + emailParticipants.length;
   const perPersonDirect = amount && !isNaN(parseFloat(amount)) && totalDirectParticipants > 0
     ? (parseFloat(amount) / totalDirectParticipants).toFixed(2)
     : '0.00';
 
-  // Update split value
   const updateSplit = (userId: string, value: string) => {
     setSplits((prev) => prev.map((s) => (s.userId === userId ? { ...s, value } : s)));
   };
@@ -476,7 +448,6 @@ export function AddExpenseView() {
     setSplits((prev) => prev.map((s) => (s.userId === userId ? { ...s, share: Math.max(1, share) } : s)));
   };
 
-  // Validate form
   const validate = () => {
     let valid = true;
     if (!description.trim()) {
@@ -505,7 +476,6 @@ export function AddExpenseView() {
     return valid;
   };
 
-  // Open email client with pre-drafted HTML for non-registered users
   const openEmailForNonRegistered = (participants: EmailParticipant[], desc: string, amt: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://splitflow-1.vercel.app';
     const landingUrl = `${baseUrl}/landing`;
@@ -519,19 +489,19 @@ export function AddExpenseView() {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#059669,#0d9488);padding:40px 20px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);">
-        <!-- Header -->
+
         <tr><td style="background:linear-gradient(135deg,#059669,#0d9488);padding:40px 30px;text-align:center;">
           <div style="font-size:36px;margin-bottom:10px;">💰</div>
           <h1 style="margin:0;color:white;font-size:24px;font-weight:800;">Split<span style="color:#a7f3d0;">Flow</span></h1>
           <p style="margin:8px 0 0;color:#a7f3d0;font-size:14px;">AI-Powered Expense Splitting</p>
         </td></tr>
-        <!-- Body -->
+
         <tr><td style="padding:35px 30px;">
           <h2 style="margin:0 0 15px;color:#111827;font-size:20px;">Hey ${names}! 👋</h2>
           <p style="margin:0 0 20px;color:#4b5563;font-size:15px;line-height:1.6;">
             <strong>${userName}</strong> just added an expense on SplitFlow and split it with you!
           </p>
-          <!-- Expense Card -->
+
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:20px;margin-bottom:25px;">
             <tr>
               <td style="padding:5px 0;color:#059669;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Expense</td>
@@ -546,7 +516,7 @@ export function AddExpenseView() {
           <p style="margin:0 0 25px;color:#4b5563;font-size:15px;line-height:1.6;">
             Sign up for <strong>SplitFlow</strong> to see your balance, track shared expenses, and settle up easily. It's <strong>100% free</strong>!
           </p>
-          <!-- CTA Button -->
+
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td align="center">
               <a href="${landingUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#0d9488);color:white;text-decoration:none;padding:16px 40px;border-radius:14px;font-size:16px;font-weight:700;box-shadow:0 10px 30px rgba(5,150,105,0.3);">
@@ -554,7 +524,7 @@ export function AddExpenseView() {
               </a>
             </td></tr>
           </table>
-          <!-- Features -->
+
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:30px;border-top:1px solid #f3f4f6;padding-top:25px;">
             <tr>
               <td width="33%" style="text-align:center;padding:10px;">
@@ -572,7 +542,7 @@ export function AddExpenseView() {
             </tr>
           </table>
         </td></tr>
-        <!-- Footer -->
+
         <tr><td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #f3f4f6;text-align:center;">
           <p style="margin:0;color:#9ca3af;font-size:12px;">Split expenses, not friendships. • <a href="${landingUrl}" style="color:#059669;">splitflow-1.vercel.app</a></p>
         </td></tr>
@@ -587,7 +557,6 @@ export function AddExpenseView() {
     window.open(`mailto:${toEmails}?subject=${subject}&body=${bodyParam}`, '_self');
   };
 
-  // Submit expense
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
@@ -703,7 +672,6 @@ export function AddExpenseView() {
     ? (parseFloat(amount) / members.length).toFixed(2)
     : '0.00';
 
-  // Computed total for direct exact/percentage split check
   const totalSplitAmount = (() => {
     const uv = parseFloat(userSplitValue) || 0;
     const friendsTotal = splits.reduce((s, sp) => s + (parseFloat(sp.value) || 0), 0);
@@ -712,18 +680,14 @@ export function AddExpenseView() {
   })();
   const totalSplitOk = Math.abs(totalSplitAmount - (parseFloat(amount) || 0)) < 0.5;
 
-  // User's own share count (for direct share mode)
   const [ownerShare, setOwnerShare] = useState(1);
 
-  // Track previous split type for auto-fill when switching
   const prevSplitTypeRef = useRef<'equal' | 'share' | 'exact' | 'percentage'>('equal');
 
-  // Auto-fill exact/percentage values when switching FROM share mode
   useEffect(() => {
     const prev = prevSplitTypeRef.current;
     prevSplitTypeRef.current = splitType;
 
-    // Only auto-fill when switching FROM share TO exact or percentage
     if (prev === 'share' && (splitType === 'exact' || splitType === 'percentage')) {
       const numAmount = parseFloat(amount) || 0;
       if (numAmount <= 0) return;
@@ -792,7 +756,6 @@ export function AddExpenseView() {
     }
   }, [splitType, mode]);
 
-  // Split participants for direct exact/percentage mode
   const directParticipants = [
     ...(friends.filter((f) => selectedFriends.includes(f.id)).map((f) => ({ id: f.id, name: f.name }))),
   ];
@@ -818,13 +781,13 @@ export function AddExpenseView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
-      {/* Header */}
+
       <div>
         <h2 className="text-xl font-bold text-foreground">Add Expense</h2>
         <p className="text-sm text-muted-foreground mt-1">Record a new expense and split it.</p>
       </div>
 
-      {/* AI Natural Language Input */}
+
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2.5">
@@ -865,11 +828,11 @@ export function AddExpenseView() {
         </CardContent>
       </Card>
 
-      {/* Main Form */}
+
       <Card>
         <CardContent className="p-5 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-            {/* Expense Mode Toggle */}
+
             <div className="space-y-2">
               <Label className="text-sm font-medium">Expense Type</Label>
               <div className="grid grid-cols-2 gap-3">
@@ -905,7 +868,7 @@ export function AddExpenseView() {
               </p>
             </div>
 
-            {/* Description */}
+
             <div className="space-y-1.5">
               <Label htmlFor="desc" className="text-sm">
                 What was it for? <span className="text-red-400">*</span>
@@ -942,7 +905,7 @@ export function AddExpenseView() {
               </div>
             </div>
 
-            {/* Amount & Date */}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="amount" className="text-sm">
@@ -976,7 +939,7 @@ export function AddExpenseView() {
               </div>
             </div>
 
-            {/* Category */}
+
             <div className="space-y-1.5">
               <Label className="text-sm">Category</Label>
               <Select value={category} onValueChange={setCategory}>
@@ -989,7 +952,7 @@ export function AddExpenseView() {
               </Select>
             </div>
 
-            {/* Group selector (only in group mode) */}
+
             {mode === 'group' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -1026,7 +989,7 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Direct mode: Select friends & add by email */}
+
             {mode === 'direct' && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
@@ -1053,7 +1016,7 @@ export function AddExpenseView() {
                   )}
                 </div>
 
-                {/* Email participants */}
+
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" />
@@ -1114,7 +1077,7 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Split Type */}
+
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Split Type</Label>
@@ -1152,7 +1115,7 @@ export function AddExpenseView() {
               </div>
             </div>
 
-            {/* Share split details — family/group size (both modes) */}
+
             {splitType === 'share' && (
               <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
                 <div className="flex items-center justify-between">
@@ -1188,7 +1151,7 @@ export function AddExpenseView() {
                   Set how many people each participant represents. The expense will be split proportionally.
                 </p>
                 <div className="space-y-2 max-h-56 overflow-y-auto">
-                  {/* In direct mode, show owner first */}
+
                   {mode === 'direct' && user?.id && (() => {
                     const shareParticipants = allDirectParticipants;
                     const emailShareTotal = emailParticipants.length;
@@ -1333,7 +1296,7 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Split Details for Group mode (exact/percentage) */}
+
             {mode === 'group' && splitType !== 'equal' && splitType !== 'share' && members.length > 0 && (
               <div className="space-y-3 p-4 bg-muted rounded-lg">
                 <Label className="text-sm font-medium">
@@ -1362,14 +1325,14 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Split Details for Direct mode (exact/percentage) */}
+
             {mode === 'direct' && (splitType === 'exact' || splitType === 'percentage') && (
               <div className="space-y-3 p-4 bg-muted rounded-lg">
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
                 </Label>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {/* User (You) row — always shown */}
+
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 w-32 shrink-0">
                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1388,7 +1351,7 @@ export function AddExpenseView() {
                     />
                     <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                   </div>
-                  {/* Selected friends */}
+
                   {directParticipants.length === 0 && emailParticipants.length === 0 && (
                     <p className="text-xs text-muted-foreground pl-9">Add friends or emails above to split with others.</p>
                   )}
@@ -1410,7 +1373,7 @@ export function AddExpenseView() {
                       </div>
                     );
                   })}
-                  {/* Email participants */}
+
                   {emailParticipants.map((ep) => (
                     <div key={ep.email} className="flex items-center gap-3">
                       <div className="flex items-center gap-2 w-32 shrink-0">
@@ -1430,7 +1393,7 @@ export function AddExpenseView() {
                     </div>
                   ))}
                 </div>
-                {/* Total check — always show when there's a value */}
+
                 {(userSplitValue || directParticipants.length > 0 || emailParticipants.length > 0) && (
                   <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-xs text-muted-foreground">Total</span>
@@ -1444,7 +1407,7 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Equal split summary */}
+
             {splitType === 'equal' && (
               <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                 {mode === 'group' && members.length > 0 ? (
@@ -1468,7 +1431,7 @@ export function AddExpenseView() {
               </div>
             )}
 
-            {/* Note */}
+
             <div className="space-y-1.5">
               <Label htmlFor="note" className="text-sm">Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Textarea
@@ -1481,7 +1444,7 @@ export function AddExpenseView() {
               />
             </div>
 
-            {/* Receipt Upload */}
+
             <div className="space-y-1.5">
               <Label className="text-sm">Receipt <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <div className="flex items-center gap-3">
@@ -1510,7 +1473,7 @@ export function AddExpenseView() {
               </div>
             </div>
 
-            {/* Submit */}
+
             <Button
               type="submit"
               disabled={submitting}

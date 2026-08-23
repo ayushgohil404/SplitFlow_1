@@ -41,7 +41,7 @@ export function AuthPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-5xl grid lg:grid-cols-2 gap-8 lg:gap-16 items-center"
         >
-          {/* Left side */}
+
           <div className="text-center lg:text-left space-y-6">
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
@@ -92,7 +92,7 @@ export function AuthPage() {
             </motion.div>
           </div>
 
-          {/* Right side - login card */}
+
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}

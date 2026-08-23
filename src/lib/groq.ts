@@ -25,7 +25,6 @@ export async function chatWithGemini(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
 
-  // Separate system prompt from conversation
   let systemInstruction: string | undefined;
   const contents: { role: string; parts: { text: string }[] }[] = [];
 

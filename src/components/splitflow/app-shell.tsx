@@ -84,7 +84,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo */}
+
       <div className="h-16 px-5 flex items-center gap-3 shrink-0">
         <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
           <Wallet className="w-[18px] h-[18px] text-primary-foreground" />
@@ -99,7 +99,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Separator />
 
-      {/* Nav items */}
+
       <ScrollArea className="flex-1 px-3 py-3">
         <nav className="space-y-1" role="navigation" aria-label="Main navigation">
           {navItems.map((item) => {
@@ -133,7 +133,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </nav>
       </ScrollArea>
 
-      {/* User info */}
+
       <Separator />
       <div className="p-3">
         <div className="flex items-center gap-3 px-2 py-2 mb-1">
@@ -251,12 +251,12 @@ export function AppShell() {
 
   return (
     <div className="h-screen flex bg-background overflow-hidden">
-      {/* Desktop sidebar */}
+
       <aside className="hidden lg:flex w-60 flex-col border-r border-border bg-sidebar">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar */}
+
       <Sheet open={sidebarOpen} onOpenChange={(open) => setSidebarOpen(open)}>
         <SheetContent side="left" className="w-64 p-0 bg-sidebar border-border">
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
@@ -264,9 +264,9 @@ export function AppShell() {
         </SheetContent>
       </Sheet>
 
-      {/* Main content area */}
+
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header - fixed height, properly aligned */}
+
         <header className="h-14 shrink-0 border-b border-border bg-background flex items-center px-4 gap-3">
           <Button
             variant="ghost"
@@ -299,7 +299,7 @@ export function AppShell() {
           </div>
         </header>
 
-        {/* Scrollable content */}
+
         <main className="flex-1 overflow-y-auto bg-muted/30" role="main">
           <div className="p-4 sm:p-6 max-w-5xl mx-auto">
             <ViewRouter />
@@ -307,7 +307,7 @@ export function AppShell() {
         </main>
       </div>
 
-      {/* FAB - Add Expense — fixed bottom-right, properly positioned */}
+
       <button
         onClick={() => setView('add-expense')}
         className="fixed bottom-6 right-6 z-50

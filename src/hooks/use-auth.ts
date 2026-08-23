@@ -13,20 +13,9 @@ export function useAuth() {
       const session = await res.json();
       if (session?.user) {
         setUser(session.user);
-        setChecked(true);
-        return;
+      } else {
+        setUser(null);
       }
-      
-      const demoRes = await fetch('/api/auth/demo-session');
-      if (demoRes.ok) {
-        const demoSession = await demoRes.json();
-        if (demoSession?.user) {
-          setUser(demoSession.user);
-          setChecked(true);
-          return;
-        }
-      }
-      setUser(null);
     } catch {
       setUser(null);
     } finally {

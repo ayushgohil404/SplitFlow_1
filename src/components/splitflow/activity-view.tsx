@@ -84,7 +84,6 @@ export function ActivityView() {
     fetchActivities();
   }, [fetchActivities]);
 
-  // Fetch groups for filter tabs
   useEffect(() => {
     async function fetchGroups() {
       try {
@@ -100,12 +99,10 @@ export function ActivityView() {
     fetchGroups();
   }, []);
 
-  // Reset page when filter changes
   useEffect(() => {
     setPage(0);
   }, [filterGroup]);
 
-  // WebSocket real-time updates
   useEffect(() => {
     const cleanup = on('new-activity', (activity: ActivityItem) => {
       setActivities((prev) => [activity, ...prev]);
@@ -119,7 +116,7 @@ export function ActivityView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {/* Group filter tabs */}
+
       <div className="flex gap-2 overflow-x-auto pb-2">
         <Button
           size="sm"
@@ -142,7 +139,7 @@ export function ActivityView() {
         ))}
       </div>
 
-      {/* Activity list */}
+
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 8 }).map((_, i) => (

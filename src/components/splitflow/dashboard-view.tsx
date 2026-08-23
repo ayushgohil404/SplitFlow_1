@@ -150,7 +150,7 @@ export function DashboardView() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      {/* Balance cards */}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <motion.div variants={item}>
           {loading ? <Skeleton className="h-28 w-full rounded-xl" /> : (
@@ -205,7 +205,7 @@ export function DashboardView() {
         </motion.div>
       </div>
 
-      {/* Quick actions */}
+
       {!isEmpty && (
         <motion.div variants={item} className="flex flex-wrap gap-2">
           <Button onClick={() => setView('add-expense')} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="w-4 h-4 mr-1.5" />Add Expense</Button>
@@ -214,7 +214,7 @@ export function DashboardView() {
         </motion.div>
       )}
 
-      {/* Groups */}
+
       {groups.length > 0 && (
         <motion.div variants={item}>
           <div className="flex items-center justify-between mb-3">
@@ -243,7 +243,7 @@ export function DashboardView() {
         </motion.div>
       )}
 
-      {/* Recent activity */}
+
       <motion.div variants={item}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>

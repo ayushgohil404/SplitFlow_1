@@ -146,7 +146,6 @@ export function AnalyticsView() {
     [filteredExpenses]
   );
 
-  // Category breakdown for pie chart
   const categoryData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredExpenses.forEach((e) => {
@@ -161,7 +160,6 @@ export function AnalyticsView() {
       .sort((a, b) => b.value - a.value);
   }, [filteredExpenses]);
 
-  // Monthly trend
   const monthlyData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredExpenses.forEach((e) => {
@@ -174,7 +172,6 @@ export function AnalyticsView() {
       .map(([month, total]) => ({ month, total }));
   }, [filteredExpenses]);
 
-  // Per-member data
   const memberData = useMemo(() => {
     const paidMap: Record<string, { name: string; total: number }> = {};
     filteredExpenses.forEach((e) => {
@@ -223,7 +220,7 @@ export function AnalyticsView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Filters */}
+
       <div className="flex flex-wrap gap-3 items-center">
         <Select value={dateRange} onValueChange={setDateRange}>
           <SelectTrigger className="w-40 h-9">
@@ -250,7 +247,7 @@ export function AnalyticsView() {
         </Select>
       </div>
 
-      {/* Summary */}
+
       <Card>
         <CardContent className="p-5">
           <p className="text-sm text-muted-foreground">Total spending</p>
@@ -259,7 +256,7 @@ export function AnalyticsView() {
         </CardContent>
       </Card>
 
-      {/* Charts */}
+
       {filteredExpenses.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
@@ -269,7 +266,7 @@ export function AnalyticsView() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Category Pie Chart */}
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Spending by Category</CardTitle>
@@ -313,7 +310,7 @@ export function AnalyticsView() {
             </CardContent>
           </Card>
 
-          {/* Monthly Trend */}
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Monthly Trend</CardTitle>
@@ -351,7 +348,7 @@ export function AnalyticsView() {
         </div>
       )}
 
-      {/* Top Categories horizontal bar */}
+
       {categoryData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -374,7 +371,7 @@ export function AnalyticsView() {
         </Card>
       )}
 
-      {/* Per-member comparison */}
+
       {memberData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -403,7 +400,7 @@ export function AnalyticsView() {
         </Card>
       )}
 
-      {/* AI Insights */}
+
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">

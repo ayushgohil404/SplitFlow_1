@@ -20,7 +20,6 @@ export async function getAuthUser(): Promise<AuthUser | null> {
       };
     }
 
-    // Fallback: check demo session cookie
     const cookieStore = await cookies();
     const sfToken = cookieStore.get('sf-token')?.value;
     if (sfToken) {

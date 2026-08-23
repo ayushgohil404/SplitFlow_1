@@ -115,13 +115,11 @@ export function GroupDetailView() {
   const [activeTab, setActiveTab] = useState('expenses');
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
 
-  // Invite dialog
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Settings dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -307,7 +305,7 @@ export function GroupDetailView() {
 
   return (
     <div className="space-y-6">
-      {/* Group header */}
+
       <Card>
         <CardContent className="p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -330,7 +328,7 @@ export function GroupDetailView() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
           <TabsTrigger value="expenses" className="text-xs sm:text-sm">Expenses</TabsTrigger>
@@ -339,7 +337,7 @@ export function GroupDetailView() {
           <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
         </TabsList>
 
-        {/* Expenses Tab */}
+
         <TabsContent value="expenses" className="mt-4">
           <div className="flex justify-end mb-4">
             <Button
@@ -386,7 +384,7 @@ export function GroupDetailView() {
           )}
         </TabsContent>
 
-        {/* Members Tab */}
+
         <TabsContent value="members" className="mt-4">
           <div className="flex justify-end gap-2 mb-4">
             {isAdmin && (
@@ -451,7 +449,7 @@ export function GroupDetailView() {
           </div>
         </TabsContent>
 
-        {/* Balances Tab */}
+
         <TabsContent value="balances" className="mt-4">
           {(!group.balances || group.balances.length === 0) ? (
             <Card>
@@ -492,7 +490,7 @@ export function GroupDetailView() {
           )}
         </TabsContent>
 
-        {/* Settings Tab */}
+
         <TabsContent value="settings" className="mt-4">
           <Card>
             <CardHeader>
@@ -555,7 +553,7 @@ export function GroupDetailView() {
         </TabsContent>
       </Tabs>
 
-      {/* Add Member Dialog */}
+
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -597,7 +595,7 @@ export function GroupDetailView() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -613,7 +611,7 @@ export function GroupDetailView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Leave Confirmation */}
+
       <AlertDialog open={leaveOpen} onOpenChange={setLeaveOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -629,7 +627,7 @@ export function GroupDetailView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Expense Detail Dialog */}
+
       {selectedExpenseId && (
         <ExpenseDetailDialog
           expenseId={selectedExpenseId}

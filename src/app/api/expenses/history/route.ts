@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search')
     const category = searchParams.get('category')
 
-    // Build where clause
     const where: any = {}
 
     if (filter === 'group') {
@@ -34,7 +33,6 @@ export async function GET(req: NextRequest) {
       where.category = category.trim()
     }
 
-    // Get all expense IDs where user is involved (paid or has a split)
     let expenseIds: Set<string>
     try {
       const [paidExpenses, splitExpenses] = await Promise.all([
@@ -61,7 +59,6 @@ export async function GET(req: NextRequest) {
 
     const idArray = Array.from(expenseIds)
 
-    // Fetch expenses with relations
     let expenses: any[]
     try {
       expenses = await db.expense.findMany({

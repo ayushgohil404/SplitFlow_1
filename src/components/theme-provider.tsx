@@ -34,7 +34,6 @@ export function ThemeEffect() {
     }
   }, [theme, applyTheme]);
 
-  // Prevent flash: apply stored theme immediately before React hydrates
   useEffect(() => {
     const stored = localStorage.getItem('splitflow-prefs');
     if (stored) {

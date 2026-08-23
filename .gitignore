@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 node_modules
 /.pnp
@@ -23,41 +21,69 @@ node_modules
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
-# debug
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files
-.env*
+# environment & secrets
+.env
+.env.*
 !.env.example
 
-# Sensitive data
+# sensitive files
 *.pem
 *.key
 *.cert
+*.p12
+*.jks
 credentials.json
 token.json
 service-account*.json
+*.secret
+
+# database files
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/*.sqlite
+db/*.sqlite3
+*.sqlite
+*.sqlite3
 
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
+
+# IDE / tooling
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .claude
 .z-ai-config
-*.log
-dev.log
-dev.out.log
-test
-prompt
 
-server.log
-# Skills directory
-/skills/
+# local dev artifacts
+local-*
+test/
+prompt/
+skills/
+download/
+worklog.md
+
+# lock files (keep only one)
+bun.lock
+
+# container / deploy
+Caddyfile
+.deploy-hash
+.zscripts/
+scripts/

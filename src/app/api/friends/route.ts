@@ -10,7 +10,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get accepted friendships (both directions)
     const accepted = await db.friendship.findMany({
       where: {
         OR: [
@@ -37,7 +36,6 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Get pending requests received
     const pendingReceived = await db.friendship.findMany({
       where: {
         addresseeId: user.id,
@@ -49,7 +47,6 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    // Get pending requests sent
     const pendingSent = await db.friendship.findMany({
       where: {
         requesterId: user.id,
@@ -110,12 +107,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'email or userId is required' }, { status: 400 })
     }
 
-    // Can't add yourself
     if (targetUser.id === user.id) {
       return NextResponse.json({ error: 'You cannot add yourself as a friend' }, { status: 400 })
     }
 
-    // Check existing friendship (any direction, any status except declined)
     const existing = await db.friendship.findFirst({
       where: {
         OR: [
@@ -157,7 +152,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create activity
     await db.activity.create({
       data: {
         userId: user.id,
@@ -176,7 +170,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/friends — Remove friend or cancel request
 export async function DELETE(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -196,7 +189,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Friendship not found' }, { status: 404 })
     }
 
-    // Only participants can remove
     if (friendship.requesterId !== user.id && friendship.addresseeId !== user.id) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }

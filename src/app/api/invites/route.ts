@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'groupId and email are required' }, { status: 400 })
     }
 
-    // Verify the user is a member of the group
     const membership = await db.groupMember.findUnique({
       where: { groupId_userId: { groupId, userId: user.id } },
     })
@@ -29,7 +28,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
     }
 
-    // Check if email user is already a member
     const existingMember = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } })
     if (existingMember) {
       const alreadyInGroup = await db.groupMember.findUnique({
@@ -40,7 +38,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check for existing pending invite
     const existingInvite = await db.invite.findFirst({
       where: {
         groupId,
@@ -57,7 +54,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Create invite
     const code = crypto.randomBytes(6).toString('hex').toUpperCase()
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
@@ -106,7 +102,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/invites?groupId=xxx — List invites for a group
 export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser()

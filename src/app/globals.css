@@ -43,7 +43,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ─── Ink Wash (水墨) — Light ─── */
+
 :root {
   --radius: 0.75rem;
   --background: #F7F4EE;
@@ -79,7 +79,7 @@
   --sidebar-ring: #3730A3;
 }
 
-/* ─── Emerald Lapis Twilight — Dark ─── */
+
 .dark {
   --background: #060D11;
   --foreground: #E8E2D8;
@@ -123,7 +123,7 @@
   }
 }
 
-/* Scrollbar — ink wash tones */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -145,22 +145,22 @@
   background: #2A4555;
 }
 
-/* Light mode — rice paper card warmth */
+
 .bg-card {
   box-shadow: 0 1px 3px rgba(55,48,163,0.03), 0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* Dark mode — emerald lapis card glow */
+
 .dark .bg-card {
   box-shadow: 0 0 0 1px rgba(52,211,153,0.06), 0 2px 12px rgba(0,0,0,0.4);
 }
 
-/* Dark mode — twilight gradient on main bg */
+
 .dark main.bg-muted\/30 {
   background: linear-gradient(180deg, rgba(13,24,32,0.4) 0%, rgba(6,13,17,0.6) 100%);
 }
 
-/* Dark mode — emerald focus ring glow */
+
 .dark input:focus, .dark textarea:focus, .dark select:focus {
   box-shadow: 0 0 0 2px rgba(52,211,153,0.15);
 }

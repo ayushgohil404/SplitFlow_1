@@ -148,7 +148,7 @@ model NonUserSplit {
   amount    Float
   percentage Float?
   share     Float  @default(1)
-  linkedUserId String? /// When this email user signs up, link to their User id
+  linkedUserId String?
   createdAt DateTime @default(now())
 
   expense     Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
@@ -192,7 +192,7 @@ model BalanceCache {
   toUserId   String
   groupId   String?
   amount    Float
-  
+
   @@unique([fromUserId, toUserId, groupId])
 }
 
@@ -203,7 +203,7 @@ model Invite {
   inviterId String
   inviteeEmail String
   inviteeId String?
-  status    String   @default("pending") // pending, accepted, declined, expired
+  status    String   @default("pending")
   role      String   @default("member")
   expiresAt DateTime @default(now())
   createdAt DateTime @default(now())
@@ -218,7 +218,7 @@ model Friendship {
   id          String   @id @default(cuid())
   requesterId String
   addresseeId String
-  status      String   @default("pending") // pending, accepted, declined
+  status      String   @default("pending")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

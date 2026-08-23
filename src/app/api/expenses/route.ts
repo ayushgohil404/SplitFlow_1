@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') ?? '50', 10)
     const offset = parseInt(searchParams.get('offset') ?? '0', 10)
 
-    // If groupId is provided, return expenses for that group
     if (groupId) {
       const expenses = await db.expense.findMany({
         where: { groupId },
@@ -93,7 +92,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // If groupId provided, verify membership
     if (groupId) {
       const membership = await db.groupMember.findUnique({
         where: {
@@ -105,11 +103,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Determine participants
     let userSplits: { userId: string; amount: number; percentage: number; share: number }[] = []
     let finalEmailSplits: { email: string; name: string; amount: number; percentage: number; share: number }[] = []
 
-    // Get group members if in a group
     let groupMembers: { userId: string }[] = []
     if (groupId) {
       groupMembers = await db.groupMember.findMany({
@@ -118,10 +114,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Collect all participant user IDs from splits
     const splitUserIds = splits?.map((s) => s.userId) || []
 
-    // If no groupId and no splits provided, use the user alone (for direct expenses with email participants)
     if (!groupId && splitUserIds.length === 0) {
       userSplits = [{ userId: user.id, amount: 0, percentage: 0, share: 0 }]
     } else if (splitType === 'equal') {
@@ -173,7 +167,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Split amounts (₹${splitsTotal.toFixed(2)}) must equal total (₹${amount.toFixed(2)})` }, { status: 400 })
       }
 
-      // Process user splits
       if (splits && splits.length > 0) {
         const safeAmount = amount || 1
         userSplits = splits.map((s) => ({
@@ -187,7 +180,6 @@ export async function POST(req: NextRequest) {
         userSplits = [{ userId: user.id, amount: myAmount, percentage: Math.round((myAmount / amount) * 10000) / 100, share: 0 }]
       }
 
-      // Process email splits
       if (emailSplits && emailSplits.length > 0) {
         for (const es of emailSplits) {
           const existingUser = await db.user.findUnique({
@@ -260,7 +252,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Process email splits for equal/share modes (exact/percentage already handled above)
     if (emailSplits && emailSplits.length > 0 && splitType !== 'exact' && splitType !== 'percentage') {
       for (const es of emailSplits) {
         const existingUser = await db.user.findUnique({
@@ -295,10 +286,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Recalculate splits for all participants (owner + friends + emails)
       if (splitType === 'equal' && emailSplits.length > 0) {
 
-        // Check if using share-based splitting (any share != 1 or shares differ from count)
         const hasCustomShares = emailSplits.some((es) => (es.share ?? 1) !== 1) ||
           userSplits.some((s) => (s.share ?? 1) !== 1)
 
@@ -337,7 +326,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create the expense
     const expense = await db.expense.create({
       data: {
         groupId: groupId || null,
@@ -386,7 +374,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Log activity
     await db.activity.create({
       data: {
         userId: user.id,

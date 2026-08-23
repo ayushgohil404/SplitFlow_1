@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'query is required' }, { status: 400 })
     }
 
-    // ---- Fetch user context data ----
 
     const memberships = await db.groupMember.findMany({
       where: { userId: user.id },
@@ -53,7 +52,6 @@ export async function POST(req: NextRequest) {
       return isRequester ? f.addressee : f.requester
     })
 
-    // Fetch detailed context — wrapped so AI still works if this fails
     let balanceSummary: { name: string; amount: number; direction: 'owes_me' | 'i_owe' }[] = []
     let expenseSummary: { description: string; amount: number; category: string; date: string; paidBy: string; group: string; splitWith: string[] }[] = []
     let thisMonthTotal = 0
@@ -106,7 +104,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Direct expense balances
     const directExpenses = await db.expense.findMany({
       where: {
         groupId: null,
@@ -164,7 +161,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Recent expenses
     const recentExpenses = await db.expense.findMany({
       where: {
         OR: [
@@ -192,7 +188,6 @@ export async function POST(req: NextRequest) {
       splitWith: e.splits.map((s) => s.user?.name).filter(Boolean) as string[],
     }))
 
-    // Monthly totals
     const now = new Date()
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const thisMonthExpenses = await db.expense.findMany({
@@ -217,7 +212,6 @@ export async function POST(req: NextRequest) {
       .reduce((s, b) => s + Math.abs(b.amount), 0)
     const netBalance = Math.round((totalOwedToMe - totalIOwe) * 100) / 100
 
-    // Build system prompt — full chatbot
     const systemPrompt = `You are SplitFlow AI, a friendly and helpful expense-splitting assistant. You help users with ANY request about their expenses, balances, groups, friends, and the app itself.
 
 CURRENCY: All amounts are in INR (Indian Rupees, ₹). Use ₹ symbol.
@@ -306,7 +300,6 @@ Before the JSON block, write a friendly confirmation message like "I've prepared
       max_tokens: 2048,
     })
 
-    // Check if the AI wants to create an expense
     let createExpense = null
     const expenseMatch = raw.match(/---CREATE_EXPENSE---\s*\n?([\s\S]*?)\n?---END---/)
     if (expenseMatch) {

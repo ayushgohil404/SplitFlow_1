@@ -80,7 +80,6 @@ export function SettleView() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [simplifyLoading, setSimplifyLoading] = useState(false);
 
-  // Record payment dialog
   const [recordOpen, setRecordOpen] = useState(false);
   const [payFrom, setPayFrom] = useState('');
   const [payTo, setPayTo] = useState('');
@@ -220,7 +219,7 @@ export function SettleView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Summary cards */}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-5">
@@ -250,7 +249,7 @@ export function SettleView() {
         </Card>
       </div>
 
-      {/* Group balances list */}
+
       {loading ? (
         <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
           <Card key={i}><CardContent className="p-4 flex items-center gap-3">
@@ -308,7 +307,7 @@ export function SettleView() {
         </Card>
       )}
 
-      {/* Selected group detail */}
+
       {selectedGroupId && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -390,7 +389,7 @@ export function SettleView() {
             </div>
           )}
 
-          {/* Simplified payments */}
+
           {simplified.length > 0 && (
             <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
               <CardHeader className="pb-3">
@@ -412,7 +411,7 @@ export function SettleView() {
             </Card>
           )}
 
-          {/* Recent settlements */}
+
           {settlements.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-foreground mb-2">Recent Settlements</h4>
@@ -433,7 +432,7 @@ export function SettleView() {
         </div>
       )}
 
-      {/* Record Payment Dialog */}
+
       <Dialog open={recordOpen} onOpenChange={setRecordOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

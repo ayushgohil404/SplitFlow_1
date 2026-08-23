@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
 
     const userId = user.id
 
-    // 1. Group-based balances (existing logic)
     const memberships = await db.groupMember.findMany({
       where: { userId },
       include: {
@@ -110,7 +109,6 @@ export async function GET(req: NextRequest) {
       })
     )
 
-    // 2. Direct expense balances (no group)
     const directExpenses = await db.expense.findMany({
       where: {
         groupId: null,
@@ -125,13 +123,11 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    // Build direct balances map: userId -> net amount
     const directBalances: Record<string, { name: string | null; image: string | null; amount: number }> = {}
 
     for (const exp of directExpenses) {
       const isPayer = exp.createdBy === userId
 
-      // User splits
       for (const split of exp.splits) {
         if (split.userId === userId) continue
 
@@ -145,7 +141,6 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // If I have a split in an expense someone else paid, I owe them
       if (!isPayer) {
         const mySplit = exp.splits.find((s) => s.userId === userId)
         if (mySplit) {
@@ -160,7 +155,6 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Non-user email splits (I paid, they owe me)
       for (const nus of exp.nonUserSplits) {
         if (isPayer) {
           const key = `email:${nus.email}`
@@ -172,7 +166,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Also include settlements for direct expenses
     const directSettlementsFromMe = await db.settlement.findMany({
       where: { groupId: null, fromUserId: userId, status: 'completed' },
     })
@@ -204,7 +197,6 @@ export async function GET(req: NextRequest) {
       directBalances[key].amount += Number(s.amount)
     }
 
-    // Format direct balances
     const directList = Object.entries(directBalances)
       .filter(([, v]) => Math.abs(v.amount) > 0.005)
       .map(([key, v]) => ({

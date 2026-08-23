@@ -78,7 +78,6 @@ export function FriendsView() {
   const [loading, setLoading] = useState(true);
   const [expandedFriend, setExpandedFriend] = useState<string | null>(null);
 
-  // Add friend dialog
    const [addOpen, setAddOpen] = useState(false);
   const [addEmail, setAddEmail] = useState('');
   const [adding, setAdding] = useState(false);
@@ -114,17 +113,14 @@ export function FriendsView() {
     fetchData();
   }, [fetchData]);
 
-  // Get net balance for a friend across all groups + direct
   const getFriendNetBalance = (friendId: string): number => {
     let net = 0;
 
-    // From group balances
     for (const gb of groupBalances) {
       const bal = gb.balances.find((b) => b.userId === friendId);
       if (bal) net += bal.amount;
     }
 
-    // From direct balances
     const direct = directBalances.find((d) => d.userId === friendId);
     if (direct) net += direct.amount;
 
@@ -217,7 +213,6 @@ export function FriendsView() {
     }
   };
 
-  // Summary calculations
   const totalOwedToMe = friends
     .map((f) => getFriendNetBalance(f.id))
     .filter((a) => a > 0)
@@ -228,7 +223,6 @@ export function FriendsView() {
     .filter((a) => a < 0)
     .reduce((s, a) => s + Math.abs(a), 0);
 
-  // Also count direct balances with non-friends
   const nonFriendDirect = directBalances.filter(
     (d) => !friends.some((f) => f.id === d.userId)
   );
@@ -255,7 +249,7 @@ export function FriendsView() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
-      {/* Header */}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Friends</h2>
@@ -270,7 +264,7 @@ export function FriendsView() {
         </Button>
       </div>
 
-      {/* Summary Cards */}
+
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4">
@@ -292,7 +286,7 @@ export function FriendsView() {
         </Card>
       </div>
 
-      {/* Pending Friend Requests */}
+
       {pendingReceived.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -334,7 +328,7 @@ export function FriendsView() {
         </div>
       )}
 
-      {/* Sent Requests */}
+
       {pendingSent.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
@@ -360,7 +354,7 @@ export function FriendsView() {
         </div>
       )}
 
-      {/* Friends List */}
+
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground">
           Your Friends ({friends.length})
@@ -430,7 +424,7 @@ export function FriendsView() {
                         className="overflow-hidden"
                       >
                         <div className="px-4 pb-4 space-y-2">
-                          {/* Group-by-group breakdown */}
+
                           {breakdown.length > 0 && (
                             <div className="space-y-1.5">
                               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">By Group</p>
@@ -445,7 +439,7 @@ export function FriendsView() {
                             </div>
                           )}
 
-                          {/* Actions */}
+
                           <div className="flex gap-2 pt-2">
                             <Button
                               variant="outline"
@@ -467,7 +461,7 @@ export function FriendsView() {
         )}
       </div>
 
-      {/* Non-friend direct balances (people you've split with but aren't friends) */}
+
       {nonFriendDirect.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-muted-foreground">Other Balances</h3>
@@ -490,7 +484,7 @@ export function FriendsView() {
         </div>
       )}
 
-      {/* Add Friend Dialog */}
+
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

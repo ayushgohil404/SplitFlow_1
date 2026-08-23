@@ -200,7 +200,6 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
     data.category = 'other'
   }
 
-  // Validate splits array
   if (data.splits && Array.isArray(data.splits)) {
     if (data.splits.length > MAX_PARTICIPANTS) {
       return `Too many participants (max ${MAX_PARTICIPANTS}).`
@@ -216,7 +215,6 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
     }
   }
 
-  // Validate emailSplits array
   if (data.emailSplits && Array.isArray(data.emailSplits)) {
     if (data.emailSplits.length > MAX_PARTICIPANTS) {
       return `Too many participants (max ${MAX_PARTICIPANTS}).`
@@ -233,7 +231,6 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
     }
   }
 
-  // Validate exact split totals
   if (data.splitType === 'exact' && data.amount) {
     const total = data.amount as number
     let sum = 0
@@ -261,7 +258,6 @@ function validateParse(data: Record<string, unknown>, rawText: string): string |
     }
   }
 
-  // Validate percentage split totals
   if (data.splitType === 'percentage') {
     let sum = 0
     const allSplits = [

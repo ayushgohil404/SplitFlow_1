@@ -377,7 +377,7 @@ export function AIAssistantView() {
                     </p>
                   ))}
                 </div>
-                {/* Pending expense approval card */}
+
                 {msg.pendingExpense && (
                   <div className="mt-2 p-3 bg-background border-2 border-emerald-200 rounded-xl shadow-sm space-y-2">
                     <div className="flex items-start gap-2">
@@ -423,7 +423,7 @@ export function AIAssistantView() {
                   </div>
                 )}
 
-                {/* Confirmed expense indicator */}
+
                 {msg.actionLabel && !msg.pendingExpense && (
                   <div className="flex items-center gap-1.5 mt-1.5 ml-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
@@ -452,7 +452,7 @@ export function AIAssistantView() {
           )}
         </div>
 
-        {/* Input */}
+
         <div className="border-t p-3">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input

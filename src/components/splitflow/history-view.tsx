@@ -85,7 +85,6 @@ export function HistoryView() {
     return () => { cancelled = true; };
   }, [filter, search, category, page]);
 
-  // Group by date using useMemo to avoid re-computing on every render
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
     for (const exp of expenses) {
@@ -109,13 +108,13 @@ export function HistoryView() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      {/* Header */}
+
       <div>
         <h2 className="text-xl font-bold text-foreground">Expense History</h2>
         <p className="text-sm text-muted-foreground mt-1">All your expenses across groups and direct splits.</p>
       </div>
 
-      {/* Summary Cards */}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
           <p className="text-xs text-primary font-medium">Total Expenses</p>
@@ -129,7 +128,7 @@ export function HistoryView() {
         </div>
       </div>
 
-      {/* Search & Filters */}
+
       <div className="rounded-xl border bg-background p-4 space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -140,7 +139,7 @@ export function HistoryView() {
             className="h-10 pl-9"
           />
         </div>
-        {/* Filter buttons - no Radix Select to avoid v2 compatibility issues */}
+
         <div className="flex flex-wrap gap-1.5">
           {FILTER_OPTIONS.map((opt) => (
             <Button
@@ -175,7 +174,7 @@ export function HistoryView() {
         </div>
       </div>
 
-      {/* Expense List */}
+
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -259,7 +258,7 @@ export function HistoryView() {
             </div>
           ))}
 
-          {/* Pagination */}
+
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 pt-2">
               <Button

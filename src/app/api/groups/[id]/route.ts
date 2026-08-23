@@ -42,7 +42,6 @@ export async function GET(
 
     const memberIds = group.members.map((m) => m.userId)
 
-    // Compute net balances between all pairs of users
     const balances: { fromUserId: string; toUserId: string; amount: number }[] = []
 
     for (let i = 0; i < memberIds.length; i++) {
@@ -50,7 +49,6 @@ export async function GET(
         const userA = memberIds[i]
         const userB = memberIds[j]
 
-        // A owes B: sum of A's splits in expenses paid by B
         const aOwesBSplits = await db.expenseSplit.findMany({
           where: {
             userId: userA,
@@ -61,7 +59,6 @@ export async function GET(
           },
         })
 
-        // B owes A: sum of B's splits in expenses paid by A
         const bOwesASplits = await db.expenseSplit.findMany({
           where: {
             userId: userB,
@@ -75,7 +72,6 @@ export async function GET(
         const aOwesB = aOwesBSplits.reduce((sum, s) => sum + Number(s.amount), 0)
         const bOwesA = bOwesASplits.reduce((sum, s) => sum + Number(s.amount), 0)
 
-        // Subtract settlements
         const settlementsAB = await db.settlement.findMany({
           where: {
             groupId: id,

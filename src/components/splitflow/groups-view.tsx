@@ -88,7 +88,6 @@ export function GroupsView() {
   const [joinError, setJoinError] = useState('');
   const [joining, setJoining] = useState(false);
 
-  // Create form state
   const [formName, setFormName] = useState('');
   const [formNameError, setFormNameError] = useState('');
   const [formDesc, setFormDesc] = useState('');
@@ -211,7 +210,7 @@ export function GroupsView() {
 
   return (
     <div className="space-y-5">
-      {/* Actions bar */}
+
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex gap-2">
           <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white shadow-sm">
@@ -222,7 +221,7 @@ export function GroupsView() {
           </Button>
         </div>
         
-        {/* Search */}
+
         {groups.length > 3 && (
           <div className="relative flex-1 max-w-xs sm:ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -236,7 +235,7 @@ export function GroupsView() {
         )}
       </div>
 
-      {/* Error state */}
+
       {error && !loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
@@ -354,7 +353,7 @@ export function GroupsView() {
         </motion.div>
       )}
 
-      {/* Create Group Dialog */}
+
       <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) setFormNameError(''); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -441,7 +440,7 @@ export function GroupsView() {
         </DialogContent>
       </Dialog>
 
-      {/* Join Group Dialog */}
+
       <Dialog open={joinOpen} onOpenChange={(open) => { setJoinOpen(open); setJoinError(''); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

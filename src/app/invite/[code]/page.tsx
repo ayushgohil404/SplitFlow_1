@@ -47,7 +47,6 @@ export default function InvitePage() {
 
   const code = params.code as string;
 
-  // Check auth using the same pattern as the rest of the app
   useEffect(() => {
     (async () => {
       try {
@@ -60,7 +59,6 @@ export default function InvitePage() {
     })();
   }, []);
 
-  // Fetch invite/group data — supports both Invite.code and Group.inviteCode
   useEffect(() => {
     if (!code) return;
 
@@ -148,7 +146,6 @@ export default function InvitePage() {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -157,7 +154,6 @@ export default function InvitePage() {
     );
   }
 
-  // Error state
   if (error || !invite) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -177,7 +173,6 @@ export default function InvitePage() {
     );
   }
 
-  // Expired (Invite table only)
   if (invite.isExpired) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -197,7 +192,6 @@ export default function InvitePage() {
     );
   }
 
-  // Already accepted/declined (Invite table only)
   if (invite.isAccepted) {
     const wasAccepted = invite.status === 'accepted';
     return (
@@ -226,7 +220,6 @@ export default function InvitePage() {
     );
   }
 
-  // Need login
   if (authed === false) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -278,7 +271,6 @@ export default function InvitePage() {
     );
   }
 
-  // Action result
   if (actionResult) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">

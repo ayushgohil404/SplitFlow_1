@@ -25,14 +25,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ settlements: [] })
     }
 
-    // Compute net balance for each user:
     const balances: Map<string, number> = new Map()
 
     for (const m of members) {
       balances.set(m.userId, 0)
     }
 
-    // Sum up what each user paid (createdBy)
     const paidByUser = await db.expense.groupBy({
       by: ['createdBy'],
       where: { groupId },
@@ -43,7 +41,6 @@ export async function POST(req: NextRequest) {
       balances.set(entry.createdBy, val + (entry._sum.amount ?? 0))
     }
 
-    // Sum up what each user owes (their ExpenseSplit amounts)
     const owedByUser = await db.expenseSplit.groupBy({
       by: ['userId'],
       where: { expense: { groupId } },
@@ -54,7 +51,6 @@ export async function POST(req: NextRequest) {
       balances.set(entry.userId, val - (entry._sum.amount ?? 0))
     }
 
-    // Subtract settlements sent and add settlements received
     const sentSettlements = await db.settlement.groupBy({
       by: ['fromUserId'],
       where: { groupId, status: 'completed' },
@@ -75,7 +71,6 @@ export async function POST(req: NextRequest) {
       balances.set(entry.toUserId, val + (entry._sum.amount ?? 0))
     }
 
-    // Separate into debtors (negative) and creditors (positive)
     const debtors: { userId: string; amount: number }[] = []
     const creditors: { userId: string; amount: number }[] = []
 
@@ -87,7 +82,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Greedy matching: sort both, match largest debtor with largest creditor
     debtors.sort((a, b) => b.amount - a.amount)
     creditors.sort((a, b) => b.amount - a.amount)
 
