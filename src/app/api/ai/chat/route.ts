@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
-import { chatWithFallback, isGroqConfigured } from '@/lib/groq'
+import { chatWithFallback, isGroqConfigured, isGeminiConfigured } from '@/lib/groq'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!isGroqConfigured()) {
+    if (!isGroqConfigured() && !isGeminiConfigured()) {
       return NextResponse.json(
-        { error: 'AI is not configured. Please set a valid GROQ_API_KEY in environment variables.', code: 'NOT_CONFIGURED' },
+        { error: 'AI is not configured. Please add GROQ_API_KEY or GEMINI_API_KEY (free from Google AI Studio) in your Vercel environment settings.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }

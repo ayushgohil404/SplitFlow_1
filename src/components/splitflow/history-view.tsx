@@ -1,17 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import {
-  Clock,
   Search,
   Filter,
-  ChevronDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  Users,
   User,
-  Loader2,
   Receipt,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,7 +35,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 };
 
 const CATEGORIES = [
-  { value: '', label: 'All Categories' },
+  { value: 'all', label: 'All Categories' },
   { value: 'food', label: '🍕 Food' },
   { value: 'travel', label: '✈️ Travel' },
   { value: 'housing', label: '🏠 Housing' },
@@ -54,27 +47,13 @@ const CATEGORIES = [
   { value: 'education', label: '📚 Education' },
 ];
 
-interface ExpenseItem {
-  id: string;
-  description: string;
-  amount: number;
-  category: string;
-  date: string;
-  splitType: string;
-  createdBy: string;
-  paidBy: { id: string; name: string; image: string | null } | null;
-  group: { id: string; name: string; emoji: string } | null;
-  splits: { userId: string; amount: number; user?: { id: string; name: string | null; image: string | null } }[];
-  nonUserSplits: { email: string; name: string | null; amount: number }[];
-}
-
 export function HistoryView() {
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('all');
   const [page, setPage] = useState(0);
   const limit = 30;
 
@@ -87,12 +66,11 @@ export function HistoryView() {
       });
       if (filter !== 'all') params.set('filter', filter);
       if (search.trim()) params.set('search', search.trim());
-      if (category) params.set('category', category);
+      if (category && category !== 'all') params.set('category', category);
 
       const res = await fetch(`/api/expenses/history?${params}`);
       if (res.ok) {
         const data = await res.json();
-        // Normalize API response to handle any missing fields
         const normalized = (data.expenses || []).map((e: any) => ({
           ...e,
           splits: Array.isArray(e.splits) ? e.splits : [],
@@ -116,23 +94,27 @@ export function HistoryView() {
     fetchHistory();
   }, [fetchHistory]);
 
-  // Group expenses by date
-  const groupedExpenses: Record<string, ExpenseItem[]> = {};
+  // Safe grouping with full null protection
+  const groupedExpenses: Record<string, any[]> = {};
   for (const exp of expenses) {
-    const dateKey = new Date(exp.date || Date.now()).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    if (!groupedExpenses[dateKey]) groupedExpenses[dateKey] = [];
-    groupedExpenses[dateKey].push(exp);
+    try {
+      const dateKey = new Date(exp.date || Date.now()).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      if (!groupedExpenses[dateKey]) groupedExpenses[dateKey] = [];
+      groupedExpenses[dateKey].push(exp);
+    } catch {
+      // skip bad expense entries
+    }
   }
 
   const totalPages = Math.ceil(total / limit);
-  const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalAmount = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-gray-900">Expense History</h2>
@@ -208,7 +190,7 @@ export function HistoryView() {
             <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No expenses found</p>
             <p className="text-sm text-gray-400 mt-1">
-              {search || filter !== 'all' || category
+              {search || filter !== 'all' || (category && category !== 'all')
                 ? 'Try adjusting your filters'
                 : 'Add your first expense to get started'}
             </p>
@@ -223,21 +205,26 @@ export function HistoryView() {
                 <div className="flex-1 h-px bg-gray-100" />
               </div>
               <div className="space-y-2">
-                {dayExpenses.map((exp) => {
+                {dayExpenses.map((exp: any) => {
                   const splitCount = (exp.splits?.length || 0) + (exp.nonUserSplits?.length || 0);
+                  const amount = Number(exp.amount) || 0;
+                  const desc = String(exp.description || 'Expense');
+                  const cat = String(exp.category || 'other');
+                  const splitType = String(exp.splitType || 'equal');
+                  const paidByName = exp.paidBy?.name || 'You';
 
                   return (
-                    <Card key={exp.id} className="hover:shadow-sm transition-shadow">
+                    <Card key={exp.id || Math.random()} className="hover:shadow-sm transition-shadow">
                       <CardContent className="p-4 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                          <span className="text-lg">{CATEGORY_EMOJIS[exp.category] || '📋'}</span>
+                          <span className="text-lg">{CATEGORY_EMOJIS[cat] || '📋'}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{exp.description}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-sm font-medium text-gray-900 truncate">{desc}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             {exp.group ? (
                               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                                {exp.group.emoji} {exp.group.name}
+                                {String(exp.group.emoji || '')} {String(exp.group.name || 'Group')}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-emerald-600 border-emerald-200">
@@ -245,14 +232,14 @@ export function HistoryView() {
                               </Badge>
                             )}
                             <span className="text-xs text-gray-400">
-                              {exp.paidBy?.name || 'You'} paid
+                              {paidByName} paid
                             </span>
                             <span className="text-xs text-gray-300">·</span>
                             <span className="text-xs text-gray-400">
-                              Split {exp.splitType === 'equal' ? `equally` : exp.splitType} with {splitCount}
+                              Split {splitType === 'equal' ? 'equally' : splitType} with {splitCount}
                             </span>
                           </div>
-                          {(exp.nonUserSplits && exp.nonUserSplits.length > 0) && (
+                          {exp.nonUserSplits && exp.nonUserSplits.length > 0 && (
                             <div className="flex items-center gap-1 mt-1">
                               <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
                                 {exp.nonUserSplits.length} email participant{exp.nonUserSplits.length > 1 ? 's' : ''}
@@ -261,7 +248,7 @@ export function HistoryView() {
                           )}
                         </div>
                         <span className="text-sm font-semibold text-gray-900 shrink-0">
-                          ₹{Number(exp.amount).toFixed(2)}
+                          ₹{amount.toFixed(2)}
                         </span>
                       </CardContent>
                     </Card>
@@ -297,6 +284,6 @@ export function HistoryView() {
           )}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

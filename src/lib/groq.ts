@@ -151,13 +151,7 @@ export async function chatWithFallback(
       }
     }
 
-    // If Groq failed with auth error, don't try Gemini for that
-    const lastStatus = lastError?.status;
-    if (lastStatus === 401 || lastStatus === 403) {
-      console.error('[Groq] Auth error, skipping Gemini fallback');
-      throw new Error('AI API key is invalid or expired. Please update GROQ_API_KEY.');
-    }
-
+    // If Groq had auth error, still try Gemini (different provider)
     console.error('[Groq] All models failed, trying Gemini...');
   }
 
