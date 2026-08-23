@@ -140,7 +140,7 @@ export function ExpenseDetailDialog({
             {/* Info grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <p className="text-xs text-gray-500 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Receipt className="w-3 h-3" />Amount
                 </p>
                 <p className="text-lg font-bold text-gray-900">
@@ -148,7 +148,7 @@ export function ExpenseDetailDialog({
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-500 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Tag className="w-3 h-3" />Category
                 </p>
                 <p className="text-sm font-medium text-gray-900 capitalize">
@@ -156,7 +156,7 @@ export function ExpenseDetailDialog({
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-500 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <User className="w-3 h-3" />Paid by
                 </p>
                 <p className="text-sm font-medium text-gray-900">
@@ -164,7 +164,7 @@ export function ExpenseDetailDialog({
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-500 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="w-3 h-3" />Date
                 </p>
                 <p className="text-sm font-medium text-gray-900">
@@ -174,7 +174,7 @@ export function ExpenseDetailDialog({
             </div>
 
             {expense.note && (
-              <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+              <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
                 {expense.note}
               </div>
             )}
@@ -183,14 +183,14 @@ export function ExpenseDetailDialog({
 
             {/* Split breakdown */}
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                 Split Breakdown ({expense.splitType || 'equal'})
               </p>
               <div className="space-y-2">
                 {expense.splits?.map((split) => (
                   <div key={split.userId} className="flex items-center gap-2">
                     <Avatar className="w-7 h-7">
-                      <AvatarFallback className="bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                      <AvatarFallback className="bg-primary/10 text-foreground text-xs font-semibold">
                         {split.userName?.charAt(0)?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
@@ -212,7 +212,7 @@ export function ExpenseDetailDialog({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
                 onClick={handleDelete}
                 disabled={deleting}
               >

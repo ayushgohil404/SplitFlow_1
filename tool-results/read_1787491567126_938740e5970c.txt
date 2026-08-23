@@ -1,0 +1,618 @@
+     1→    40→    54→   950→                    className={`h-11 ${descError ? 'border-red-300' : ''}`}
+     2→    41→    55→   951→                    autoFocus
+     3→    42→    56→   952→                  />
+     4→    43→    57→   953→                  {descError && <p className="text-xs text-red-500 mt-1">{descError}</p>}
+     5→    44→    58→   954→                </div>
+     6→    45→    59→   955→                <TooltipProvider>
+     7→    46→    60→   956→                  <Tooltip>
+     8→    47→    61→   957→                    <TooltipTrigger asChild>
+     9→    48→    62→   958→                      <Button
+    10→    49→    63→   959→                        type="button"
+    11→    50→    64→   960→                        variant="outline"
+    12→    51→    65→   961→                        size="icon"
+    13→    52→    66→   962→                        className="shrink-0 h-11 w-11"
+    14→    53→    67→   963→                        onClick={handleCategorize}
+    15→    54→    68→   964→                        disabled={categorizeLoading || !description.trim()}
+    16→    55→    69→   965→                      >
+    17→    56→    70→   966→                        {categorizeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-emerald-600" />}
+    18→    57→    71→   967→                      </Button>
+    19→    58→    72→   968→                    </TooltipTrigger>
+    20→    59→    73→   969→                    <TooltipContent className="text-xs">Auto-categorize using AI</TooltipContent>
+    21→    60→    74→   970→                  </Tooltip>
+    22→    61→    75→   971→                </TooltipProvider>
+    23→    62→    76→   972→              </div>
+    24→    63→    77→   973→            </div>
+    25→    64→    78→   974→
+    26→    65→    79→   975→            {/* Amount & Date */}
+    27→    66→    80→   976→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    28→    67→    81→   977→              <div className="space-y-1.5">
+    29→    68→    82→   978→                <Label htmlFor="amount" className="text-sm">
+    30→    69→    83→   979→                  Amount <span className="text-red-400">*</span>
+    31→    70→    84→   980→                </Label>
+    32→    71→    85→   981→                <div className="relative">
+    33→    72→    86→   982→                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
+    34→    73→    87→   983→                  <Input
+    35→    74→    88→   984→                    id="amount"
+    36→    75→    89→   985→                    type="number"
+    37→    76→    90→   986→                    step="0.01"
+    38→    77→    91→   987→                    min="0.01"
+    39→    78→    92→   988→                    placeholder="0.00"
+    40→    79→    93→   989→                    value={amount}
+    41→    80→    94→   990→                    onChange={(e) => { setAmount(e.target.value); setAmountError(''); }}
+    42→    81→    95→   991→                    className={`h-11 pl-7 ${amountError ? 'border-red-300' : ''}`}
+    43→    82→    96→   992→                  />
+    44→    83→    97→   993→                </div>
+    45→    84→    98→   994→                {amountError && <p className="text-xs text-red-500 mt-1">{amountError}</p>}
+    46→    85→    99→   995→              </div>
+    47→    86→   100→   996→              <div className="space-y-1.5">
+    48→    87→   101→   997→                <Label htmlFor="date" className="text-sm">Date</Label>
+    49→    88→   102→   998→                <Input
+    50→    89→   103→   999→                  id="date"
+    51→    90→   104→  1000→                  type="date"
+    52→    91→   105→  1001→                  value={date}
+    53→    92→   106→  1002→                  onChange={(e) => setDate(e.target.value)}
+    54→    93→   107→  1003→                  className="h-11"
+    55→    94→   108→  1004→                  max={new Date().toISOString().split('T')[0]}
+    56→    95→   109→  1005→                />
+    57→    96→   110→  1006→              </div>
+    58→    97→   111→  1007→            </div>
+    59→    98→   112→  1008→
+    60→    99→   113→  1009→            {/* Category */}
+    61→   100→   114→  1010→            <div className="space-y-1.5">
+    62→   101→   115→  1011→              <Label className="text-sm">Category</Label>
+    63→   102→   116→  1012→              <Select value={category} onValueChange={setCategory}>
+    64→   103→   117→  1013→                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+    65→   104→   118→  1014→                <SelectContent>
+    66→   105→   119→  1015→                  {CATEGORIES.map((c) => (
+    67→   106→   120→  1016→                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+    68→   107→   121→  1017→                  ))}
+    69→   108→   122→  1018→                </SelectContent>
+    70→   109→   123→  1019→              </Select>
+    71→   110→   124→  1020→            </div>
+    72→   111→   125→  1021→
+    73→   112→   126→  1022→            {/* Group selector (only in group mode) */}
+    74→   113→   127→  1023→            {mode === 'group' && (
+    75→   114→   128→  1024→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    76→   115→   129→  1025→                <div className="space-y-1.5">
+    77→   116→   130→  1026→                  <Label className="text-sm">Group <span className="text-red-400">*</span></Label>
+    78→   117→   131→  1027→                  <Select value={groupId} onValueChange={setGroupId}>
+    79→   118→   132→  1028→                    <SelectTrigger className="h-11">
+    80→   119→   133→  1029→                      <SelectValue placeholder={groups.length === 0 ? 'Create a group first' : 'Select group'} />
+    81→   120→   134→  1030→                    </SelectTrigger>
+    82→   121→   135→  1031→                    <SelectContent>
+    83→   122→   136→  1032→                      {groups.map((g) => (
+    84→   123→   137→  1033→                        <SelectItem key={g.id} value={g.id}>{g.emoji} {g.name}</SelectItem>
+    85→   124→   138→  1034→                      ))}
+    86→   125→   139→  1035→                    </SelectContent>
+    87→   126→   140→  1036→                  </Select>
+    88→   127→   141→  1037→                  {groups.length === 0 && (
+    89→   128→   142→  1038→                    <Button variant="link" size="sm" className="h-auto p-0 text-emerald-600" onClick={() => setView('groups')}>
+    90→   129→   143→  1039→                      Create a group first
+    91→   130→   144→  1040→                    </Button>
+    92→   131→   145→  1041→                  )}
+    93→   132→   146→  1042→                </div>
+    94→   133→   147→  1043→                <div className="space-y-1.5">
+    95→   134→   148→  1044→                  <Label className="text-sm">Paid by</Label>
+    96→   135→   149→  1045→                  <Select value={paidById} onValueChange={setPaidById}>
+    97→   136→   150→  1046→                    <SelectTrigger className="h-11">
+    98→   137→   151→  1047→                      <SelectValue placeholder={membersLoading ? 'Loading...' : 'Who paid?'} />
+    99→   138→   152→  1048→                    </SelectTrigger>
+   100→   139→   153→  1049→                    <SelectContent>
+   101→   140→   154→  1050→                      {members.map((m) => (
+   102→   141→   155→  1051→                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+   103→   142→   156→  1052→                      ))}
+   104→   143→   157→  1053→                    </SelectContent>
+   105→   144→   158→  1054→                  </Select>
+   106→   145→   159→  1055→                </div>
+   107→   146→   160→  1056→              </div>
+   108→   147→   161→  1057→            )}
+   109→   148→   162→  1058→
+   110→   149→   163→  1059→            {/* Direct mode: Select friends & add by email */}
+   111→   150→   164→  1060→            {mode === 'direct' && (
+   112→   151→   165→  1061→              <div className="space-y-4">
+   113→   152→   166→  1062→                <div className="space-y-1.5">
+   114→   153→   167→  1063→                  <Label className="text-sm font-medium">Split with Friends</Label>
+   115→   154→   168→  1064→                  {friends.length === 0 ? (
+   116→   155→   169→  1065→                    <p className="text-xs text-gray-400">No friends yet. Add by email below or send a friend request from the Friends page.</p>
+   117→   156→   170→  1066→                  ) : (
+   118→   157→   171→  1067→                    <div className="flex flex-wrap gap-2">
+   119→   158→   172→  1068→                      {friends.map((f) => (
+   120→   159→   173→  1069→                        <button
+   121→   160→   174→  1070→                          key={f.id}
+   122→   161→   175→  1071→                          type="button"
+   123→   162→   176→  1072→                          onClick={() => toggleFriend(f.id)}
+   124→   163→   177→  1073→                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+   125→   164→   178→  1074→                            selectedFriends.includes(f.id)
+   126→   165→   179→  1075→                              ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
+   127→   166→   180→  1076→                              : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+   128→   167→   181→  1077→                          }`}
+   129→   168→   182→  1078→                        >
+   130→   169→   183→  1079→                          {f.name || f.email}
+   131→   170→   184→  1080→                        </button>
+   132→   171→   185→  1081→                      ))}
+   133→   172→   186→  1082→                    </div>
+   134→   173→   187→  1083→                  )}
+   135→   174→   188→  1084→                </div>
+   136→   175→   189→  1085→
+   137→   176→   190→  1086→                {/* Email participants */}
+   138→   177→   191→  1087→                <div className="space-y-2">
+   139→   178→   192→  1088→                  <Label className="text-sm font-medium flex items-center gap-1.5">
+   140→   179→   193→  1089→                    <Mail className="w-3.5 h-3.5" />
+   141→   180→   194→  1090→                    Add by Email
+   142→   181→   195→  1091→                    <span className="text-xs text-gray-400 font-normal">(for non-users too)</span>
+   143→   182→   196→  1092→                  </Label>
+   144→   183→   197→  1093→                  <div className="flex gap-2">
+   145→   184→   198→  1094→                    <Input
+   146→   185→   199→  1095→                      type="email"
+   147→   186→   200→  1096→                      placeholder="friend@email.com"
+   148→   187→   201→  1097→                      value={newEmail}
+   149→   188→   202→  1098→                      onChange={(e) => setNewEmail(e.target.value)}
+   150→   189→   203→  1099→                      className="h-9 flex-1"
+   151→   190→   204→  1100→                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmailParticipant())}
+   152→   191→   205→  1101→                    />
+   153→   192→   206→  1102→                    <Input
+   154→   193→   207→  1103→                      placeholder="Name (optional)"
+   155→   194→   208→  1104→                      value={newName}
+   156→   195→   209→  1105→                      onChange={(e) => setNewName(e.target.value)}
+   157→   196→   210→  1106→                      className="h-9 w-32"
+   158→   197→   211→  1107→                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmailParticipant())}
+   159→   198→   212→  1108→                    />
+   160→   199→   213→  1109→                    <Button
+   161→   200→   214→  1110→                      type="button"
+   162→   201→   215→  1111→                      variant="outline"
+   163→   202→   216→  1112→                      size="sm"
+   164→   203→   217→  1113→                      className="h-9 shrink-0"
+   165→   204→   218→  1114→                      onClick={addEmailParticipant}
+   166→   205→   219→  1115→                      disabled={!newEmail.trim()}
+   167→   206→   220→  1116→                    >
+   168→   207→   221→  1117→                      <Plus className="w-3.5 h-3.5" />
+   169→   208→   222→  1118→                    </Button>
+   170→   209→   223→  1119→                  </div>
+   171→   210→   224→  1120→                  {emailParticipants.length > 0 && (
+   172→   211→   225→  1121→                    <div className="flex flex-wrap gap-2 mt-2">
+   173→   212→   226→  1122→                      {emailParticipants.map((p) => (
+   174→   213→   227→  1123→                        <Badge key={p.email} variant="secondary" className="gap-1.5 py-1 px-2.5">
+   175→   214→   228→  1124→                          <Mail className="w-3 h-3 text-gray-400" />
+   176→   215→   229→  1125→                          {p.name}
+   177→   216→   230→  1126→                          <span className="text-gray-400">({p.email})</span>
+   178→   217→   231→  1127→                          <button
+   179→   218→   232→  1128→                            type="button"
+   180→   219→   233→  1129→                            onClick={() => removeEmail(p.email)}
+   181→   220→   234→  1130→                            className="ml-1 text-gray-400 hover:text-red-500"
+   182→   221→   235→  1131→                          >
+   183→   222→   236→  1132→                            <X className="w-3 h-3" />
+   184→   223→   237→  1133→                          </button>
+   185→   224→   238→  1134→                        </Badge>
+   186→   225→   239→  1135→                      ))}
+   187→   226→   240→  1136→                    </div>
+   188→   227→   241→  1137→                  )}
+   189→   228→   242→  1138→                  {emailParticipants.length > 0 && (
+   190→   229→   243→  1139→                    <p className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+   191→   230→   244→  1140→                      Email participants who are not on SplitFlow will see the expense once they sign up with that email.
+   192→   231→   245→  1141→                    </p>
+   193→   232→   246→  1142→                  )}
+   194→   233→   247→  1143→                </div>
+   195→   234→   248→  1144→              </div>
+   196→   235→   249→  1145→            )}
+   197→   236→   250→  1146→
+   198→   237→   251→  1147→            {/* Split Type */}
+   199→   238→   252→  1148→            <div className="space-y-2">
+   200→   239→   253→  1149→              <div className="flex items-center gap-2">
+   201→   240→   254→  1150→                <Label className="text-sm">Split Type</Label>
+   202→   241→   255→  1151→                <TooltipProvider>
+   203→   242→   256→  1152→                  <Tooltip>
+   204→   243→   257→  1153→                    <TooltipTrigger>
+   205→   244→   258→  1154→                      <Info className="w-3.5 h-3.5 text-gray-400" />
+   206→   245→   259→  1155→                    </TooltipTrigger>
+   207→   246→   260→  1156→                    <TooltipContent className="text-xs max-w-xs">
+   208→   247→   261→  1157→                      <strong>Equal:</strong> Split evenly among all participants<br/>
+   209→   248→   262→  1158→                      <strong>By Share:</strong> Split by family/group size (e.g., 4 members vs 3 members = 4:3 ratio)<br/>
+   210→   249→   263→  1159→                      <strong>Exact:</strong> Enter specific amounts per person<br/>
+   211→   250→   264→  1160→                      <strong>Percentage:</strong> Enter percentage each person pays
+   212→   251→   265→  1161→                    </TooltipContent>
+   213→   252→   266→  1162→                  </Tooltip>
+   214→   253→   267→  1163→                </TooltipProvider>
+   215→   254→   268→  1164→              </div>
+   216→   255→   269→  1165→              <div className="flex gap-2">
+   217→   256→   270→  1166→                {(['equal', 'share', 'exact', 'percentage'] as const).map((type) => (
+   218→   257→   271→  1167→                  <Button
+   219→   258→   272→  1168→                    key={type}
+   220→   259→   273→  1169→                    type="button"
+   221→   260→   274→  1170→                    variant={splitType === type ? 'default' : 'outline'}
+   222→   261→   275→  1171→                    className={
+   223→   262→   276→  1172→                      splitType === type
+   224→   263→   277→  1173→                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+   225→   264→   278→  1174→                        : ''
+   226→   265→   279→  1175→                    }
+   227→   266→   280→  1176→                    onClick={() => setSplitType(type)}
+   228→   267→   281→  1177→                    size="sm"
+   229→   268→   282→  1178→                  >
+   230→   269→   283→  1179→                    {type === 'equal' ? 'Equal' : type === 'share' ? 'By Share 👨‍👩‍👧‍👦' : type === 'exact' ? 'Exact ₹' : 'Percentage %'}
+   231→   270→   284→  1180→                  </Button>
+   232→   271→   285→  1181→                ))}
+   233→   272→   286→  1182→              </div>
+   234→   273→   287→  1183→            </div>
+   235→   274→   288→  1184→
+   236→   275→   289→  1185→            {/* Share split details — family/group size (both modes) */}
+   237→   276→   290→  1186→            {splitType === 'share' && (
+   238→   277→   291→  1187→              <div className="space-y-3 p-4 bg-emerald-50/70 rounded-lg border border-emerald-100">
+   239→   278→   292→  1188→                <div className="flex items-center justify-between">
+   240→   279→   293→  1189→                  <Label className="text-sm font-medium">
+   241→   280→   294→  1190→                    Family / Group Size 👨‍👩‍👧‍👦
+   242→   281→   295→  1191→                  </Label>
+   243→   282→   296→  1192→                  {(() => {
+   244→   283→   297→  1193→                    const shareParticipants = mode === 'group'
+   245→   284→   298→  1194→                      ? members.map((m) => ({ id: m.id, name: m.name }))
+   246→   285→   299→  1195→                      : allDirectParticipants;
+   247→   286→   300→  1196→                    const totalShares = shareParticipants.reduce((sum, p) => {
+   248→   287→   301→  1197→                      if (p.id === user?.id && mode === 'direct') return sum + ownerShare;
+   249→   288→   302→  1198→                      const s = splits.find((sp) => sp.userId === p.id);
+   250→   289→   303→  1199→                      return sum + (s?.share || 1);
+   251→   290→   304→  1200→                    }, 0) + (mode === 'direct' ? emailParticipants.length : 0);
+   252→   291→   305→  1201→                    const ratioArr = shareParticipants.map((p) => {
+   253→   292→   306→  1202→                      if (p.id === user?.id && mode === 'direct') return ownerShare;
+   254→   293→   307→  1203→                      const s = splits.find((sp) => sp.userId === p.id);
+   255→   294→   308→  1204→                      return s?.share || 1;
+   256→   295→   309→  1205→                    });
+   257→   296→   310→  1206→                    if (mode === 'direct') {
+   258→   297→   311→  1207→                      emailParticipants.forEach(() => ratioArr.push(1));
+   259→   298→   312→  1208→                    }
+   260→   299→   313→  1209→                    const ratioStr = ratioArr.join(' : ');
+   261→   300→   314→  1210→                    return (
+   262→   301→   315→  1211→                      <span className="text-xs text-emerald-700 font-medium bg-emerald-100 px-2 py-1 rounded-full">
+   263→   302→   316→  1212→                        Ratio: {ratioStr} = {totalShares} total shares
+   264→   303→   317→  1213→                      </span>
+   265→   304→   318→  1214→                    );
+   266→   305→   319→  1215→                  })()}
+   267→   306→   320→  1216→                </div>
+   268→   307→   321→  1217→                <p className="text-xs text-gray-500">
+   269→   308→   322→  1218→                  Set how many people each participant represents. The expense will be split proportionally.
+   270→   309→   323→  1219→                </p>
+   271→   310→   324→  1220→                <div className="space-y-2 max-h-56 overflow-y-auto">
+   272→   311→   325→  1221→                  {/* In direct mode, show owner first */}
+   273→   312→   326→  1222→                  {mode === 'direct' && user?.id && (() => {
+   274→   313→   327→  1223→                    const shareParticipants = allDirectParticipants;
+   275→   314→   328→  1224→                    const emailShareTotal = emailParticipants.length;
+   276→   315→   329→  1225→                    const totalShares = shareParticipants.reduce((sum, p) => {
+   277→   316→   330→  1226→                      if (p.id === user!.id) return sum + ownerShare;
+   278→   317→   331→  1227→                      const s = splits.find((sp) => sp.userId === p.id);
+   279→   318→   332→  1228→                      return sum + (s?.share || 1);
+   280→   319→   333→  1229→                    }, 0) + emailShareTotal;
+   281→   320→   334→  1230→                    const numAmount = parseFloat(amount) || 0;
+   282→   321→   335→  1231→                    const shareAmount = totalShares > 0
+   283→   322→   336→  1232→                      ? Math.round((numAmount * ownerShare) / totalShares * 100) / 100
+   284→   323→   337→  1233→                      : 0;
+   285→   324→   338→  1234→                    const sharePct = totalShares > 0
+   286→   325→   339→  1235→                      ? Math.round((ownerShare / totalShares) * 1000) / 10
+   287→   326→   340→  1236→                      : 0;
+   288→   327→   341→  1237→                    return (
+   289→   328→   342→  1238→                      <div key={user!.id} className="flex items-center gap-3">
+   290→   329→   343→  1239→                        <div className="flex items-center gap-2 w-28 truncate shrink-0">
+   291→   330→   344→  1240→                          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+   292→   331→   345→  1241→                            <User className="w-3 h-3 text-emerald-700" />
+   293→   332→   346→  1242→                          </div>
+   294→   333→   347→  1243→                          <span className="text-sm font-medium text-gray-700">You</span>
+   295→   334→   348→  1244→                        </div>
+   296→   335→   349→  1245→                        <div className="flex items-center gap-1.5 shrink-0">
+   297→   336→   350→  1246→                          <button
+   298→   337→   351→  1247→                            type="button"
+   299→   338→   352→  1248→                            onClick={() => setOwnerShare(Math.max(1, ownerShare - 1))}
+   300→   339→   353→  1249→                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+   301→   340→   354→  1250→                            disabled={ownerShare <= 1}
+   302→   341→   355→  1251→                          >
+   303→   342→   356→  1252→                            −
+   304→   343→   357→  1253→                          </button>
+   305→   344→   358→  1254→                          <input
+   306→   345→   359→  1255→                            type="number"
+   307→   346→   360→  1256→                            min="1"
+   308→   347→   361→  1257→                            max="99"
+   309→   348→   362→  1258→                            value={ownerShare}
+   310→   349→   363→  1259→                            onChange={(e) => setOwnerShare(parseInt(e.target.value) || 1)}
+   311→   350→   364→  1260→                            className="w-10 h-7 text-center text-sm font-medium border border-gray-200 rounded-md bg-white"
+   312→   351→   365→  1261→                          />
+   313→   352→   366→  1262→                          <button
+   314→   353→   367→  1263→                            type="button"
+   315→   354→   368→  1264→                            onClick={() => setOwnerShare(ownerShare + 1)}
+   316→   355→   369→  1265→                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50"
+   317→   356→   370→  1266→                          >
+   318→   357→   371→  1267→                            +
+   319→   358→   372→  1268→                          </button>
+   320→   359→   373→  1269→                        </div>
+   321→   360→   374→  1270→                        <span className="text-xs text-gray-400 shrink-0">{ownerShare === 1 ? 'person' : 'people'}</span>
+   322→   361→   375→  1271→                        <div className="flex-1" />
+   323→   362→   376→  1272→                        <span className="text-sm font-semibold text-emerald-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+   324→   363→   377→  1273→                        <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+   325→   364→   378→  1274→                      </div>
+   326→   365→   379→  1275→                    );
+   327→   366→   380→  1276→                  })()}
+   328→   367→   381→  1277→                  {(mode === 'group' ? members : directParticipants).map((p) => {
+   329→   368→   382→  1278→                    const split = splits.find((s) => s.userId === p.id);
+   330→   369→   383→  1279→                    const shareCount = split?.share || 1;
+   331→   370→   384→  1280→                    const shareParticipants = mode === 'group'
+   332→   371→   385→  1281→                      ? members
+   333→   372→   386→  1282→                      : allDirectParticipants;
+   334→   373→   387→  1283→                    const emailShareTotal = mode === 'direct' ? emailParticipants.length : 0;
+   335→   374→   388→  1284→                    const totalShares = shareParticipants.reduce((sum, pp) => {
+   336→   375→   389→  1285→                      if (pp.id === user?.id && mode === 'direct') return sum + ownerShare;
+   337→   376→   390→  1286→                      const s = splits.find((sp) => sp.userId === pp.id);
+   338→   377→   391→  1287→                      return sum + (s?.share || 1);
+   339→   378→   392→  1288→                    }, 0) + emailShareTotal;
+   340→   379→   393→  1289→                    const numAmount = parseFloat(amount) || 0;
+   341→   380→   394→  1290→                    const shareAmount = totalShares > 0
+   342→   381→   395→  1291→                      ? Math.round((numAmount * shareCount) / totalShares * 100) / 100
+   343→   382→   396→  1292→                      : 0;
+   344→   383→   397→  1293→                    const sharePct = totalShares > 0
+   345→   384→   398→  1294→                      ? Math.round((shareCount / totalShares) * 1000) / 10
+   346→   385→   399→  1295→                      : 0;
+   347→   386→   400→  1296→                    return (
+   348→   387→   401→  1297→                      <div key={p.id} className="flex items-center gap-3">
+   349→   388→   402→  1298→                        <span className="text-sm text-gray-700 w-28 truncate shrink-0">{p.name}</span>
+   350→   389→   403→  1299→                        <div className="flex items-center gap-1.5 shrink-0">
+   351→   390→   404→  1300→                          <button
+   352→   391→   405→  1301→                            type="button"
+   353→   392→   406→  1302→                            onClick={() => updateSplitShare(p.id, shareCount - 1)}
+   354→   393→   407→  1303→                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+   355→   394→   408→  1304→                            disabled={shareCount <= 1}
+   356→   395→   409→  1305→                          >
+   357→   396→   410→  1306→                            −
+   358→   397→   411→  1307→                          </button>
+   359→   398→   412→  1308→                          <input
+   360→   399→   413→  1309→                            type="number"
+   361→   400→   414→  1310→                            min="1"
+   362→   401→   415→  1311→                            max="99"
+   363→   402→   416→  1312→                            value={shareCount}
+   364→   403→   417→  1313→                            onChange={(e) => updateSplitShare(p.id, parseInt(e.target.value) || 1)}
+   365→   404→   418→  1314→                            className="w-10 h-7 text-center text-sm font-medium border border-gray-200 rounded-md bg-white"
+   366→   405→   419→  1315→                          />
+   367→   406→   420→  1316→                          <button
+   368→   407→   421→  1317→                            type="button"
+   369→   408→   422→  1318→                            onClick={() => updateSplitShare(p.id, shareCount + 1)}
+   370→   409→   423→  1319→                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50"
+   371→   410→   424→  1320→                          >
+   372→   411→   425→  1321→                            +
+   373→   412→   426→  1322→                          </button>
+   374→   413→   427→  1323→                        </div>
+   375→   414→   428→  1324→                        <span className="text-xs text-gray-400 shrink-0">{shareCount === 1 ? 'person' : 'people'}</span>
+   376→   415→   429→  1325→                        <div className="flex-1" />
+   377→   416→   430→  1326→                        <span className="text-sm font-semibold text-emerald-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+   378→   417→   431→  1327→                        <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+   379→   418→   432→  1328→                      </div>
+   380→   419→   433→  1329→                    );
+   381→   420→   434→  1330→                  })}
+   382→   421→   435→  1331→                </div>
+   383→   422→   436→  1332→                {emailParticipants.length > 0 && (
+   384→   423→   437→  1333→                  <div className="mt-2 pt-2 border-t border-emerald-200">
+   385→   424→   438→  1334→                    {emailParticipants.map((ep) => {
+   386→   425→   439→  1335→                      const shareParticipants = mode === 'group' ? members : allDirectParticipants;
+   387→   426→   440→  1336→                      const totalShares = shareParticipants.reduce((sum, p) => {
+   388→   427→   441→  1337→                        if (p.id === user?.id && mode === 'direct') return sum + ownerShare;
+   389→   428→   442→  1338→                        const s = splits.find((sp) => sp.userId === p.id);
+   390→   429→   443→  1339→                        return sum + (s?.share || 1);
+   391→   430→   444→  1340→                      }, 0) + emailParticipants.length;
+   392→   431→   445→  1341→                      const numAmount = parseFloat(amount) || 0;
+   393→   432→   446→  1342→                      const shareAmount = totalShares > 0
+   394→   433→   447→  1343→                        ? Math.round((numAmount * 1) / totalShares * 100) / 100
+   395→   434→   448→  1344→                        : 0;
+   396→   435→   449→  1345→                      const sharePct = totalShares > 0
+   397→   436→   450→  1346→                        ? Math.round((1 / totalShares) * 1000) / 10
+   398→   437→   451→  1347→                        : 0;
+   399→   438→   452→  1348→                      return (
+   400→   439→   453→  1349→                        <div key={ep.email} className="flex items-center gap-3 text-amber-700">
+   401→   440→   454→  1350→                          <div className="flex items-center gap-1.5 w-28 truncate shrink-0">
+   402→   441→   455→  1351→                            <Mail className="w-3.5 h-3.5" />
+   403→   442→   456→  1352→                            <span className="text-sm truncate">{ep.name}</span>
+   404→   443→   457→  1353→                          </div>
+   405→   444→   458→  1354→                          <span className="text-xs bg-amber-100 px-2 py-0.5 rounded-full">1 share</span>
+   406→   445→   459→  1355→                          <div className="flex-1" />
+   407→   446→   460→  1356→                          <span className="text-sm font-semibold text-amber-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+   408→   447→   461→  1357→                          <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+   409→   448→   462→  1358→                        </div>
+   410→   449→   463→  1359→                      );
+   411→   450→   464→  1360→                    })}
+   412→   451→   465→  1361→                  </div>
+   413→   452→   466→  1362→                )}
+   414→   453→   467→  1363→              </div>
+   415→   454→   468→  1364→            )}
+   416→   455→   469→  1365→
+   417→   456→   470→  1366→            {/* Split Details for Group mode (exact/percentage) */}
+   418→   457→   471→  1367→            {mode === 'group' && splitType !== 'equal' && splitType !== 'share' && members.length > 0 && (
+   419→   458→   472→  1368→              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+   420→   459→   473→  1369→                <Label className="text-sm font-medium">
+   421→   460→   474→  1370→                  Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
+   422→   461→   475→  1371→                </Label>
+   423→   462→   476→  1372→                <div className="space-y-2 max-h-48 overflow-y-auto">
+   424→   463→   477→  1373→                  {members.map((m) => {
+   425→   464→   478→  1374→                    const split = splits.find((s) => s.userId === m.id);
+   426→   465→   479→  1375→                    return (
+   427→   466→   480→  1376→                      <div key={m.id} className="flex items-center gap-3">
+   428→   467→   481→  1377→                        <span className="text-sm text-gray-700 w-32 truncate shrink-0">{m.name}</span>
+   429→   468→   482→  1378→                        <Input
+   430→   469→   483→  1379→                          type="number"
+   431→   470→   484→  1380→                          step={splitType === 'percentage' ? '1' : '0.01'}
+   432→   471→   485→  1381→                          min="0"
+   433→   472→   486→  1382→                          placeholder="0"
+   434→   473→   487→  1383→                          value={split?.value || ''}
+   435→   474→   488→  1384→                          onChange={(e) => updateSplit(m.id, e.target.value)}
+   436→   475→   489→  1385→                          className="h-9"
+   437→   476→   490→  1386→                        />
+   438→   477→   491→  1387→                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+   439→   478→   492→  1388→                      </div>
+   440→   479→   493→  1389→                    );
+   441→   480→   494→  1390→                  })}
+   442→   481→   495→  1391→                </div>
+   443→   482→   496→  1392→              </div>
+   444→   483→   497→  1393→            )}
+   445→   484→   498→  1394→
+   446→   485→   499→  1395→            {/* Split Details for Direct mode (exact/percentage) */}
+   447→   486→   500→  1396→            {mode === 'direct' && (splitType === 'exact' || splitType === 'percentage') && (
+   448→   487→   501→  1397→              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+   449→   488→   502→  1398→                <Label className="text-sm font-medium">
+   450→   489→   503→  1399→                  Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
+   451→   490→   504→  1400→                </Label>
+   452→   491→   505→  1401→                <div className="space-y-2 max-h-48 overflow-y-auto">
+   453→   492→   506→  1402→                  {/* User (You) row — always shown */}
+   454→   493→   507→  1403→                  <div className="flex items-center gap-3">
+   455→   494→   508→  1404→                    <div className="flex items-center gap-2 w-32 shrink-0">
+   456→   495→   509→  1405→                      <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+   457→   496→   510→  1406→                        <User className="w-3 h-3 text-emerald-700" />
+   458→   497→   511→  1407→                      </div>
+   459→   498→   512→  1408→                      <span className="text-sm font-medium text-gray-700">You</span>
+   460→   499→   513→  1409→                    </div>
+   461→   500→   514→  1410→                    <Input
+   462→   501→   515→  1411→                      type="number"
+   463→   502→   516→  1412→                      step={splitType === 'percentage' ? '1' : '0.01'}
+   464→   503→   517→  1413→                      min="0"
+   465→   504→   518→  1414→                      placeholder="0"
+   466→   505→   519→  1415→                      value={userSplitValue}
+   467→   506→   520→  1416→                      onChange={(e) => setUserSplitValue(e.target.value)}
+   468→   507→   521→  1417→                      className="h-9"
+   469→   508→   522→  1418→                    />
+   470→   509→   523→  1419→                    <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+   471→   510→   524→  1420→                  </div>
+   472→   511→   525→  1421→                  {/* Selected friends */}
+   473→   512→   526→  1422→                  {directParticipants.length === 0 && emailParticipants.length === 0 && (
+   474→   513→   527→  1423→                    <p className="text-xs text-gray-400 pl-9">Add friends or emails above to split with others.</p>
+   475→   514→   528→  1424→                  )}
+   476→   515→   529→  1425→                  {directParticipants.map((p) => {
+   477→   516→   530→  1426→                    const split = splits.find((s) => s.userId === p.id);
+   478→   517→   531→  1427→                    return (
+   479→   518→   532→  1428→                      <div key={p.id} className="flex items-center gap-3">
+   480→   519→   533→  1429→                        <span className="text-sm text-gray-700 w-32 truncate shrink-0">{p.name}</span>
+   481→   520→   534→  1430→                        <Input
+   482→   521→   535→  1431→                          type="number"
+   483→   522→   536→  1432→                          step={splitType === 'percentage' ? '1' : '0.01'}
+   484→   523→   537→  1433→                          min="0"
+   485→   524→   538→  1434→                          placeholder="0"
+   486→   525→   539→  1435→                          value={split?.value || ''}
+   487→   526→   540→  1436→                          onChange={(e) => updateSplit(p.id, e.target.value)}
+   488→   527→   541→  1437→                          className="h-9"
+   489→   528→   542→  1438→                        />
+   490→   529→   543→  1439→                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+   491→   530→   544→  1440→                      </div>
+   492→   531→   545→  1441→                    );
+   493→   532→   546→  1442→                  })}
+   494→   533→   547→  1443→                  {/* Email participants */}
+   495→   534→   548→  1444→                  {emailParticipants.map((ep) => (
+   496→   535→   549→  1445→                    <div key={ep.email} className="flex items-center gap-3">
+   497→   536→   550→  1446→                      <div className="flex items-center gap-2 w-32 shrink-0">
+   498→   537→   551→  1447→                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+   499→   538→   552→  1448→                        <span className="text-sm text-gray-700 truncate">{ep.name}</span>
+   500→   539→   553→  1449→                      </div>
+   501→   540→   554→  1450→                      <Input
+   502→   541→   555→  1451→                        type="number"
+   503→   542→   556→  1452→                        step={splitType === 'percentage' ? '1' : '0.01'}
+   504→   543→   557→  1453→                        min="0"
+   505→   544→   558→  1454→                        placeholder="0"
+   506→   545→   559→  1455→                        value={emailSplitAmounts[ep.email] || ''}
+   507→   546→   560→  1456→                        onChange={(e) => setEmailSplitAmounts((prev) => ({ ...prev, [ep.email]: e.target.value }))}
+   508→   547→   561→  1457→                        className="h-9"
+   509→   548→   562→  1458→                      />
+   510→   549→   563→  1459→                      <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+   511→   550→   564→  1460→                    </div>
+   512→   551→   565→  1461→                  ))}
+   513→   552→   566→  1462→                </div>
+   514→   553→   567→  1463→                {/* Total check — always show when there's a value */}
+   515→   554→   568→  1464→                {(userSplitValue || directParticipants.length > 0 || emailParticipants.length > 0) && (
+   516→   555→   569→  1465→                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+   517→   556→   570→  1466→                    <span className="text-xs text-gray-500">Total</span>
+   518→   557→   571→  1467→                    <span className={`text-sm font-semibold ${totalSplitOk ? 'text-emerald-600' : 'text-red-500'}`}>
+   519→   558→   572→  1468→                      {splitType === 'percentage'
+   520→   559→   573→  1469→                        ? `${totalSplitAmount.toFixed(1)}% / 100%`
+   521→   560→   574→  1470→                        : `₹${totalSplitAmount.toFixed(2)} / ₹${parseFloat(amount || '0').toFixed(2)}`}
+   522→   561→   575→  1471→                    </span>
+   523→   562→   576→  1472→                  </div>
+   524→   563→   577→  1473→                )}
+   525→   564→   578→  1474→              </div>
+   526→   565→   579→  1475→            )}
+   527→   566→   580→  1476→
+   528→   567→   581→  1477→            {/* Equal split summary */}
+   529→   568→   582→  1478→            {splitType === 'equal' && (
+   530→   569→   583→  1479→              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+   531→   570→   584→  1480→                {mode === 'group' && members.length > 0 ? (
+   532→   571→   585→  1481→                  <p className="text-sm text-emerald-700">
+   533→   572→   586→  1482→                    Split equally among <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''}: <strong>₹{perPerson}</strong> each
+   534→   573→   587→  1483→                  </p>
+   535→   574→   588→  1484→                ) : mode === 'direct' && totalDirectParticipants > 1 ? (
+   536→   575→   589→  1485→                  <p className="text-sm text-emerald-700">
+   537→   576→   590→  1486→                    Split equally among <strong>{totalDirectParticipants}</strong> people: <strong>₹{perPersonDirect}</strong> each
+   538→   577→   591→  1487→                    {emailParticipants.length > 0 && (
+   539→   578→   592→  1488→                      <span className="block text-xs text-amber-600 mt-1">
+   540→   579→   593→  1489→                        Including {emailParticipants.length} email participant{emailParticipants.length > 1 ? 's' : ''} who will see this after signing up
+   541→   580→   594→  1490→                      </span>
+   542→   581→   595→  1491→                    )}
+   543→   582→   596→  1492→                  </p>
+   544→   583→   597→  1493→                ) : (
+   545→   584→   598→  1494→                  <p className="text-sm text-emerald-700">
+   546→   585→   599→  1495→                    Add friends or email participants to split with
+   547→   586→   600→  1496→                  </p>
+   548→   587→   601→  1497→                )}
+   549→   588→   602→  1498→              </div>
+   550→   589→   603→  1499→            )}
+   551→   590→   604→  1500→
+   552→   591→   605→  1501→            {/* Note */}
+   553→   592→   606→  1502→            <div className="space-y-1.5">
+   554→   593→   607→  1503→              <Label htmlFor="note" className="text-sm">Note <span className="text-gray-400 font-normal">(optional)</span></Label>
+   555→   594→   608→  1504→              <Textarea
+   556→   595→   609→  1505→                id="note"
+   557→   596→   610→  1506→                placeholder="Any additional details..."
+   558→   597→   611→  1507→                value={note}
+   559→   598→   612→  1508→                onChange={(e) => setNote(e.target.value)}
+   560→   599→   613→  1509→                rows={2}
+   561→   600→   614→  1510→                className="resize-none"
+   562→   601→   615→  1511→              />
+   563→   602→   616→  1512→            </div>
+   564→   603→   617→  1513→
+   565→   604→   618→  1514→            {/* Receipt Upload */}
+   566→   605→   619→  1515→            <div className="space-y-1.5">
+   567→   606→   620→  1516→              <Label className="text-sm">Receipt <span className="text-gray-400 font-normal">(optional)</span></Label>
+   568→   607→   621→  1517→              <div className="flex items-center gap-3">
+   569→   608→   622→  1518→                <label className="cursor-pointer">
+   570→   609→   623→  1519→                  <input
+   571→   610→   624→  1520→                    type="file"
+   572→   611→   625→  1521→                    accept="image/*"
+   573→   612→   626→  1522→                    className="hidden"
+   574→   613→   627→  1523→                    onChange={handleReceiptUpload}
+   575→   614→   628→  1524→                    disabled={receiptLoading}
+   576→   615→   629→  1525→                  />
+   577→   616→   630→  1526→                  <div className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-gray-300 rounded-lg hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors">
+   578→   617→   631→  1527→                    {receiptLoading ? (
+   579→   618→   632→  1528→                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+   580→   619→   633→  1529→                    ) : (
+   581→   620→   634→  1530→                      <Camera className="w-4 h-4 text-gray-400" />
+   582→   621→   635→  1531→                    )}
+   583→   622→   636→  1532→                    <span className="text-sm text-gray-600">Upload receipt photo</span>
+   584→   623→   637→  1533→                  </div>
+   585→   624→   638→  1534→                </label>
+   586→   625→   639→  1535→                {receiptPreview && (
+   587→   626→   640→  1536→                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200">
+   588→   627→   641→  1537→                    <img src={receiptPreview} alt="Receipt" className="w-full h-full object-cover" />
+   589→   628→   642→  1538→                  </div>
+   590→   629→   643→  1539→                )}
+   591→   630→   644→  1540→              </div>
+   592→   631→   645→  1541→            </div>
+   593→   632→   646→  1542→
+   594→   633→   647→  1543→            {/* Submit */}
+   595→   634→   648→  1544→            <Button
+   596→   635→   649→  1545→              type="submit"
+   597→   636→   650→  1546→              disabled={submitting}
+   598→   637→   651→  1547→              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+   599→   638→   652→  1548→            >
+   600→   639→   653→  1549→              {submitting ? (
+   601→   640→   654→  1550→                <div className="flex items-center gap-2">
+   602→   641→   655→  1551→                  <Loader2 className="w-4 h-4 animate-spin" />
+   603→   642→   656→  1552→                  Adding Expense...
+   604→   643→   657→  1553→                </div>
+   605→   644→   658→  1554→              ) : (
+   606→   645→   659→  1555→                <div className="flex items-center gap-2">
+   607→   646→   660→  1556→                  <Plus className="w-4 h-4" />
+   608→   647→   661→  1557→                  Add Expense
+   609→   648→   662→  1558→                </div>
+   610→   649→   663→  1559→              )}
+   611→   650→   664→  1560→            </Button>
+   612→   651→   665→  1561→          </form>
+   613→   652→   666→  1562→        </CardContent>
+   614→   653→   667→  1563→      </Card>
+   615→   654→   668→  1564→    </motion.div>
+   616→   655→   669→  1565→  );
+   617→   656→   670→  1566→}
+   618→   657→   671→  1567→

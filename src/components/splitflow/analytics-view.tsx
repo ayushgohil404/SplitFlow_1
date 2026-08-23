@@ -254,9 +254,9 @@ export function AnalyticsView() {
       {/* Summary */}
       <Card>
         <CardContent className="p-5">
-          <p className="text-sm text-gray-500">Total spending</p>
+          <p className="text-sm text-muted-foreground">Total spending</p>
           <p className="text-3xl font-bold text-gray-900">₹{totalSpent.toFixed(2)}</p>
-          <p className="text-sm text-gray-500 mt-1">{filteredExpenses.length} expenses</p>
+          <p className="text-sm text-muted-foreground mt-1">{filteredExpenses.length} expenses</p>
         </CardContent>
       </Card>
 
@@ -265,7 +265,7 @@ export function AnalyticsView() {
         <Card>
           <CardContent className="p-12 text-center">
             <BarChart3 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No expenses to analyze</p>
+            <p className="text-muted-foreground">No expenses to analyze</p>
           </CardContent>
         </Card>
       ) : (
@@ -277,7 +277,7 @@ export function AnalyticsView() {
             </CardHeader>
             <CardContent>
               {categoryData.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No data</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No data</p>
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
@@ -307,7 +307,7 @@ export function AnalyticsView() {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                     />
-                    <span className="text-gray-600">{cat.name}</span>
+                    <span className="text-muted-foreground">{cat.name}</span>
                   </div>
                 ))}
               </div>
@@ -321,7 +321,7 @@ export function AnalyticsView() {
             </CardHeader>
             <CardContent>
               {monthlyData.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No data</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No data</p>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={monthlyData}>
@@ -391,9 +391,9 @@ export function AnalyticsView() {
                     <span className="text-gray-700 font-medium">{m.name}</span>
                     <span className="text-gray-900 font-semibold">₹{m.total.toFixed(2)}</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                  <div className="w-full bg-muted rounded-full h-2.5">
                     <div
-                      className="h-2.5 rounded-full bg-emerald-500"
+                      className="h-2.5 rounded-full bg-primary/100"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -409,14 +409,14 @@ export function AnalyticsView() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-600" />AI Insights
+              <Sparkles className="w-4 h-4 text-primary" />AI Insights
             </CardTitle>
             <Button
               size="sm"
               variant="outline"
               onClick={handleAIInsights}
               disabled={aiLoading}
-              className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+              className="text-primary border-emerald-200 hover:bg-primary/10"
             >
               {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
               Generate Insights
@@ -427,7 +427,7 @@ export function AnalyticsView() {
           {aiLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
-              <span className="ml-2 text-sm text-gray-500">Analyzing your spending...</span>
+              <span className="ml-2 text-sm text-muted-foreground">Analyzing your spending...</span>
             </div>
           ) : aiInsights ? (
             <div className="prose prose-sm prose-gray max-w-none">
@@ -438,7 +438,7 @@ export function AnalyticsView() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-4">
               Click &quot;Generate Insights&quot; to get AI-powered analysis of your spending.
             </p>
           )}

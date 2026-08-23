@@ -858,12 +858,12 @@ export function AddExpenseView() {
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2.5">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
+            <Sparkles className="w-4 h-4 text-primary" />
             <h3 className="font-semibold text-foreground text-sm">Quick Add with AI</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="w-3.5 h-3.5 text-gray-400" />
+                  <Info className="w-3.5 h-3.5 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="text-xs max-w-xs">
                   Describe your expense in plain English. AI will extract the amount, category, and split details.
@@ -880,14 +880,14 @@ export function AddExpenseView() {
                 value={nlpInput}
                 onChange={(e) => setNlpInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleNlpSubmit()}
-                className="h-11 bg-white"
+                className="h-11 bg-background"
                 disabled={nlpLoading}
               />
             </div>
             <Button
               onClick={handleNlpSubmit}
               disabled={nlpLoading || !nlpInput.trim()}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-4 shrink-0"
+              className="bg-primary hover:bg-primary/90 text-white h-11 px-4 shrink-0"
             >
               {nlpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             </Button>
@@ -908,8 +908,8 @@ export function AddExpenseView() {
                   onClick={() => setMode('direct')}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
                     mode === 'direct'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/40'
                   }`}
                 >
                   <Users className="w-4 h-4" />
@@ -920,15 +920,15 @@ export function AddExpenseView() {
                   onClick={() => setMode('group')}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
                     mode === 'group'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/40'
                   }`}
                 >
                   <Users className="w-4 h-4" />
                   <span>Group Expense</span>
                 </button>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 {mode === 'direct'
                   ? 'Split with friends or by email — no group needed'
                   : 'Split within an existing group'}
@@ -963,7 +963,7 @@ export function AddExpenseView() {
                         onClick={handleCategorize}
                         disabled={categorizeLoading || !description.trim()}
                       >
-                        {categorizeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-emerald-600" />}
+                        {categorizeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="text-xs">Auto-categorize using AI</TooltipContent>
@@ -979,7 +979,7 @@ export function AddExpenseView() {
                   Amount <span className="text-red-400">*</span>
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₹</span>
                   <Input
                     id="amount"
                     type="number"
@@ -1035,7 +1035,7 @@ export function AddExpenseView() {
                     </SelectContent>
                   </Select>
                   {groups.length === 0 && (
-                    <Button variant="link" size="sm" className="h-auto p-0 text-emerald-600" onClick={() => setView('groups')}>
+                    <Button variant="link" size="sm" className="h-auto p-0 text-primary" onClick={() => setView('groups')}>
                       Create a group first
                     </Button>
                   )}
@@ -1062,7 +1062,7 @@ export function AddExpenseView() {
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Split with Friends</Label>
                   {friends.length === 0 ? (
-                    <p className="text-xs text-gray-400">No friends yet. Add by email below or send a friend request from the Friends page.</p>
+                    <p className="text-xs text-muted-foreground">No friends yet. Add by email below or send a friend request from the Friends page.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {friends.map((f) => (
@@ -1073,7 +1073,7 @@ export function AddExpenseView() {
                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                             selectedFriends.includes(f.id)
                               ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                              : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                              : 'bg-background border-border text-muted-foreground hover:border-muted-foreground/40'
                           }`}
                         >
                           {f.name || f.email}
@@ -1088,7 +1088,7 @@ export function AddExpenseView() {
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" />
                     Add by Email
-                    <span className="text-xs text-gray-400 font-normal">(for non-users too)</span>
+                    <span className="text-xs text-muted-foreground font-normal">(for non-users too)</span>
                   </Label>
                   <div className="flex gap-2">
                     <Input
@@ -1121,13 +1121,13 @@ export function AddExpenseView() {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {emailParticipants.map((p) => (
                         <Badge key={p.email} variant="secondary" className="gap-1.5 py-1 px-2.5">
-                          <Mail className="w-3 h-3 text-gray-400" />
+                          <Mail className="w-3 h-3 text-muted-foreground" />
                           {p.name}
-                          <span className="text-gray-400">({p.email})</span>
+                          <span className="text-muted-foreground">({p.email})</span>
                           <button
                             type="button"
                             onClick={() => removeEmail(p.email)}
-                            className="ml-1 text-gray-400 hover:text-red-500"
+                            className="ml-1 text-muted-foreground hover:text-red-500"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -1151,7 +1151,7 @@ export function AddExpenseView() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-3.5 h-3.5 text-gray-400" />
+                      <Info className="w-3.5 h-3.5 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="text-xs max-w-xs">
                       <strong>Equal:</strong> Split evenly among all participants<br/>
@@ -1170,7 +1170,7 @@ export function AddExpenseView() {
                     variant={splitType === type ? 'default' : 'outline'}
                     className={
                       splitType === type
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        ? 'bg-primary hover:bg-primary/90 text-white'
                         : ''
                     }
                     onClick={() => setSplitType(type)}
@@ -1184,7 +1184,7 @@ export function AddExpenseView() {
 
             {/* Share split details — family/group size (both modes) */}
             {splitType === 'share' && (
-              <div className="space-y-3 p-4 bg-emerald-50/70 rounded-lg border border-emerald-100">
+              <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">
                     Family / Group Size 👨‍👩‍👧‍👦
@@ -1208,13 +1208,13 @@ export function AddExpenseView() {
                     }
                     const ratioStr = ratioArr.join(' : ');
                     return (
-                      <span className="text-xs text-emerald-700 font-medium bg-emerald-100 px-2 py-1 rounded-full">
+                      <span className="text-xs text-foreground font-medium bg-emerald-100 px-2 py-1 rounded-full">
                         Ratio: {ratioStr} = {totalShares} total shares
                       </span>
                     );
                   })()}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Set how many people each participant represents. The expense will be split proportionally.
                 </p>
                 <div className="space-y-2 max-h-56 overflow-y-auto">
@@ -1238,7 +1238,7 @@ export function AddExpenseView() {
                       <div key={user!.id} className="flex items-center gap-3">
                         <div className="flex items-center gap-2 w-28 truncate shrink-0">
                           <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <User className="w-3 h-3 text-emerald-700" />
+                            <User className="w-3 h-3 text-foreground" />
                           </div>
                           <span className="text-sm font-medium text-gray-700">You</span>
                         </div>
@@ -1246,7 +1246,7 @@ export function AddExpenseView() {
                           <button
                             type="button"
                             onClick={() => setOwnerShare(Math.max(1, ownerShare - 1))}
-                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30"
                             disabled={ownerShare <= 1}
                           >
                             −
@@ -1257,20 +1257,20 @@ export function AddExpenseView() {
                             max="99"
                             value={ownerShare}
                             onChange={(e) => setOwnerShare(parseInt(e.target.value) || 1)}
-                            className="w-10 h-7 text-center text-sm font-medium border border-gray-200 rounded-md bg-white"
+                            className="w-10 h-7 text-center text-sm font-medium border border-border rounded-md bg-background"
                           />
                           <button
                             type="button"
                             onClick={() => setOwnerShare(ownerShare + 1)}
-                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted"
                           >
                             +
                           </button>
                         </div>
-                        <span className="text-xs text-gray-400 shrink-0">{ownerShare === 1 ? 'person' : 'people'}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">{ownerShare === 1 ? 'person' : 'people'}</span>
                         <div className="flex-1" />
-                        <span className="text-sm font-semibold text-emerald-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
-                        <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+                        <span className="text-sm font-semibold text-foreground shrink-0">₹{shareAmount.toFixed(2)}</span>
+                        <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
                       </div>
                     );
                   })()}
@@ -1300,7 +1300,7 @@ export function AddExpenseView() {
                           <button
                             type="button"
                             onClick={() => updateSplitShare(p.id, shareCount - 1)}
-                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30"
                             disabled={shareCount <= 1}
                           >
                             −
@@ -1311,20 +1311,20 @@ export function AddExpenseView() {
                             max="99"
                             value={shareCount}
                             onChange={(e) => updateSplitShare(p.id, parseInt(e.target.value) || 1)}
-                            className="w-10 h-7 text-center text-sm font-medium border border-gray-200 rounded-md bg-white"
+                            className="w-10 h-7 text-center text-sm font-medium border border-border rounded-md bg-background"
                           />
                           <button
                             type="button"
                             onClick={() => updateSplitShare(p.id, shareCount + 1)}
-                            className="w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted"
                           >
                             +
                           </button>
                         </div>
-                        <span className="text-xs text-gray-400 shrink-0">{shareCount === 1 ? 'person' : 'people'}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">{shareCount === 1 ? 'person' : 'people'}</span>
                         <div className="flex-1" />
-                        <span className="text-sm font-semibold text-emerald-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
-                        <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+                        <span className="text-sm font-semibold text-foreground shrink-0">₹{shareAmount.toFixed(2)}</span>
+                        <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
                       </div>
                     );
                   })}
@@ -1354,7 +1354,7 @@ export function AddExpenseView() {
                           <span className="text-xs bg-amber-100 px-2 py-0.5 rounded-full">1 share</span>
                           <div className="flex-1" />
                           <span className="text-sm font-semibold text-amber-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
-                          <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{sharePct}%</span>
+                          <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
                         </div>
                       );
                     })}
@@ -1384,7 +1384,7 @@ export function AddExpenseView() {
                           onChange={(e) => updateSplit(m.id, e.target.value)}
                           className="h-9"
                         />
-                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                        <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                       </div>
                     );
                   })}
@@ -1403,7 +1403,7 @@ export function AddExpenseView() {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 w-32 shrink-0">
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <User className="w-3 h-3 text-emerald-700" />
+                        <User className="w-3 h-3 text-foreground" />
                       </div>
                       <span className="text-sm font-medium text-gray-700">You</span>
                     </div>
@@ -1416,11 +1416,11 @@ export function AddExpenseView() {
                       onChange={(e) => setUserSplitValue(e.target.value)}
                       className="h-9"
                     />
-                    <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                    <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                   </div>
                   {/* Selected friends */}
                   {directParticipants.length === 0 && emailParticipants.length === 0 && (
-                    <p className="text-xs text-gray-400 pl-9">Add friends or emails above to split with others.</p>
+                    <p className="text-xs text-muted-foreground pl-9">Add friends or emails above to split with others.</p>
                   )}
                   {directParticipants.map((p) => {
                     const split = splits.find((s) => s.userId === p.id);
@@ -1436,7 +1436,7 @@ export function AddExpenseView() {
                           onChange={(e) => updateSplit(p.id, e.target.value)}
                           className="h-9"
                         />
-                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                        <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                       </div>
                     );
                   })}
@@ -1444,7 +1444,7 @@ export function AddExpenseView() {
                   {emailParticipants.map((ep) => (
                     <div key={ep.email} className="flex items-center gap-3">
                       <div className="flex items-center gap-2 w-32 shrink-0">
-                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                        <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
                         <span className="text-sm text-gray-700 truncate">{ep.name}</span>
                       </div>
                       <Input
@@ -1456,15 +1456,15 @@ export function AddExpenseView() {
                         onChange={(e) => setEmailSplitAmounts((prev) => ({ ...prev, [ep.email]: e.target.value }))}
                         className="h-9"
                       />
-                      <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                      <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                     </div>
                   ))}
                 </div>
                 {/* Total check — always show when there's a value */}
                 {(userSplitValue || directParticipants.length > 0 || emailParticipants.length > 0) && (
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                    <span className="text-xs text-gray-500">Total</span>
-                    <span className={`text-sm font-semibold ${totalSplitOk ? 'text-emerald-600' : 'text-red-500'}`}>
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-xs text-muted-foreground">Total</span>
+                    <span className={`text-sm font-semibold ${totalSplitOk ? 'text-primary' : 'text-red-500'}`}>
                       {splitType === 'percentage'
                         ? `${totalSplitAmount.toFixed(1)}% / 100%`
                         : `₹${totalSplitAmount.toFixed(2)} / ₹${parseFloat(amount || '0').toFixed(2)}`}
@@ -1476,13 +1476,13 @@ export function AddExpenseView() {
 
             {/* Equal split summary */}
             {splitType === 'equal' && (
-              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                 {mode === 'group' && members.length > 0 ? (
-                  <p className="text-sm text-emerald-700">
+                  <p className="text-sm text-foreground">
                     Split equally among <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''}: <strong>₹{perPerson}</strong> each
                   </p>
                 ) : mode === 'direct' && totalDirectParticipants > 1 ? (
-                  <p className="text-sm text-emerald-700">
+                  <p className="text-sm text-foreground">
                     Split equally among <strong>{totalDirectParticipants}</strong> people: <strong>₹{perPersonDirect}</strong> each
                     {emailParticipants.length > 0 && (
                       <span className="block text-xs text-amber-600 mt-1">
@@ -1491,7 +1491,7 @@ export function AddExpenseView() {
                     )}
                   </p>
                 ) : (
-                  <p className="text-sm text-emerald-700">
+                  <p className="text-sm text-foreground">
                     Add friends or email participants to split with
                   </p>
                 )}
@@ -1500,7 +1500,7 @@ export function AddExpenseView() {
 
             {/* Note */}
             <div className="space-y-1.5">
-              <Label htmlFor="note" className="text-sm">Note <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Label htmlFor="note" className="text-sm">Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Textarea
                 id="note"
                 placeholder="Any additional details..."
@@ -1513,7 +1513,7 @@ export function AddExpenseView() {
 
             {/* Receipt Upload */}
             <div className="space-y-1.5">
-              <Label className="text-sm">Receipt <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Label className="text-sm">Receipt <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <div className="flex items-center gap-3">
                 <label className="cursor-pointer">
                   <input
@@ -1523,17 +1523,17 @@ export function AddExpenseView() {
                     onChange={handleReceiptUpload}
                     disabled={receiptLoading}
                   />
-                  <div className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-gray-300 rounded-lg hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors">
+                  <div className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/10/50 transition-colors">
                     {receiptLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
                     ) : (
-                      <Camera className="w-4 h-4 text-gray-400" />
+                      <Camera className="w-4 h-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm text-gray-600">Upload receipt photo</span>
+                    <span className="text-sm text-muted-foreground">Upload receipt photo</span>
                   </div>
                 </label>
                 {receiptPreview && (
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200">
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border">
                     <img src={receiptPreview} alt="Receipt" className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -1544,7 +1544,7 @@ export function AddExpenseView() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-medium shadow-sm"
             >
               {submitting ? (
                 <div className="flex items-center gap-2">

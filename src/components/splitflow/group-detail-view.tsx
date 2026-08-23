@@ -293,7 +293,7 @@ export function GroupDetailView() {
   if (!group) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500">Group not found</p>
+        <p className="text-muted-foreground">Group not found</p>
         <Button variant="outline" className="mt-4" onClick={() => setView('groups')}>
           Back to Groups
         </Button>
@@ -313,9 +313,9 @@ export function GroupDetailView() {
             <div className="flex-1 min-w-0">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{group.name}</h2>
               {group.description && (
-                <p className="text-sm text-gray-500 mt-1">{group.description}</p>
+                <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
               )}
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><Users className="w-4 h-4" />{group.members.length} members</span>
                 <span className="flex items-center gap-1"><Receipt className="w-4 h-4" />₹{group.totalExpenses?.toFixed(2)} total</span>
               </div>
@@ -339,7 +339,7 @@ export function GroupDetailView() {
           <div className="flex justify-end mb-4">
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
               onClick={() => {
                 useAppStore.getState().selectGroup(selectedGroupId!);
                 setView('add-expense');
@@ -352,7 +352,7 @@ export function GroupDetailView() {
             <Card>
               <CardContent className="p-12 text-center">
                 <Receipt className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No expenses yet</p>
+                <p className="text-muted-foreground">No expenses yet</p>
               </CardContent>
             </Card>
           ) : (
@@ -367,7 +367,7 @@ export function GroupDetailView() {
                     <span className="text-xl">{CATEGORY_EMOJIS[exp.category] || '📋'}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{exp.description}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         Paid by {exp.paidBy?.name} · {exp.date ? new Date(exp.date).toLocaleDateString() : ''}
                       </p>
                     </div>
@@ -395,7 +395,7 @@ export function GroupDetailView() {
               <Card key={member.id}>
                 <CardContent className="p-4 flex items-center gap-3">
                   <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-emerald-50 text-emerald-700 text-sm font-semibold">
+                    <AvatarFallback className="bg-primary/10 text-foreground text-sm font-semibold">
                       {member.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -403,13 +403,13 @@ export function GroupDetailView() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
                       {member.role === 'admin' && (
-                        <Badge variant="secondary" className="text-xs bg-emerald-50 text-emerald-700">
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-foreground">
                           <Shield className="w-3 h-3 mr-1" />Admin
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500">{member.email}</p>
-                    <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Calendar className="w-3 h-3" />
                       Joined {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'Unknown'}
                     </p>
@@ -418,7 +418,7 @@ export function GroupDetailView() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="text-destructive hover:text-red-700 hover:bg-destructive/10"
                       onClick={() => handleRemoveMember(member.id)}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -436,7 +436,7 @@ export function GroupDetailView() {
             <Card>
               <CardContent className="p-12 text-center">
                 <Scale className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">All settled up! No balances.</p>
+                <p className="text-muted-foreground">All settled up! No balances.</p>
               </CardContent>
             </Card>
           ) : (
@@ -446,11 +446,11 @@ export function GroupDetailView() {
                 return (
                   <Card key={idx}>
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isYouOwe ? 'bg-red-50' : 'bg-emerald-50'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isYouOwe ? 'bg-destructive/10' : 'bg-primary/10'}`}>
                         {isYouOwe ? (
-                          <ArrowDownRight className="w-5 h-5 text-red-500" />
+                          <ArrowDownRight className="w-5 h-5 text-destructive" />
                         ) : (
-                          <ArrowUpRight className="w-5 h-5 text-emerald-600" />
+                          <ArrowUpRight className="w-5 h-5 text-primary" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -460,7 +460,7 @@ export function GroupDetailView() {
                           <span className="font-medium">{bal.to?.name}</span>
                         </p>
                       </div>
-                      <span className={`text-sm font-bold ${isYouOwe ? 'text-red-500' : 'text-emerald-600'}`}>
+                      <span className={`text-sm font-bold ${isYouOwe ? 'text-destructive' : 'text-primary'}`}>
                         {isYouOwe ? '-' : '+'}₹{(Number(bal.amount) || 0).toFixed(2)}
                       </span>
                     </CardContent>
@@ -506,7 +506,7 @@ export function GroupDetailView() {
               <Button
                 onClick={handleSaveSettings}
                 disabled={saving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
@@ -516,7 +516,7 @@ export function GroupDetailView() {
           <div className="flex flex-wrap gap-3 mt-6">
             <Button
               variant="outline"
-              className="text-red-600 border-red-200 hover:bg-red-50"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={() => setLeaveOpen(true)}
             >
               <LogOut className="w-4 h-4 mr-2" />Leave Group
@@ -524,7 +524,7 @@ export function GroupDetailView() {
             {isAdmin && (
               <Button
                 variant="outline"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="w-4 h-4 mr-2" />Delete Group
@@ -539,18 +539,18 @@ export function GroupDetailView() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-emerald-600" />
+              <UserPlus className="w-5 h-5 text-primary" />
               Add Member
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Enter your friend's email to add them directly to this group. They must already have a SplitFlow account.
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="invite-email">Friend's Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="invite-email"
                   type="email"
@@ -565,7 +565,7 @@ export function GroupDetailView() {
             <Button
               onClick={handleSendInvite}
               disabled={!inviteEmail.trim() || inviting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full bg-primary hover:bg-primary/90 text-white"
             >
               {inviting ? 'Adding...' : 'Add to Group'}
             </Button>

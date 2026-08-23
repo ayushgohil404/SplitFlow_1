@@ -228,11 +228,11 @@ export function SettleView() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Others owe you</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">₹{totalOwed.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Others owe you</p>
+                <p className="text-2xl font-bold text-primary mt-1">₹{totalOwed.toFixed(2)}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center">
-                <ArrowUpRight className="w-6 h-6 text-emerald-600" />
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <ArrowUpRight className="w-6 h-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -241,11 +241,11 @@ export function SettleView() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">You owe others</p>
-                <p className="text-2xl font-bold text-red-500 mt-1">₹{totalOwing.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">You owe others</p>
+                <p className="text-2xl font-bold text-destructive mt-1">₹{totalOwing.toFixed(2)}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                <ArrowDownRight className="w-6 h-6 text-red-500" />
+              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <ArrowDownRight className="w-6 h-6 text-destructive" />
               </div>
             </div>
           </CardContent>
@@ -269,7 +269,7 @@ export function SettleView() {
           <CardContent className="p-12 text-center">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-gray-900 mb-1">All settled up!</h3>
-            <p className="text-sm text-gray-500">You don&apos;t owe anyone and no one owes you. Nice!</p>
+            <p className="text-sm text-muted-foreground">You don&apos;t owe anyone and no one owes you. Nice!</p>
           </CardContent>
         </Card>
       ) : (
@@ -284,19 +284,19 @@ export function SettleView() {
                 return (
                   <button
                     key={gb.groupId}
-                    className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${
-                      isActive ? 'bg-emerald-50/50 border-l-2 border-l-emerald-500' : ''
+                    className={`w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left ${
+                      isActive ? 'bg-primary/10/50 border-l-2 border-l-emerald-500' : ''
                     }`}
                     onClick={() => setSelectedGroupId(gb.groupId)}
                   >
                     <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 text-sm">{gb.groupName}</p>
-                      {isActive && <p className="text-xs text-emerald-600 mt-0.5">Selected</p>}
+                      {isActive && <p className="text-xs text-primary mt-0.5">Selected</p>}
                     </div>
                     <span
                       className={`text-sm font-semibold ${
-                        gb.yourBalance >= 0 ? 'text-emerald-600' : 'text-red-500'
+                        gb.yourBalance >= 0 ? 'text-primary' : 'text-destructive'
                       }`}
                     >
                       {gb.yourBalance >= 0 ? '+' : ''}
@@ -318,7 +318,7 @@ export function SettleView() {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-white"
                 onClick={() => setRecordOpen(true)}
               >
                 <CreditCard className="w-4 h-4 mr-1.5" />Record Payment
@@ -354,8 +354,8 @@ export function SettleView() {
             <Card>
               <CardContent className="p-8 text-center">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 font-medium">All settled up in this group!</p>
-                <p className="text-xs text-gray-400 mt-1">No outstanding balances</p>
+                <p className="text-sm text-muted-foreground font-medium">All settled up in this group!</p>
+                <p className="text-xs text-muted-foreground mt-1">No outstanding balances</p>
               </CardContent>
             </Card>
           ) : (
@@ -366,11 +366,11 @@ export function SettleView() {
                 return (
                   <Card key={idx} className={isYouOwe || isOwedToYou ? 'ring-1 ring-emerald-100' : ''}>
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isYouOwe ? 'bg-red-50' : 'bg-emerald-50'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isYouOwe ? 'bg-destructive/10' : 'bg-primary/10'}`}>
                         {isYouOwe ? (
-                          <ArrowDownRight className="w-5 h-5 text-red-500" />
+                          <ArrowDownRight className="w-5 h-5 text-destructive" />
                         ) : (
-                          <ArrowUpRight className="w-5 h-5 text-emerald-600" />
+                          <ArrowUpRight className="w-5 h-5 text-primary" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -379,10 +379,10 @@ export function SettleView() {
                           {' → '}
                           <span className="font-medium">{b.to?.name || 'Someone'}</span>
                         </p>
-                        {isYouOwe && <p className="text-xs text-red-500 mt-0.5">You need to pay</p>}
-                        {isOwedToYou && <p className="text-xs text-emerald-600 mt-0.5">Owed to you</p>}
+                        {isYouOwe && <p className="text-xs text-destructive mt-0.5">You need to pay</p>}
+                        {isOwedToYou && <p className="text-xs text-primary mt-0.5">Owed to you</p>}
                       </div>
-                      <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-red-500' : isOwedToYou ? 'text-emerald-600' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-gray-700'}`}>
                         ₹{(Number(b.amount) || 0).toFixed(2)}
                       </span>
                     </CardContent>
@@ -397,16 +397,16 @@ export function SettleView() {
             <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-emerald-600" />Optimal Payment Plan
+                  <Zap className="w-4 h-4 text-primary" />Optimal Payment Plan
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs text-gray-500 mb-3">Reduce from {balances.length} transactions to {simplified.length}:</p>
+                <p className="text-xs text-muted-foreground mb-3">Reduce from {balances.length} transactions to {simplified.length}:</p>
                 <div className="space-y-2">
                   {simplified.map((p, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-emerald-100">
+                    <div key={idx} className="flex items-center gap-3 p-2.5 bg-background rounded-lg border border-primary/20">
                       <span className="text-sm flex-1 text-gray-900 font-medium">{p.fromUserId} → {p.toUserId}</span>
-                      <span className="text-sm font-bold text-emerald-700">₹{(Number(p.amount) || 0).toFixed(2)}</span>
+                      <span className="text-sm font-bold text-foreground">₹{(Number(p.amount) || 0).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -420,11 +420,11 @@ export function SettleView() {
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Settlements</h4>
               <div className="space-y-2">
                 {settlements.slice(0, 5).map((s) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={s.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900">{s.from?.name} paid {s.to?.name}</p>
-                      {s.note && <p className="text-xs text-gray-500">{s.note}</p>}
+                      {s.note && <p className="text-xs text-muted-foreground">{s.note}</p>}
                     </div>
                     <span className="text-sm font-semibold text-gray-700">₹{(Number(s.amount) || 0).toFixed(2)}</span>
                   </div>
@@ -442,11 +442,11 @@ export function SettleView() {
             <DialogTitle>Record a Payment</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Record that a payment was made. This will reduce the outstanding balance.
             </p>
             <div className="space-y-1.5">
-              <Label>From (payer) <span className="text-red-400">*</span></Label>
+              <Label>From (payer) <span className="text-destructive">*</span></Label>
               <Select value={payFrom} onValueChange={setPayFrom}>
                 <SelectTrigger><SelectValue placeholder="Who is paying?" /></SelectTrigger>
                 <SelectContent>
@@ -457,7 +457,7 @@ export function SettleView() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>To (receiver) <span className="text-red-400">*</span></Label>
+              <Label>To (receiver) <span className="text-destructive">*</span></Label>
               <Select value={payTo} onValueChange={setPayTo}>
                 <SelectTrigger><SelectValue placeholder="Who receives payment?" /></SelectTrigger>
                 <SelectContent>
@@ -468,9 +468,9 @@ export function SettleView() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pay-amount">Amount <span className="text-red-400">*</span></Label>
+              <Label htmlFor="pay-amount">Amount <span className="text-destructive">*</span></Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
                 <Input
                   id="pay-amount"
                   type="number"
@@ -479,13 +479,13 @@ export function SettleView() {
                   placeholder="0.00"
                   value={payAmount}
                   onChange={(e) => { setPayAmount(e.target.value); setPayAmountError(''); }}
-                  className={`pl-7 ${payAmountError ? 'border-red-300' : ''}`}
+                  className={`pl-7 ${payAmountError ? 'border-destructive/40' : ''}`}
                 />
               </div>
-              {payAmountError && <p className="text-xs text-red-500 mt-1">{payAmountError}</p>}
+              {payAmountError && <p className="text-xs text-destructive mt-1">{payAmountError}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pay-note">Note <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Label htmlFor="pay-note">Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input
                 id="pay-note"
                 placeholder="e.g., Venmo, Cash, UPI"
@@ -499,7 +499,7 @@ export function SettleView() {
             <Button
               onClick={handleRecordPayment}
               disabled={!payFrom || !payTo || !payAmount || recording}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {recording ? 'Recording...' : 'Record Payment'}
             </Button>

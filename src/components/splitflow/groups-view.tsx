@@ -206,7 +206,7 @@ export function GroupsView() {
       {/* Actions bar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex gap-2">
-          <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+          <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white shadow-sm">
             <Plus className="w-4 h-4 mr-2" />Create Group
           </Button>
           <Button variant="outline" onClick={() => setJoinOpen(true)}>
@@ -217,7 +217,7 @@ export function GroupsView() {
         {/* Search */}
         {groups.length > 3 && (
           <div className="relative flex-1 max-w-xs sm:ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search groups..."
               value={searchQuery}
@@ -231,11 +231,11 @@ export function GroupsView() {
       {/* Error state */}
       {error && !loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
-            <AlertCircle className="w-7 h-7 text-red-500" />
+          <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <AlertCircle className="w-7 h-7 text-destructive" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load groups</h3>
-          <p className="text-sm text-gray-500 mb-4">Something went wrong. Please try again.</p>
+          <p className="text-sm text-muted-foreground mb-4">Something went wrong. Please try again.</p>
           <Button onClick={fetchGroups} variant="outline" className="gap-2">
             <RefreshCw className="w-4 h-4" /> Retry
           </Button>
@@ -264,7 +264,7 @@ export function GroupsView() {
       ) : filteredGroups.length === 0 && searchQuery ? (
         <div className="text-center py-12">
           <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">No groups matching &quot;{searchQuery}&quot;</p>
+          <p className="text-muted-foreground text-sm">No groups matching &quot;{searchQuery}&quot;</p>
           <Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
             Clear search
           </Button>
@@ -275,18 +275,18 @@ export function GroupsView() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center justify-center py-16 text-center"
         >
-          <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-emerald-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No groups yet</h3>
-          <p className="text-sm text-gray-500 mb-1 max-w-sm leading-relaxed">
+          <p className="text-sm text-muted-foreground mb-1 max-w-sm leading-relaxed">
             Create a group to start splitting expenses with friends, roommates, or travel buddies.
           </p>
-          <p className="text-xs text-gray-400 mb-6">
+          <p className="text-xs text-muted-foreground mb-6">
             You can also join an existing group using an invite code.
           </p>
           <div className="flex gap-3">
-            <Button onClick={() => setCreateOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button onClick={() => setCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white">
               <Plus className="w-4 h-4 mr-2" />Create Your First Group
             </Button>
             <Button variant="outline" onClick={() => setJoinOpen(true)}>
@@ -312,26 +312,26 @@ export function GroupsView() {
                     <span className="text-3xl">{group.emoji || '👥'}</span>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{group.name}</h3>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <Users className="w-3 h-3" />{group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
                   {group.description && (
-                    <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">{group.description}</p>
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">{group.description}</p>
                   )}
                   <div className="space-y-1.5 pt-2 border-t border-gray-100">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Total spent</span>
+                      <span className="text-muted-foreground">Total spent</span>
                       <span className="font-medium text-gray-900">
                         ₹{(group.totalExpenses || 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Your balance</span>
+                      <span className="text-muted-foreground">Your balance</span>
                       <span
                         className={`font-semibold ${
-                          (group.yourBalance || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                          (group.yourBalance || 0) >= 0 ? 'text-primary' : 'text-destructive'
                         }`}
                       >
                         {(group.yourBalance || 0) >= 0 ? '+' : ''}
@@ -364,7 +364,7 @@ export function GroupsView() {
                     className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${
                       formEmoji === emoji
                         ? 'bg-emerald-100 ring-2 ring-emerald-500 scale-110'
-                        : 'bg-gray-50 hover:bg-gray-100'
+                        : 'bg-muted hover:bg-muted'
                     }`}
                   >
                     {emoji}
@@ -373,19 +373,19 @@ export function GroupsView() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="group-name">Group Name <span className="text-red-400">*</span></Label>
+              <Label htmlFor="group-name">Group Name <span className="text-destructive">*</span></Label>
               <Input
                 id="group-name"
                 placeholder="e.g., Weekend Trip to Goa"
                 value={formName}
                 onChange={(e) => { setFormName(e.target.value); setFormNameError(''); }}
-                className={`h-11 ${formNameError ? 'border-red-300' : ''}`}
+                className={`h-11 ${formNameError ? 'border-destructive/40' : ''}`}
                 autoFocus
               />
-              {formNameError && <p className="text-xs text-red-500">{formNameError}</p>}
+              {formNameError && <p className="text-xs text-destructive">{formNameError}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="group-desc">Description <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Label htmlFor="group-desc">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Textarea
                 id="group-desc"
                 placeholder="What's this group for?"
@@ -425,7 +425,7 @@ export function GroupsView() {
             <Button
               onClick={handleCreate}
               disabled={!formName.trim() || creating}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {creating ? 'Creating...' : 'Create Group'}
             </Button>
@@ -440,7 +440,7 @@ export function GroupsView() {
             <DialogTitle>Join a Group</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Ask the group creator for their invite code and paste it below.
             </p>
             <div className="space-y-1.5">
@@ -450,11 +450,11 @@ export function GroupsView() {
                 placeholder="e.g., ABC123"
                 value={inviteCode}
                 onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setJoinError(''); }}
-                className={`h-11 text-center font-mono text-lg tracking-widest ${joinError ? 'border-red-300' : ''}`}
+                className={`h-11 text-center font-mono text-lg tracking-widest ${joinError ? 'border-destructive/40' : ''}`}
                 autoFocus
                 maxLength={8}
               />
-              {joinError && <p className="text-xs text-red-500">{joinError}</p>}
+              {joinError && <p className="text-xs text-destructive">{joinError}</p>}
             </div>
           </div>
           <DialogFooter>
@@ -462,7 +462,7 @@ export function GroupsView() {
             <Button
               onClick={handleJoin}
               disabled={!inviteCode.trim() || joining}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {joining ? 'Joining...' : 'Join Group'}
             </Button>

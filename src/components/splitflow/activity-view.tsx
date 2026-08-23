@@ -124,7 +124,7 @@ export function ActivityView() {
         <Button
           size="sm"
           variant={filterGroup === 'all' ? 'default' : 'outline'}
-          className={filterGroup === 'all' ? 'bg-emerald-600 hover:bg-emerald-700 text-white shrink-0' : 'shrink-0'}
+          className={filterGroup === 'all' ? 'bg-primary hover:bg-primary/90 text-white shrink-0' : 'shrink-0'}
           onClick={() => setFilterGroup('all')}
         >
           All
@@ -134,7 +134,7 @@ export function ActivityView() {
             key={g.id}
             size="sm"
             variant={filterGroup === g.id ? 'default' : 'outline'}
-            className={filterGroup === g.id ? 'bg-emerald-600 hover:bg-emerald-700 text-white shrink-0' : 'shrink-0'}
+            className={filterGroup === g.id ? 'bg-primary hover:bg-primary/90 text-white shrink-0' : 'shrink-0'}
             onClick={() => setFilterGroup(g.id)}
           >
             {g.emoji} {g.name}
@@ -161,8 +161,8 @@ export function ActivityView() {
         <Card>
           <CardContent className="p-12 text-center">
             <Activity className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No activity yet</p>
-            <p className="text-sm text-gray-400 mt-1">Activity will appear here as you use SplitFlow.</p>
+            <p className="text-muted-foreground">No activity yet</p>
+            <p className="text-sm text-muted-foreground mt-1">Activity will appear here as you use SplitFlow.</p>
           </CardContent>
         </Card>
       ) : (
@@ -180,19 +180,19 @@ export function ActivityView() {
                   <Card className="hover:shadow-sm transition-shadow">
                     <CardContent className="p-4 flex items-center gap-3">
                       <Avatar className="w-10 h-10 shrink-0">
-                        <AvatarFallback className="bg-emerald-50 text-emerald-700 text-sm font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-foreground text-sm font-semibold">
                           {act.user?.name?.charAt(0)?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900">
-                          <span className="text-gray-500">{act.message}</span>
+                          <span className="text-muted-foreground">{act.message}</span>
                         </p>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                        <Icon className="w-4 h-4 text-gray-400" />
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
                       </div>
-                      <span className="text-xs text-gray-400 shrink-0 w-24 text-right">
+                      <span className="text-xs text-muted-foreground shrink-0 w-24 text-right">
                         {act.createdAt
                           ? formatDistanceToNow(new Date(act.createdAt), { addSuffix: true })
                           : ''}

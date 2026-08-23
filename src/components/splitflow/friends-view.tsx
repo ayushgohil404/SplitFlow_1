@@ -259,11 +259,11 @@ export function FriendsView() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Friends</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage friends and balances.</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage friends and balances.</p>
         </div>
         <Button
           onClick={() => setAddOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-white"
           size="sm"
         >
           <UserPlus className="w-4 h-4 mr-1.5" />Add Friend
@@ -272,22 +272,22 @@ export function FriendsView() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100">
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-primary/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <ArrowDownRight className="w-4 h-4 text-emerald-600" />
-              <p className="text-xs text-emerald-600 font-medium">Friends owe you</p>
+              <ArrowDownRight className="w-4 h-4 text-primary" />
+              <p className="text-xs text-primary font-medium">Friends owe you</p>
             </div>
-            <p className="text-2xl font-bold text-emerald-700 mt-1">₹{grandTotalOwed.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">₹{grandTotalOwed.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-100">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <ArrowUpRight className="w-4 h-4 text-red-500" />
-              <p className="text-xs text-red-500 font-medium">You owe friends</p>
+              <ArrowUpRight className="w-4 h-4 text-destructive" />
+              <p className="text-xs text-destructive font-medium">You owe friends</p>
             </div>
-            <p className="text-2xl font-bold text-red-600 mt-1">₹{grandTotalIOwe.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-destructive mt-1">₹{grandTotalIOwe.toFixed(2)}</p>
           </CardContent>
         </Card>
       </div>
@@ -309,12 +309,12 @@ export function FriendsView() {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{req.user.name || 'User'}</p>
-                  <p className="text-xs text-gray-500 truncate">{req.user.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <Button
                     size="sm"
-                    className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="h-8 bg-primary hover:bg-primary/90 text-white"
                     onClick={() => handleAcceptRequest(req.id)}
                   >
                     <Check className="w-3.5 h-3.5" />
@@ -322,7 +322,7 @@ export function FriendsView() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    className="h-8 text-destructive hover:text-red-700 hover:bg-destructive/10"
                     onClick={() => handleDeclineRequest(req.id)}
                   >
                     <X className="w-3.5 h-3.5" />
@@ -337,7 +337,7 @@ export function FriendsView() {
       {/* Sent Requests */}
       {pendingSent.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-500 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <Send className="w-3.5 h-3.5" />
             Sent Requests ({pendingSent.length})
           </h3>
@@ -345,13 +345,13 @@ export function FriendsView() {
             <Card key={req.id} className="opacity-60">
               <CardContent className="p-4 flex items-center gap-3">
                 <Avatar className="w-9 h-9">
-                  <AvatarFallback className="bg-gray-100 text-gray-500 text-xs font-semibold">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
                     {req.user.name?.charAt(0)?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-700 truncate">{req.user.name || 'User'}</p>
-                  <p className="text-xs text-gray-400 truncate">{req.user.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
                 </div>
                 <Badge variant="secondary" className="text-[10px]">Pending</Badge>
               </CardContent>
@@ -370,11 +370,11 @@ export function FriendsView() {
           <Card>
             <CardContent className="p-12 text-center">
               <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No friends yet</p>
-              <p className="text-sm text-gray-400 mt-1 mb-4">Add friends by email to start splitting expenses directly</p>
+              <p className="text-muted-foreground font-medium">No friends yet</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Add friends by email to start splitting expenses directly</p>
               <Button
                 onClick={() => setAddOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 <UserPlus className="w-4 h-4 mr-1.5" />Add Friend
               </Button>
@@ -399,7 +399,7 @@ export function FriendsView() {
                   >
                     <CardContent className="p-4 flex items-center gap-3">
                       <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-emerald-50 text-emerald-700 text-sm font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-foreground text-sm font-semibold">
                           {friend.name?.charAt(0)?.toUpperCase() || friend.email?.charAt(0)?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
@@ -407,16 +407,16 @@ export function FriendsView() {
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {friend.name || friend.email}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">{friend.email}</p>
+                        <p className="text-xs text-muted-foreground truncate">{friend.email}</p>
                       </div>
                       {Math.abs(netBalance) > 0.005 ? (
-                        <span className={`text-sm font-bold shrink-0 ${netBalance > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        <span className={`text-sm font-bold shrink-0 ${netBalance > 0 ? 'text-primary' : 'text-destructive'}`}>
                           {netBalance > 0 ? '+' : ''}₹{netBalance.toFixed(2)}
                         </span>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] shrink-0 bg-gray-100 text-gray-500">Settled</Badge>
+                        <Badge variant="secondary" className="text-[10px] shrink-0 bg-muted text-muted-foreground">Settled</Badge>
                       )}
-                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                     </CardContent>
                   </Card>
 
@@ -433,11 +433,11 @@ export function FriendsView() {
                           {/* Group-by-group breakdown */}
                           {breakdown.length > 0 && (
                             <div className="space-y-1.5">
-                              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">By Group</p>
+                              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">By Group</p>
                               {breakdown.map((b: any) => (
-                                <div key={b.groupId} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
+                                <div key={b.groupId} className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg">
                                   <span className="text-sm text-gray-700">{b.groupEmoji} {b.groupName}</span>
-                                  <span className={`text-sm font-medium ${b.amount > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                  <span className={`text-sm font-medium ${b.amount > 0 ? 'text-primary' : 'text-destructive'}`}>
                                     {b.amount > 0 ? '+' : ''}₹{(Number(b.amount) || 0).toFixed(2)}
                                   </span>
                                 </div>
@@ -450,7 +450,7 @@ export function FriendsView() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="text-destructive hover:text-red-700 hover:bg-destructive/10"
                               onClick={(e) => { e.stopPropagation(); handleRemoveFriend(friend.friendshipId); }}
                             >
                               Remove Friend
@@ -470,18 +470,18 @@ export function FriendsView() {
       {/* Non-friend direct balances (people you've split with but aren't friends) */}
       {nonFriendDirect.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-500">Other Balances</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Other Balances</h3>
           {nonFriendDirect.map((d, i) => (
             <Card key={i}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                  {d.isEmail ? <Mail className="w-5 h-5 text-gray-400" /> : <User className="w-5 h-5 text-gray-400" />}
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  {d.isEmail ? <Mail className="w-5 h-5 text-muted-foreground" /> : <User className="w-5 h-5 text-muted-foreground" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{d.userName || 'Unknown'}</p>
-                  <p className="text-xs text-gray-400">{d.isEmail ? 'Not yet a user' : 'Not friends'}</p>
+                  <p className="text-xs text-muted-foreground">{d.isEmail ? 'Not yet a user' : 'Not friends'}</p>
                 </div>
-                <span className={`text-sm font-bold ${d.amount > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                <span className={`text-sm font-bold ${d.amount > 0 ? 'text-primary' : 'text-destructive'}`}>
                   {d.amount > 0 ? '+' : ''}₹{(Number(d.amount) || 0).toFixed(2)}
                 </span>
               </CardContent>
@@ -495,18 +495,18 @@ export function FriendsView() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-emerald-600" />
+              <UserPlus className="w-5 h-5 text-primary" />
               Add Friend
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Enter your friend&apos;s email address. If they&apos;re already on SplitFlow, they&apos;ll receive a friend request. If not, you can still add expenses using their email.
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="friend-email">Friend&apos;s Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="friend-email"
                   type="email"
@@ -521,7 +521,7 @@ export function FriendsView() {
             <Button
               onClick={handleAddFriend}
               disabled={!addEmail.trim() || adding}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full bg-primary hover:bg-primary/90 text-white"
             >
               {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
               {adding ? 'Sending...' : 'Send Friend Request'}

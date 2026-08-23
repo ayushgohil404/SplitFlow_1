@@ -113,17 +113,17 @@ export function HistoryView() {
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-gray-900">Expense History</h2>
-        <p className="text-sm text-gray-500 mt-1">All your expenses across groups and direct splits.</p>
+        <p className="text-sm text-muted-foreground mt-1">All your expenses across groups and direct splits.</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
-          <p className="text-xs text-emerald-600 font-medium">Total Expenses</p>
-          <p className="text-2xl font-bold text-emerald-700 mt-1">{expenses.length}</p>
+        <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
+          <p className="text-xs text-primary font-medium">Total Expenses</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{expenses.length}</p>
         </div>
         <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-          <p className="text-xs text-blue-600 font-medium">Total Amount</p>
+          <p className="text-xs text-blue-400 font-medium">Total Amount</p>
           <p className="text-2xl font-bold text-blue-700 mt-1">
             {'₹'}{(Number(totalAmount) || 0).toFixed(2)}
           </p>
@@ -131,9 +131,9 @@ export function HistoryView() {
       </div>
 
       {/* Search & Filters */}
-      <div className="rounded-xl border bg-white p-4 space-y-3">
+      <div className="rounded-xl border bg-background p-4 space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search expenses..."
             value={search}
@@ -149,7 +149,7 @@ export function HistoryView() {
               variant={filter === opt.value ? 'default' : 'outline'}
               size="sm"
               className={filter === opt.value
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5'
+                ? 'bg-primary hover:bg-primary/90 text-white text-xs h-7 px-2.5'
                 : 'text-xs h-7 px-2.5'
               }
               onClick={() => { setFilter(opt.value); setPage(0); }}
@@ -165,7 +165,7 @@ export function HistoryView() {
               variant={category === opt.value ? 'default' : 'outline'}
               size="sm"
               className={category === opt.value
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5'
+                ? 'bg-primary hover:bg-primary/90 text-white text-xs h-7 px-2.5'
                 : 'text-xs h-7 px-2.5'
               }
               onClick={() => { setCategory(opt.value); setPage(0); }}
@@ -184,10 +184,10 @@ export function HistoryView() {
           ))}
         </div>
       ) : expenses.length === 0 ? (
-        <div className="rounded-xl border bg-white p-12 text-center">
+        <div className="rounded-xl border bg-background p-12 text-center">
           <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">No expenses found</p>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-muted-foreground font-medium">No expenses found</p>
+          <p className="text-sm text-muted-foreground mt-1">
             {search || filter !== 'all' || category !== 'all'
               ? 'Try adjusting your filters'
               : 'Add your first expense to get started'}
@@ -198,8 +198,8 @@ export function HistoryView() {
           {Object.entries(grouped).map(([dateKey, dayExpenses]) => (
             <div key={dateKey}>
               <div className="flex items-center gap-3 mb-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{dateKey}</p>
-                <div className="flex-1 h-px bg-gray-100" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{dateKey}</p>
+                <div className="flex-1 h-px bg-muted" />
               </div>
               <div className="space-y-2">
                 {dayExpenses.map((exp: any) => {
@@ -217,28 +217,28 @@ export function HistoryView() {
                   return (
                     <div
                       key={String(exp.id || Math.random())}
-                      className="rounded-xl border bg-white p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
+                      className="rounded-xl border bg-background p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                         <span className="text-lg">{CATEGORY_EMOJIS[cat] || '📋'}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{desc}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {groupName ? (
-                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded bg-gray-100 text-gray-600 inline-flex items-center">
+                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded bg-muted text-muted-foreground inline-flex items-center">
                               {groupEmoji} {groupName}
                             </span>
                           ) : (
-                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded border border-emerald-200 text-emerald-600 inline-flex items-center">
+                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded border border-emerald-200 text-primary inline-flex items-center">
                               <User className="w-2.5 h-2.5 mr-0.5" /> Direct
                             </span>
                           )}
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {paidByName} paid
                           </span>
                           <span className="text-xs text-gray-300">·</span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {splitType === 'equal' ? 'equal split' : splitType} with {splitCount}
                           </span>
                         </div>
@@ -271,7 +271,7 @@ export function HistoryView() {
               >
                 Previous
               </Button>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 Page {page + 1} of {totalPages}
               </span>
               <Button
