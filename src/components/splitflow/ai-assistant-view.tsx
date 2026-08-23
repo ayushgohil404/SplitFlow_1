@@ -320,7 +320,7 @@ export function AIAssistantView() {
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-emerald-500" />
+                <Sparkles className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
                 Hi, {user?.name || 'there'}!
@@ -430,7 +430,7 @@ export function AIAssistantView() {
                 {/* Confirmed expense indicator */}
                 {msg.actionLabel && !msg.pendingExpense && (
                   <div className="flex items-center gap-1.5 mt-1.5 ml-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                     <span className="text-xs text-primary font-medium">{msg.actionLabel}</span>
                   </div>
                 )}

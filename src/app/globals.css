@@ -151,7 +151,7 @@
 }
 
 /* Dark mode subtle gradient on main bg */
-.dark main.bg-muted/30, .dark [class*="bg-muted"] {
+.dark main.bg-muted\/30 {
   background: linear-gradient(180deg, rgba(30,30,42,0.3) 0%, rgba(10,10,15,0.5) 100%);
 }
 

@@ -426,7 +426,7 @@ export function AnalyticsView() {
         <CardContent>
           {aiLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <span className="ml-2 text-sm text-muted-foreground">Analyzing your spending...</span>
             </div>
           ) : aiInsights ? (

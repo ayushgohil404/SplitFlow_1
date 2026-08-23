@@ -174,8 +174,17 @@ export function GroupsView() {
 
   const handleJoin = async () => {
     setJoinError('');
-    if (!inviteCode.trim()) {
+    let code = inviteCode.trim();
+    if (!code) {
       setJoinError('Please enter an invite code');
+      return;
+    }
+    // Strip URL if user pasted full link
+    if (code.includes('/invite/')) {
+      code = code.split('/invite/').pop() || '';
+    }
+    if (!code) {
+      setJoinError('Please enter a valid invite code');
       return;
     }
     setJoining(true);
@@ -183,7 +192,7 @@ export function GroupsView() {
       const res = await fetch('/api/groups/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
+        body: JSON.stringify({ inviteCode: code }),
       });
       if (res.ok) {
         toast.success('Joined group successfully!');
@@ -441,18 +450,18 @@ export function GroupsView() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Ask the group creator for their invite code and paste it below.
+              Paste the group invite code or invite link shared by the group creator.
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="invite-code">Invite Code</Label>
               <Input
                 id="invite-code"
-                placeholder="e.g., ABC123"
+                placeholder="Paste invite code or link"
                 value={inviteCode}
-                onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setJoinError(''); }}
-                className={`h-11 text-center font-mono text-lg tracking-widest ${joinError ? 'border-destructive/40' : ''}`}
+                onChange={(e) => { setInviteCode(e.target.value); setJoinError(''); }}
+                className={`h-11 text-center font-mono text-sm tracking-wider ${joinError ? 'border-destructive/40' : ''}`}
                 autoFocus
-                maxLength={8}
+                maxLength={30}
               />
               {joinError && <p className="text-xs text-destructive">{joinError}</p>}
             </div>

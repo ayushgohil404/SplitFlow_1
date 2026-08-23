@@ -267,7 +267,7 @@ export function SettleView() {
       ) : !hasAnyBalance ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+            <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-foreground mb-1">All settled up!</h3>
             <p className="text-sm text-muted-foreground">You don&apos;t owe anyone and no one owes you. Nice!</p>
           </CardContent>
@@ -353,7 +353,7 @@ export function SettleView() {
           ) : balances.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground font-medium">All settled up in this group!</p>
                 <p className="text-xs text-muted-foreground mt-1">No outstanding balances</p>
               </CardContent>
@@ -421,7 +421,7 @@ export function SettleView() {
               <div className="space-y-2">
                 {settlements.slice(0, 5).map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground">{s.from?.name} paid {s.to?.name}</p>
                       {s.note && <p className="text-xs text-muted-foreground">{s.note}</p>}

@@ -39,18 +39,18 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-            <AlertCircle className="w-8 h-8 text-red-500" />
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
-          <p className="text-sm text-gray-500 mb-6 max-w-sm leading-relaxed">
+          <h3 className="text-lg font-semibold text-foreground mb-2">Something went wrong</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-sm leading-relaxed">
             We hit an unexpected issue. Don&apos;t worry — your data is safe. Try again or refresh the page.
           </p>
           <div className="flex gap-3">
             <Button variant="outline" onClick={this.handleReset} className="gap-2">
               <RefreshCw className="w-4 h-4" /> Try Again
             </Button>
-            <Button onClick={() => window.location.reload()} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+            <Button onClick={() => window.location.reload()} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
               Refresh Page
             </Button>
           </div>

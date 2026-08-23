@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const group = await db.group.findUnique({
-      where: { inviteCode: inviteCode.trim().toUpperCase() },
+      where: { inviteCode: inviteCode.trim() },
     })
 
     if (!group) {
