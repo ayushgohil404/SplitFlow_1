@@ -145,7 +145,7 @@ Do NOT wrap in markdown code blocks. Return raw JSON only.`
     const msg = error?.message || ''
     let userMsg = 'Failed to generate insights. Please try again later.'
     if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
-      userMsg = 'AI API key is invalid. Update GEMINI_API_KEY in Vercel settings.'
+      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
     } else if (msg.includes('All AI models failed')) {
       userMsg = 'AI models are currently unavailable. Please try again later.'
     }

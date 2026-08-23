@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
-import { isGeminiConfigured } from '@/lib/groq'
 
-
-const VISION_MODEL = 'gemini-2.5-flash';
+const VISION_MODEL = 'gemini-2.5-flash'
 
 function extractJSON(text: string): unknown {
   try {
@@ -68,7 +66,7 @@ async function callGeminiVision(base64: string, mimeType: string): Promise<strin
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Gemini vision failed (${res.status}): ${text.slice(0, 200)}`)
+    throw new Error(`Vision model failed (${res.status}): ${text.slice(0, 200)}`)
   }
 
   const data = await res.json()
@@ -84,9 +82,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!isGeminiConfigured()) {
+    const geminiKey = process.env.GEMINI_API_KEY
+    if (!geminiKey || geminiKey.length < 10) {
       return NextResponse.json(
-        { error: 'AI service not configured. Set GEMINI_API_KEY.', code: 'NOT_CONFIGURED' },
+        { error: 'Receipt scanning requires GEMINI_API_KEY (free from aistudio.google.com). Set it in Vercel settings.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }
@@ -134,9 +133,7 @@ export async function POST(req: NextRequest) {
     const msg = error?.message || ''
     let userMsg = 'Failed to scan receipt. Try entering details manually.'
     if (msg.includes('API key') || msg.includes('401') || msg.includes('403') || msg.includes('unauthorized') || msg.includes('invalid')) {
-      userMsg = 'AI API key is invalid. Update GEMINI_API_KEY in Vercel settings.'
-    } else if (msg.includes('All Gemini models failed') || msg.includes('All vision models failed')) {
-      userMsg = 'Vision model unavailable. Try a different image or enter manually.'
+      userMsg = 'Vision API key is invalid. Update GEMINI_API_KEY in Vercel settings.'
     }
     return NextResponse.json({ error: userMsg, code: 'AI_ERROR' }, { status: 200 })
   }

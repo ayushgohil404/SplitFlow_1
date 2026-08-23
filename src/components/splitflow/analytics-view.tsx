@@ -183,22 +183,27 @@ export function AnalyticsView() {
   }, [filteredExpenses]);
 
   const handleAIInsights = async () => {
+    if (selectedGroupId === 'all') {
+      toast.error('Select a specific group to generate AI insights');
+      return;
+    }
     setAiLoading(true);
     try {
       const res = await fetch('/api/ai/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          groupId: selectedGroupId !== 'all' ? selectedGroupId : undefined,
-          dateRange,
-        }),
+        body: JSON.stringify({ groupId: selectedGroupId, dateRange }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAiInsights(data.insights || data.text || 'No insights available.');
-      } else {
-        toast.error('Failed to get insights');
+      const data = await res.json();
+      if (data.error) {
+        if (data.code === 'NOT_CONFIGURED') {
+          toast.error('AI is not configured. Add GROQ_API_KEY in Vercel settings.');
+        } else {
+          toast.error(data.error);
+        }
+        return;
       }
+      setAiInsights(data.insights || data.text || 'No insights available.');
     } catch {
       toast.error('Failed to get insights');
     } finally {

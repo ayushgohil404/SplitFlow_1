@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: 'AI is not configured. Please add GEMINI_API_KEY (free from Google AI Studio) in your Vercel environment settings.', code: 'NOT_CONFIGURED' },
+        { error: 'AI is not configured. Please add GROQ_API_KEY (free from Google AI Studio) in your Vercel environment settings.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }
@@ -334,7 +334,7 @@ Before the JSON block, write a friendly confirmation message like "I've prepared
     const status = error?.status || ''
     let userMessage = 'Something went wrong. Please try again.'
     if (msg.includes('API key') || msg.includes('not configured') || msg.includes('unauthorized') || msg.includes('invalid') || status === 401 || status === 403) {
-      userMessage = 'AI API key is invalid or not configured. Please check GEMINI_API_KEY in Vercel settings.'
+      userMessage = 'AI API key is invalid or not configured. Please check GROQ_API_KEY in Vercel settings.'
     } else if (msg.includes('rate limit') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
       userMessage = 'AI is rate limited. Please wait a moment and try again.'
     } else if (msg.includes('All Gemini models failed')) {

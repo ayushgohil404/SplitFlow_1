@@ -237,7 +237,7 @@ export function AIAssistantView() {
       const data = await res.json().catch(() => ({ error: 'Failed to get response' }));
       if (data.error) {
         const errMsg = data.code === 'NOT_CONFIGURED'
-          ? 'AI is not set up yet. Go to Vercel Dashboard > Settings > Environment Variables and add GEMINI_API_KEY (free from aistudio.google.com).'
+          ? 'AI is not set up yet. Go to Vercel Dashboard > Settings > Environment Variables and add GROQ_API_KEY (free from console.groq.com).'
           : (data.error || 'Something went wrong.');
         const aiMsg: Message = {
           id: `ai-${Date.now()}`,

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: 'AI service not configured. Set GEMINI_API_KEY.', code: 'NOT_CONFIGURED' },
+        { error: 'AI service not configured. Set GROQ_API_KEY.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     const msg = error?.message || ''
     let userMsg = 'Failed to categorize. Try selecting manually.'
     if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
-      userMsg = 'AI API key is invalid. Update GEMINI_API_KEY in Vercel settings.'
+      userMsg = 'AI API key is invalid. Update GROQ_API_KEY in Vercel settings.'
     } else if (msg.includes('All Gemini models failed')) {
       userMsg = 'AI models unavailable. Try selecting manually.'
     }
