@@ -478,7 +478,7 @@ export function AddExpenseView() {
 
   const openEmailForNonRegistered = (participants: EmailParticipant[], desc: string, amt: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://splitflow-1.vercel.app';
-    const landingUrl = `${baseUrl}/landing`;
+    const landingUrl = `${baseUrl}`;
     const toEmails = participants.map((p) => p.email).join(',');
     const names = participants.map((p) => p.name).join(', ');
     const userName = user?.name || 'Someone';

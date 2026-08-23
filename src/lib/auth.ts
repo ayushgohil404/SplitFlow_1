@@ -48,7 +48,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: "/",
+    signIn: "/app",
   },
-  secret: process.env.NEXTAUTH_SECRET || "splitflow-super-secret-key-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET!,
 };

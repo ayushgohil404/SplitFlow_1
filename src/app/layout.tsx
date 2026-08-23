@@ -14,11 +14,49 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXTAUTH_URL || "https://splitflow-1.vercel.app";
+
 export const metadata: Metadata = {
-  title: "SplitFlow - AI-Powered Expense Splitting",
-  description: "Split expenses, not friendships. The free AI-powered alternative to Splitwise with smarter splitting, natural language expense entry, and spending insights.",
+  title: {
+    default: "SplitFlow — AI-Powered Expense Splitting",
+    template: "%s | SplitFlow",
+  },
+  description:
+    "Split expenses, not friendships. The free AI-powered alternative to Splitwise with natural language entry, receipt scanning, debt simplification, and spending analytics.",
+  keywords: [
+    "expense splitting",
+    "splitwise alternative",
+    "shared expenses",
+    "group expenses",
+    "AI expense tracker",
+    "debt simplification",
+    "bill splitter",
+    "split costs",
+    "free expense app",
+  ],
+  authors: [{ name: "SplitFlow" }],
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "SplitFlow",
+    title: "SplitFlow — AI-Powered Expense Splitting",
+    description:
+      "Split expenses, not friendships. Free forever with AI-powered natural language entry, receipt scanning, and debt simplification.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SplitFlow — AI-Powered Expense Splitting",
+    description:
+      "Split expenses, not friendships. The free AI-powered alternative to Splitwise.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>",
+    icon: "/logo.svg",
   },
 };
 

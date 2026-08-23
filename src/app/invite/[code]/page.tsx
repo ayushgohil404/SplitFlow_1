@@ -113,7 +113,7 @@ export default function InvitePage() {
         setError(data.error);
       } else {
         setActionResult({ type: 'accepted' });
-        setTimeout(() => router.push('/'), 1500);
+        setTimeout(() => router.push('/app'), 1500);
       }
     } catch {
       setError('Something went wrong');
@@ -136,7 +136,7 @@ export default function InvitePage() {
       } else {
         setActionResult({ type: action === 'accept' ? 'accepted' : 'declined' });
         if (action === 'accept' && data.group) {
-          setTimeout(() => router.push('/'), 1500);
+          setTimeout(() => router.push('/app'), 1500);
         }
       }
     } catch {
@@ -164,7 +164,7 @@ export default function InvitePage() {
             <p className="text-sm text-muted-foreground mb-6">
               {error || 'This invite link is invalid or has been removed.'}
             </p>
-            <Button onClick={() => router.push('/')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button onClick={() => router.push('/app')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               Go to SplitFlow
             </Button>
           </CardContent>
@@ -183,7 +183,7 @@ export default function InvitePage() {
             <p className="text-sm text-muted-foreground mb-6">
               This invite from {invite.inviter.name || 'someone'} has expired. Ask them to send a new one.
             </p>
-            <Button onClick={() => router.push('/')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button onClick={() => router.push('/app')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               Go to SplitFlow
             </Button>
           </CardContent>
@@ -211,7 +211,7 @@ export default function InvitePage() {
                 ? `You already joined ${invite.group.name}.`
                 : 'You already responded to this invite.'}
             </p>
-            <Button onClick={() => router.push('/')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button onClick={() => router.push('/app')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               Go to SplitFlow
             </Button>
           </CardContent>
@@ -291,7 +291,7 @@ export default function InvitePage() {
                   <XCircle className="w-14 h-14 text-muted-foreground mx-auto mb-4" />
                   <h1 className="text-xl font-bold text-foreground mb-2">Invite Declined</h1>
                   <p className="text-sm text-muted-foreground">No problem! You can always join later.</p>
-                  <Button onClick={() => router.push('/')} variant="outline" className="mt-4">
+                  <Button onClick={() => router.push('/app')} variant="outline" className="mt-4">
                     Go to SplitFlow
                   </Button>
                 </>

@@ -32,7 +32,7 @@ export function useAuth() {
     document.cookie = 'sf-token=; path=/; max-age=0';
     setUser(null);
     setChecked(false);
-    window.location.href = '/';
+    window.location.href = '/app';
   };
 
   return { user, isLoading: isLoading && !checked, checked, signOut, checkSession };

@@ -13,7 +13,7 @@ export function AuthPage() {
     setOauthLoading(provider);
     try {
       import('next-auth/react').then(({ signIn }) => {
-        signIn(provider, { callbackUrl: '/' });
+        signIn(provider, { callbackUrl: '/app' });
       }).catch(() => {
         setOauthLoading(null);
       });
