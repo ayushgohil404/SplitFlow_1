@@ -6,7 +6,6 @@ import {
   Sparkles,
   Loader2,
   Plus,
-  Camera,
   Info,
   Users,
   Mail,
@@ -107,8 +106,6 @@ export function AddExpenseView() {
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
 
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [receiptLoading, setReceiptLoading] = useState(false);
 
   const [categorizeLoading, setCategorizeLoading] = useState(false);
 
@@ -377,35 +374,6 @@ export function AddExpenseView() {
     }
   };
 
-  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Receipt image must be under 10MB');
-      return;
-    }
-    setReceiptPreview(URL.createObjectURL(file));
-    setReceiptLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('receipt', file);
-      const res = await fetch('/api/ai/receipt', { method: 'POST', body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.description) { setDescription(data.description); setDescError(''); }
-        if (data.amount) { setAmount(String(data.amount)); setAmountError(''); }
-        if (data.category) setCategory(data.category);
-        if (data.date) setDate(data.date);
-        toast.success('Receipt scanned successfully!');
-      } else {
-        toast.error('Could not read receipt. Try a clearer photo.');
-      }
-    } catch {
-      toast.error('Failed to scan receipt');
-    } finally {
-      setReceiptLoading(false);
-    }
-  };
 
   const addEmailParticipant = () => {
     if (!newEmail.trim()) return;
@@ -527,17 +495,13 @@ export function AddExpenseView() {
 
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:30px;border-top:1px solid #f3f4f6;padding-top:25px;">
             <tr>
-              <td width="33%" style="text-align:center;padding:10px;">
+              <td width="50%" style="text-align:center;padding:10px;">
                 <div style="font-size:24px;">🤖</div>
                 <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">AI-Powered</p>
               </td>
-              <td width="33%" style="text-align:center;padding:10px;">
+              <td width="50%" style="text-align:center;padding:10px;">
                 <div style="font-size:24px;">📊</div>
                 <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">Analytics</p>
-              </td>
-              <td width="33%" style="text-align:center;padding:10px;">
-                <div style="font-size:24px;">🧾</div>
-                <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">Receipt Scan</p>
               </td>
             </tr>
           </table>
@@ -1445,33 +1409,7 @@ export function AddExpenseView() {
             </div>
 
 
-            <div className="space-y-1.5">
-              <Label className="text-sm">Receipt <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <div className="flex items-center gap-3">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleReceiptUpload}
-                    disabled={receiptLoading}
-                  />
-                  <div className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/10/50 transition-colors">
-                    {receiptLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    ) : (
-                      <Camera className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <span className="text-sm text-muted-foreground">Upload receipt photo</span>
-                  </div>
-                </label>
-                {receiptPreview && (
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border">
-                    <img src={receiptPreview} alt="Receipt" className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-            </div>
+
 
 
             <Button

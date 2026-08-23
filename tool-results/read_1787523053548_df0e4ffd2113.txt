@@ -1,0 +1,1439 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from 'react';
+     4→import { motion } from 'framer-motion';
+     5→import {
+     6→  Sparkles,
+     7→  Loader2,
+     8→  Plus,
+     9→  Info,
+    10→  Users,
+    11→  Mail,
+    12→  X,
+    13→  UserPlus,
+    14→  User,
+    15→} from 'lucide-react';
+    16→import { Card, CardContent } from '@/components/ui/card';
+    17→import { Button } from '@/components/ui/button';
+    18→import { Input } from '@/components/ui/input';
+    19→import { Label } from '@/components/ui/label';
+    20→import { Textarea } from '@/components/ui/textarea';
+    21→import {
+    22→  Select,
+    23→  SelectContent,
+    24→  SelectItem,
+    25→  SelectTrigger,
+    26→  SelectValue,
+    27→} from '@/components/ui/select';
+    28→import {
+    29→  Tooltip,
+    30→  TooltipContent,
+    31→  TooltipProvider,
+    32→  TooltipTrigger,
+    33→} from '@/components/ui/tooltip';
+    34→import { Badge } from '@/components/ui/badge';
+    35→import { toast } from 'sonner';
+    36→import { useAppStore } from '@/store/app-store';
+    37→
+    38→interface Group {
+    39→  id: string;
+    40→  name: string;
+    41→  emoji: string;
+    42→}
+    43→
+    44→interface Member {
+    45→  id: string;
+    46→  name: string;
+    47→  email?: string;
+    48→}
+    49→
+    50→interface Friend {
+    51→  id: string;
+    52→  name: string;
+    53→  email: string;
+    54→}
+    55→
+    56→interface EmailParticipant {
+    57→  email: string;
+    58→  name: string;
+    59→}
+    60→
+    61→const CATEGORIES = [
+    62→  { value: 'food', label: '🍕 Food & Dining' },
+    63→  { value: 'travel', label: '✈️ Travel' },
+    64→  { value: 'housing', label: '🏠 Housing' },
+    65→  { value: 'entertainment', label: '🎉 Entertainment' },
+    66→  { value: 'utilities', label: '💡 Utilities' },
+    67→  { value: 'shopping', label: '🛍️ Shopping' },
+    68→  { value: 'transport', label: '🚗 Transport' },
+    69→  { value: 'health', label: '🏥 Health' },
+    70→  { value: 'education', label: '📚 Education' },
+    71→  { value: 'general', label: '📋 General' },
+    72→];
+    73→
+    74→type ExpenseMode = 'group' | 'direct';
+    75→
+    76→export function AddExpenseView() {
+    77→  const { selectedGroupId, navigateToGroup, setView, user } = useAppStore();
+    78→
+    79→  const [mode, setMode] = useState<ExpenseMode>(selectedGroupId ? 'group' : 'direct');
+    80→
+    81→  const [groups, setGroups] = useState<Group[]>([]);
+    82→  const [members, setMembers] = useState<Member[]>([]);
+    83→  const [friends, setFriends] = useState<Friend[]>([]);
+    84→  const [membersLoading, setMembersLoading] = useState(false);
+    85→
+    86→  const [nlpInput, setNlpInput] = useState('');
+    87→  const [nlpLoading, setNlpLoading] = useState(false);
+    88→  const [pendingFriendSplitValues, setPendingFriendSplitValues] = useState<Record<string, string>>({});
+    89→
+    90→  const [description, setDescription] = useState('');
+    91→  const [amount, setAmount] = useState('');
+    92→  const [amountError, setAmountError] = useState('');
+    93→  const [descError, setDescError] = useState('');
+    94→  const [category, setCategory] = useState('general');
+    95→  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    96→  const [groupId, setGroupId] = useState(selectedGroupId || '');
+    97→  const [paidById, setPaidById] = useState(user?.id || '');
+    98→  const [splitType, setSplitType] = useState<'equal' | 'share' | 'exact' | 'percentage'>('equal');
+    99→  const [splits, setSplits] = useState<{ userId: string; value: string; share: number }[]>([]);
+   100→  const [note, setNote] = useState('');
+   101→
+   102→  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+   103→  const [emailParticipants, setEmailParticipants] = useState<EmailParticipant[]>([]);
+   104→  const [emailSplitAmounts, setEmailSplitAmounts] = useState<Record<string, string>>({});
+   105→  const [userSplitValue, setUserSplitValue] = useState('');
+   106→  const [newEmail, setNewEmail] = useState('');
+   107→  const [newName, setNewName] = useState('');
+   108→
+   109→
+   110→  const [categorizeLoading, setCategorizeLoading] = useState(false);
+   111→
+   112→  const [submitting, setSubmitting] = useState(false);
+   113→
+   114→  useEffect(() => {
+   115→    async function fetchData() {
+   116→      try {
+   117→        const [groupsRes, friendsRes] = await Promise.all([
+   118→          fetch('/api/groups'),
+   119→          fetch('/api/friends'),
+   120→        ]);
+   121→        if (groupsRes.ok) {
+   122→          const data = await groupsRes.json();
+   123→          const list = Array.isArray(data) ? data : data.groups || [];
+   124→          setGroups(list);
+   125→          if (!selectedGroupId && list.length > 0) {
+   126→            setGroupId(list[0].id);
+   127→          }
+   128→        }
+   129→        if (friendsRes.ok) {
+   130→          const fData = await friendsRes.json();
+   131→          setFriends(fData.friends || []);
+   132→        }
+   133→      } catch {
+   134→      }
+   135→    }
+   136→    fetchData();
+   137→  }, [selectedGroupId]);
+   138→
+   139→  useEffect(() => {
+   140→    if (mode !== 'group' || !groupId) return;
+   141→    setMembersLoading(true);
+   142→    async function fetchMembers() {
+   143→      try {
+   144→        const res = await fetch(`/api/groups/${groupId}`);
+   145→        if (res.ok) {
+   146→          const data = await res.json();
+   147→          const g = data.group || data;
+   148→          const memberList = ((g.members || []) as any[]).map((m: any) => ({
+   149→            id: m.user?.id || m.userId || m.id,
+   150→            name: m.user?.name || m.name || 'Unknown',
+   151→            email: m.user?.email || m.email || '',
+   152→          }));
+   153→          setMembers(memberList);
+   154→          setSplits(memberList.map((m: Member) => ({ userId: m.id, value: '', share: 1 })));
+   155→          const me = memberList.find((m: Member) => m.id === user?.id);
+   156→          if (me) setPaidById(me.id);
+   157→        }
+   158→      } catch {
+   159→      } finally {
+   160→        setMembersLoading(false);
+   161→      }
+   162→    }
+   163→    fetchMembers();
+   164→  }, [groupId, mode, user?.id]);
+   165→
+   166→  const handleNlpSubmit = async () => {
+   167→    if (!nlpInput.trim()) return;
+   168→    setNlpLoading(true);
+   169→    setPendingFriendSplitValues({});
+   170→    try {
+   171→      const res = await fetch('/api/ai/parse-expense', {
+   172→        method: 'POST',
+   173→        headers: { 'Content-Type': 'application/json' },
+   174→        body: JSON.stringify({ text: nlpInput }),
+   175→      });
+   176→      const data = await res.json();
+   177→
+   178→      if (!res.ok && res.status !== 200) {
+   179→        toast.error(data.error || 'Could not parse expense. Try being more specific.');
+   180→        return;
+   181→      }
+   182→      if (data.error) {
+   183→        console.log('[AI Parse] Error response:', data);
+   184→        if (data.code === 'NOT_CONFIGURED') {
+   185→          toast.error('AI is not configured. Please set a valid GEMINI_API_KEY in Vercel environment variables.');
+   186→        } else if (data.code === 'AI_ERROR') {
+   187→          toast.error(data.error);
+   188→        } else {
+   189→          toast.error(data.error || 'Could not parse expense. Try a different phrasing.');
+   190→        }
+   191→        return;
+   192→      }
+   193→
+   194→      if (data.description) { setDescription(data.description); setDescError(''); }
+   195→      if (data.amount) { setAmount(String(data.amount)); setAmountError(''); }
+   196→      if (data.category) setCategory(data.category);
+   197→      if (data.date) setDate(data.date);
+   198→
+   199→      const sType = data.splitType as string;
+   200→      const isExactOrPct = sType === 'exact' || sType === 'percentage';
+   201→
+   202→      if (data.groupId && typeof data.groupId === 'string') {
+   203→        const groupName = data.groupId.toLowerCase();
+   204→        const matchedGroup = groups.find((g) => g.name.toLowerCase() === groupName);
+   205→        if (matchedGroup) {
+   206→          setMode('group');
+   207→          setGroupId(matchedGroup.id);
+   208→          if (isExactOrPct) {
+   209→            setSplitType(sType as 'exact' | 'percentage');
+   210→          } else if (sType === 'equal' || sType === 'share') {
+   211→            setSplitType(sType === 'share' ? 'share' : 'equal');
+   212→          } else if (sType === 'single') {
+   213→            setSplitType('equal');
+   214→          }
+   215→          toast.success(`Expense parsed for group "${matchedGroup.name}"! Review and submit.`);
+   216→          return;
+   217→        }
+   218→      }
+   219→
+   220→      const emailSplits = data.emailSplits as { email: string; name?: string; amount?: number; percentage?: number }[] | undefined;
+   221→      const namedSplits = data.splits as { name: string; amount?: number | null; percentage?: number | null; share?: number }[] | undefined;
+   222→      const hasEmails = emailSplits && emailSplits.length > 0;
+   223→      const hasNamedSplits = namedSplits && namedSplits.some((s) => s.name !== 'me');
+   224→
+   225→      if (sType === 'single' && !hasEmails && !hasNamedSplits) {
+   226→        setMode('direct');
+   227→        setSelectedFriends([]);
+   228→        setEmailParticipants([]);
+   229→        setEmailSplitAmounts({});
+   230→        setPendingFriendSplitValues({});
+   231→        setSplitType('equal');
+   232→        toast.success('Expense parsed! No split needed — just submit.');
+   233→        return;
+   234→      }
+   235→
+   236→      if (isExactOrPct) {
+   237→        const meSplit = namedSplits?.find((s) => s.name === 'me');
+   238→        if (meSplit && (meSplit.amount != null || meSplit.percentage != null)) {
+   239→          setUserSplitValue(String(meSplit.amount ?? meSplit.percentage));
+   240→        } else if (data.amount) {
+   241→          const totalAmt = parseFloat(String(data.amount));
+   242→          let othersTotal = 0;
+   243→          if (sType === 'exact') {
+   244→            for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) othersTotal += ns.amount ?? 0;
+   245→            for (const es of (emailSplits || [])) othersTotal += es.amount ?? 0;
+   246→          } else {
+   247→            for (const ns of (namedSplits || []).filter((s) => s.name !== 'me')) othersTotal += ns.percentage ?? 0;
+   248→            for (const es of (emailSplits || [])) othersTotal += es.percentage ?? 0;
+   249→          }
+   250→          const myValue = sType === 'exact'
+   251→            ? Math.round((totalAmt - othersTotal) * 100) / 100
+   252→            : Math.round((100 - othersTotal) * 100) / 100;
+   253→          setUserSplitValue(myValue > 0 ? String(myValue) : '');
+   254→        } else {
+   255→          setUserSplitValue('');
+   256→        }
+   257→      } else {
+   258→        setUserSplitValue('');
+   259→      }
+   260→
+   261→      if (hasEmails || hasNamedSplits) {
+   262→        setMode('direct');
+   263→      }
+   264→
+   265→      if (hasEmails) {
+   266→        const newEmailParts: EmailParticipant[] = emailSplits.map((es) => ({
+   267→          email: es.email,
+   268→          name: es.name || es.email.split('@')[0],
+   269→        }));
+   270→        setEmailParticipants(newEmailParts);
+   271→
+   272→        if (isExactOrPct) {
+   273→          const amtMap: Record<string, string> = {};
+   274→          for (const es of emailSplits) {
+   275→            if (es.amount != null) amtMap[es.email] = String(es.amount);
+   276→            else if (es.percentage != null) amtMap[es.email] = String(es.percentage);
+   277→          }
+   278→          setEmailSplitAmounts(amtMap);
+   279→        } else {
+   280→          setEmailSplitAmounts({});
+   281→        }
+   282→      } else {
+   283→        setEmailParticipants([]);
+   284→        setEmailSplitAmounts({});
+   285→      }
+   286→
+   287→      const friendAmtMap: Record<string, string> = {};
+   288→      const nonMeSplits = (namedSplits || []).filter((s) => s.name !== 'me');
+   289→
+   290→      for (const ns of nonMeSplits) {
+   291→        const friendMatch = friends.find(
+   292→          (f) =>
+   293→            f.name?.toLowerCase().trim() === ns.name?.toLowerCase().trim() ||
+   294→            f.email?.toLowerCase().split('@')[0] === ns.name?.toLowerCase().trim() ||
+   295→            f.email?.toLowerCase() === ns.name?.toLowerCase()
+   296→        );
+   297→        if (friendMatch) {
+   298→          if (!selectedFriends.includes(friendMatch.id)) {
+   299→            setSelectedFriends((prev) => [...prev, friendMatch.id]);
+   300→          }
+   301→          if (sType === 'share' && ns.share != null && ns.share > 0) {
+   302→            friendAmtMap[friendMatch.id] = String(ns.share);
+   303→          } else if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+   304→            friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
+   305→          }
+   306→        } else if (ns.name?.includes('@')) {
+   307→          const emailAddr = ns.name.toLowerCase();
+   308→          if (!emailSplits?.some((es) => es.email.toLowerCase() === emailAddr)) {
+   309→            setEmailParticipants((prev) => [...prev, { email: emailAddr, name: ns.name.split('@')[0] }]);
+   310→            if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
+   311→              setEmailSplitAmounts((prev) => ({ ...prev, [emailAddr]: String(ns.amount ?? ns.percentage) }));
+   312→            }
+   313→          }
+   314→        }
+   315→      }
+   316→
+   317→      if (Object.keys(friendAmtMap).length > 0) {
+   318→        setPendingFriendSplitValues(friendAmtMap);
+   319→      } else {
+   320→        setPendingFriendSplitValues({});
+   321→      }
+   322→
+   323→      if (isExactOrPct) {
+   324→        setSplitType(sType as 'exact' | 'percentage');
+   325→      } else if (sType === 'share') {
+   326→        setSplitType('share');
+   327→        const meSplit = namedSplits?.find((s) => s.name === 'me');
+   328→        if (meSplit?.share && typeof meSplit.share === 'number' && meSplit.share > 0) {
+   329→          setOwnerShare(meSplit.share);
+   330→        }
+   331→      } else if (sType === 'equal') {
+   332→        setSplitType('equal');
+   333→      } else if (sType === 'single') {
+   334→        setSplitType('equal');
+   335→      }
+   336→
+   337→      toast.success('Expense parsed! Review the details and submit.');
+   338→    } catch (err: any) {
+   339→      console.error('[AI Parse] Client error:', err);
+   340→      toast.error('Network error. Please check your connection and try again.');
+   341→    } finally {
+   342→      setNlpLoading(false);
+   343→    }
+   344→  };
+   345→
+   346→  const handleCategorize = async () => {
+   347→    if (!description.trim()) {
+   348→      toast.error('Enter a description first');
+   349→      return;
+   350→    }
+   351→    setCategorizeLoading(true);
+   352→    try {
+   353→      const res = await fetch('/api/ai/categorize', {
+   354→        method: 'POST',
+   355→        headers: { 'Content-Type': 'application/json' },
+   356→        body: JSON.stringify({ description }),
+   357→      });
+   358→      if (res.ok) {
+   359→        const data = await res.json();
+   360→        if (data.error) {
+   361→          toast.error(data.error || 'Failed to categorize');
+   362→        } else if (data.category) {
+   363→          setCategory(data.category);
+   364→          toast.success(`Categorized as ${data.category}`);
+   365→        }
+   366→      } else {
+   367→        const data = await res.json();
+   368→        toast.error(data.error || 'Failed to categorize');
+   369→      }
+   370→    } catch {
+   371→      toast.error('Failed to categorize');
+   372→    } finally {
+   373→      setCategorizeLoading(false);
+   374→    }
+   375→  };
+   376→
+   377→
+   378→  const addEmailParticipant = () => {
+   379→    if (!newEmail.trim()) return;
+   380→    const email = newEmail.trim().toLowerCase();
+   381→    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+   382→    if (!emailRegex.test(email)) {
+   383→      toast.error('Please enter a valid email address');
+   384→      return;
+   385→    }
+   386→    if (emailParticipants.some((p) => p.email === email)) {
+   387→      toast.error('This email is already added');
+   388→      return;
+   389→    }
+   390→    setEmailParticipants([...emailParticipants, { email, name: newName.trim() || email.split('@')[0] }]);
+   391→    setNewEmail('');
+   392→    setNewName('');
+   393→  };
+   394→
+   395→  const removeEmail = (email: string) => {
+   396→    setEmailParticipants(emailParticipants.filter((p) => p.email !== email));
+   397→    setEmailSplitAmounts((prev) => { const n = { ...prev }; delete n[email]; return n; });
+   398→  };
+   399→
+   400→  const toggleFriend = (friendId: string) => {
+   401→    setSelectedFriends((prev) =>
+   402→      prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
+   403→    );
+   404→  };
+   405→
+   406→  const totalDirectParticipants = 1 + selectedFriends.length + emailParticipants.length;
+   407→  const perPersonDirect = amount && !isNaN(parseFloat(amount)) && totalDirectParticipants > 0
+   408→    ? (parseFloat(amount) / totalDirectParticipants).toFixed(2)
+   409→    : '0.00';
+   410→
+   411→  const updateSplit = (userId: string, value: string) => {
+   412→    setSplits((prev) => prev.map((s) => (s.userId === userId ? { ...s, value } : s)));
+   413→  };
+   414→
+   415→  const updateSplitShare = (userId: string, share: number) => {
+   416→    setSplits((prev) => prev.map((s) => (s.userId === userId ? { ...s, share: Math.max(1, share) } : s)));
+   417→  };
+   418→
+   419→  const validate = () => {
+   420→    let valid = true;
+   421→    if (!description.trim()) {
+   422→      setDescError('Please enter what the expense was for');
+   423→      valid = false;
+   424→    } else {
+   425→      setDescError('');
+   426→    }
+   427→    const numAmount = parseFloat(amount);
+   428→    if (!amount || isNaN(numAmount) || numAmount <= 0) {
+   429→      setAmountError('Please enter a valid amount greater than ₹0');
+   430→      valid = false;
+   431→    } else {
+   432→      setAmountError('');
+   433→    }
+   434→    if (mode === 'group' && !groupId) {
+   435→      toast.error('Please select a group');
+   436→      valid = false;
+   437→    }
+   438→    if (mode === 'direct' && selectedFriends.length === 0 && emailParticipants.length === 0 && splitType !== 'equal') {
+   439→      toast.error('Select at least one friend or add an email to split with');
+   440→      valid = false;
+   441→    }
+   442→    if (mode === 'direct' && selectedFriends.length === 0 && emailParticipants.length === 0 && splitType === 'equal') {
+   443→    }
+   444→    return valid;
+   445→  };
+   446→
+   447→  const openEmailForNonRegistered = (participants: EmailParticipant[], desc: string, amt: string) => {
+   448→    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://splitflow-1.vercel.app';
+   449→    const landingUrl = `${baseUrl}`;
+   450→    const toEmails = participants.map((p) => p.email).join(',');
+   451→    const names = participants.map((p) => p.name).join(', ');
+   452→    const userName = user?.name || 'Someone';
+   453→
+   454→    const htmlBody = `
+   455→<html>
+   456→<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+   457→  <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#059669,#0d9488);padding:40px 20px;">
+   458→    <tr><td align="center">
+   459→      <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);">
+   460→
+   461→        <tr><td style="background:linear-gradient(135deg,#059669,#0d9488);padding:40px 30px;text-align:center;">
+   462→          <div style="font-size:36px;margin-bottom:10px;">💰</div>
+   463→          <h1 style="margin:0;color:white;font-size:24px;font-weight:800;">Split<span style="color:#a7f3d0;">Flow</span></h1>
+   464→          <p style="margin:8px 0 0;color:#a7f3d0;font-size:14px;">AI-Powered Expense Splitting</p>
+   465→        </td></tr>
+   466→
+   467→        <tr><td style="padding:35px 30px;">
+   468→          <h2 style="margin:0 0 15px;color:#111827;font-size:20px;">Hey ${names}! 👋</h2>
+   469→          <p style="margin:0 0 20px;color:#4b5563;font-size:15px;line-height:1.6;">
+   470→            <strong>${userName}</strong> just added an expense on SplitFlow and split it with you!
+   471→          </p>
+   472→
+   473→          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:20px;margin-bottom:25px;">
+   474→            <tr>
+   475→              <td style="padding:5px 0;color:#059669;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Expense</td>
+   476→            </tr>
+   477→            <tr>
+   478→              <td style="padding:5px 0;color:#111827;font-size:22px;font-weight:700;">${desc}</td>
+   479→            </tr>
+   480→            <tr>
+   481→              <td style="padding:5px 0;color:#059669;font-size:28px;font-weight:800;">₹${amt}</td>
+   482→            </tr>
+   483→          </table>
+   484→          <p style="margin:0 0 25px;color:#4b5563;font-size:15px;line-height:1.6;">
+   485→            Sign up for <strong>SplitFlow</strong> to see your balance, track shared expenses, and settle up easily. It's <strong>100% free</strong>!
+   486→          </p>
+   487→
+   488→          <table width="100%" cellpadding="0" cellspacing="0">
+   489→            <tr><td align="center">
+   490→              <a href="${landingUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#0d9488);color:white;text-decoration:none;padding:16px 40px;border-radius:14px;font-size:16px;font-weight:700;box-shadow:0 10px 30px rgba(5,150,105,0.3);">
+   491→                Join SplitFlow Free →
+   492→              </a>
+   493→            </td></tr>
+   494→          </table>
+   495→
+   496→          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:30px;border-top:1px solid #f3f4f6;padding-top:25px;">
+   497→            <tr>
+   498→              <td width="33%" style="text-align:center;padding:10px;">
+   499→                <div style="font-size:24px;">🤖</div>
+   500→                <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">AI-Powered</p>
+   501→              </td>
+   502→              <td width="33%" style="text-align:center;padding:10px;">
+   503→                <div style="font-size:24px;">📊</div>
+   504→                <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">Analytics</p>
+   505→              </td>
+   506→
+   507→            </tr>
+   508→          </table>
+   509→        </td></tr>
+   510→
+   511→        <tr><td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #f3f4f6;text-align:center;">
+   512→          <p style="margin:0;color:#9ca3af;font-size:12px;">Split expenses, not friendships. • <a href="${landingUrl}" style="color:#059669;">splitflow-1.vercel.app</a></p>
+   513→        </td></tr>
+   514→      </table>
+   515→    </td></tr>
+   516→  </table>
+   517→</body>
+   518→</html>`;
+   519→
+   520→    const subject = encodeURIComponent(`You've been added to an expense on SplitFlow - ${desc}`);
+   521→    const bodyParam = encodeURIComponent(htmlBody);
+   522→    window.open(`mailto:${toEmails}?subject=${subject}&body=${bodyParam}`, '_self');
+   523→  };
+   524→
+   525→  const handleSubmit = async (e: React.FormEvent) => {
+   526→    e.preventDefault();
+   527→    if (!validate()) return;
+   528→    setSubmitting(true);
+   529→    try {
+   530→      const body: any = {
+   531→        description: description.trim(),
+   532→        amount: parseFloat(amount),
+   533→        category,
+   534→        date,
+   535→        paidById,
+   536→        splitType,
+   537→        note: note.trim(),
+   538→      };
+   539→
+   540→      if (mode === 'group') {
+   541→        body.groupId = groupId;
+   542→        if (splitType === 'share') {
+   543→          body.splitType = 'equal';
+   544→          body.splits = splits.map((s) => ({
+   545→            userId: s.userId,
+   546→            share: s.share || 1,
+   547→          }));
+   548→        } else if (splitType === 'exact') {
+   549→          body.splits = splits.map((s) => ({
+   550→            userId: s.userId,
+   551→            amount: parseFloat(s.value) || 0,
+   552→          }));
+   553→        } else if (splitType === 'percentage') {
+   554→          body.splits = splits.map((s) => ({
+   555→            userId: s.userId,
+   556→            percentage: parseFloat(s.value) || 0,
+   557→          }));
+   558→        }
+   559→      } else {
+   560→        if (splitType === 'equal') {
+   561→          body.splits = selectedFriends.map((id) => ({ userId: id, share: 1 }));
+   562→          body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
+   563→        } else if (splitType === 'share') {
+   564→          body.splitType = 'equal';
+   565→          const ownerSplit = user?.id ? [{ userId: user.id, share: ownerShare }] : [];
+   566→          body.splits = [...ownerSplit, ...splits.map((s) => ({
+   567→            userId: s.userId,
+   568→            share: s.share || 1,
+   569→          }))];
+   570→          body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
+   571→        } else if (splitType === 'exact') {
+   572→          const userAmt = parseFloat(userSplitValue) || 0;
+   573→          const bodySplits: any[] = [];
+   574→          if (userAmt > 0) {
+   575→            bodySplits.push({ userId: user?.id, amount: userAmt });
+   576→          }
+   577→          bodySplits.push(...splits.map((s) => ({
+   578→            userId: s.userId,
+   579→            amount: parseFloat(s.value) || 0,
+   580→          })));
+   581→          body.splits = bodySplits;
+   582→          if (emailParticipants.length > 0) {
+   583→            body.nonUserSplits = emailParticipants.map((p) => ({
+   584→              email: p.email,
+   585→              name: p.name,
+   586→              amount: parseFloat(emailSplitAmounts[p.email]) || 0,
+   587→            }));
+   588→          }
+   589→        } else if (splitType === 'percentage') {
+   590→          const userPct = parseFloat(userSplitValue) || 0;
+   591→          const bodySplits: any[] = [];
+   592→          if (userPct > 0) {
+   593→            bodySplits.push({ userId: user?.id, percentage: userPct });
+   594→          }
+   595→          bodySplits.push(...splits.map((s) => ({
+   596→            userId: s.userId,
+   597→            percentage: parseFloat(s.value) || 0,
+   598→          })));
+   599→          body.splits = bodySplits;
+   600→          if (emailParticipants.length > 0) {
+   601→            body.nonUserSplits = emailParticipants.map((p) => ({
+   602→              email: p.email,
+   603→              name: p.name,
+   604→              percentage: parseFloat(emailSplitAmounts[p.email]) || 0,
+   605→            }));
+   606→          }
+   607→        }
+   608→      }
+   609→
+   610→      const res = await fetch('/api/expenses', {
+   611→        method: 'POST',
+   612→        headers: { 'Content-Type': 'application/json' },
+   613→        body: JSON.stringify(body),
+   614→      });
+   615→      if (res.ok) {
+   616→        if (emailParticipants.length > 0) {
+   617→          openEmailForNonRegistered(emailParticipants, description, amount);
+   618→        }
+   619→        toast.success('Expense added!');
+   620→        if (mode === 'group' && groupId) {
+   621→          navigateToGroup(groupId);
+   622→        } else {
+   623→          setView('history');
+   624→        }
+   625→      } else {
+   626→        const data = await res.json();
+   627→        toast.error(data.error || 'Failed to add expense. Please try again.');
+   628→      }
+   629→    } catch {
+   630→      toast.error('Network error. Please check your connection.');
+   631→    } finally {
+   632→      setSubmitting(false);
+   633→    }
+   634→  };
+   635→
+   636→  const perPerson = amount && !isNaN(parseFloat(amount)) && members.length > 0
+   637→    ? (parseFloat(amount) / members.length).toFixed(2)
+   638→    : '0.00';
+   639→
+   640→  const totalSplitAmount = (() => {
+   641→    const uv = parseFloat(userSplitValue) || 0;
+   642→    const friendsTotal = splits.reduce((s, sp) => s + (parseFloat(sp.value) || 0), 0);
+   643→    const emailTotal = Object.values(emailSplitAmounts).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+   644→    return uv + friendsTotal + emailTotal;
+   645→  })();
+   646→  const totalSplitOk = Math.abs(totalSplitAmount - (parseFloat(amount) || 0)) < 0.5;
+   647→
+   648→  const [ownerShare, setOwnerShare] = useState(1);
+   649→
+   650→  const prevSplitTypeRef = useRef<'equal' | 'share' | 'exact' | 'percentage'>('equal');
+   651→
+   652→  useEffect(() => {
+   653→    const prev = prevSplitTypeRef.current;
+   654→    prevSplitTypeRef.current = splitType;
+   655→
+   656→    if (prev === 'share' && (splitType === 'exact' || splitType === 'percentage')) {
+   657→      const numAmount = parseFloat(amount) || 0;
+   658→      if (numAmount <= 0) return;
+   659→
+   660→      if (mode === 'direct') {
+   661→        const totalShares =
+   662→          ownerShare +
+   663→          splits.reduce((sum, s) => sum + (s.share || 1), 0) +
+   664→          emailParticipants.length;
+   665→        if (totalShares <= 0) return;
+   666→
+   667→        if (splitType === 'exact') {
+   668→          const ownerAmt = Math.round((numAmount * ownerShare) / totalShares * 100) / 100;
+   669→          setUserSplitValue(String(ownerAmt));
+   670→          setSplits((prev) =>
+   671→            prev.map((s) => {
+   672→              const amt = Math.round((numAmount * (s.share || 1)) / totalShares * 100) / 100;
+   673→              return { ...s, value: String(amt) };
+   674→            })
+   675→          );
+   676→          const emailAmt = Math.round((numAmount * 1) / totalShares * 100) / 100;
+   677→          setEmailSplitAmounts((prev) => {
+   678→            const next: Record<string, string> = {};
+   679→            emailParticipants.forEach((ep) => { next[ep.email] = String(emailAmt); });
+   680→            return next;
+   681→          });
+   682→        } else {
+   683→          const ownerPct = Math.round((ownerShare / totalShares) * 1000) / 10;
+   684→          setUserSplitValue(String(ownerPct));
+   685→          setSplits((prev) =>
+   686→            prev.map((s) => {
+   687→              const pct = Math.round(((s.share || 1) / totalShares) * 1000) / 10;
+   688→              return { ...s, value: String(pct) };
+   689→            })
+   690→          );
+   691→          const emailPct = Math.round((1 / totalShares) * 1000) / 10;
+   692→          setEmailSplitAmounts((prev) => {
+   693→            const next: Record<string, string> = {};
+   694→            emailParticipants.forEach((ep) => { next[ep.email] = String(emailPct); });
+   695→            return next;
+   696→          });
+   697→        }
+   698→      } else if (mode === 'group' && members.length > 0) {
+   699→        const totalShares = members.reduce((sum, m) => {
+   700→          const s = splits.find((sp) => sp.userId === m.id);
+   701→          return sum + (s?.share || 1);
+   702→        }, 0);
+   703→        if (totalShares <= 0) return;
+   704→
+   705→        if (splitType === 'exact') {
+   706→          setSplits((prev) =>
+   707→            prev.map((s) => {
+   708→              const amt = Math.round((numAmount * (s.share || 1)) / totalShares * 100) / 100;
+   709→              return { ...s, value: String(amt) };
+   710→            })
+   711→          );
+   712→        } else {
+   713→          setSplits((prev) =>
+   714→            prev.map((s) => {
+   715→              const pct = Math.round(((s.share || 1) / totalShares) * 1000) / 10;
+   716→              return { ...s, value: String(pct) };
+   717→            })
+   718→          );
+   719→        }
+   720→      }
+   721→    }
+   722→  }, [splitType, mode]);
+   723→
+   724→  const directParticipants = [
+   725→    ...(friends.filter((f) => selectedFriends.includes(f.id)).map((f) => ({ id: f.id, name: f.name }))),
+   726→  ];
+   727→  const allDirectParticipants = [
+   728→    ...(user?.id ? [{ id: user.id, name: user?.name || 'You' }] : []),
+   729→    ...directParticipants,
+   730→  ];
+   731→
+   732→  useEffect(() => {
+   733→    if (mode === 'direct' && (splitType === 'exact' || splitType === 'percentage' || splitType === 'share')) {
+   734→      const newSplits = directParticipants.map((p) => {
+   735→        const pendingById = pendingFriendSplitValues[p.id];
+   736→        const friend = friends.find((f) => f.id === p.id);
+   737→        const friendName = friend?.name?.toLowerCase();
+   738→        const pendingByName = friendName ? pendingFriendSplitValues[friendName] : undefined;
+   739→        const pendingValue = pendingById || pendingByName || '';
+   740→        const pendingShare = splitType === 'share' ? (parseInt(pendingValue) || 1) : 1;
+   741→        return { userId: p.id, value: pendingValue, share: pendingShare };
+   742→      });
+   743→      setSplits(newSplits);
+   744→    }
+   745→  }, [mode, splitType, selectedFriends.length, pendingFriendSplitValues]);
+   746→
+   747→  return (
+   748→    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
+   749→
+   750→      <div>
+   751→        <h2 className="text-xl font-bold text-foreground">Add Expense</h2>
+   752→        <p className="text-sm text-muted-foreground mt-1">Record a new expense and split it.</p>
+   753→      </div>
+   754→
+   755→
+   756→      <Card className="border-primary/30 bg-primary/5">
+   757→        <CardContent className="p-4">
+   758→          <div className="flex items-center gap-2 mb-2.5">
+   759→            <Sparkles className="w-4 h-4 text-primary" />
+   760→            <h3 className="font-semibold text-foreground text-sm">Quick Add with AI</h3>
+   761→            <TooltipProvider>
+   762→              <Tooltip>
+   763→                <TooltipTrigger>
+   764→                  <Info className="w-3.5 h-3.5 text-muted-foreground" />
+   765→                </TooltipTrigger>
+   766→                <TooltipContent className="text-xs max-w-xs">
+   767→                  Describe your expense in plain English. AI will extract the amount, category, and split details.
+   768→                  <br /><br />
+   769→                  Examples: &quot;Paid ₹450 for pizza split equally with Alex and Sam&quot;
+   770→                </TooltipContent>
+   771→              </Tooltip>
+   772→            </TooltipProvider>
+   773→          </div>
+   774→          <div className="flex gap-2">
+   775→            <div className="flex-1">
+   776→              <Input
+   777→                placeholder='e.g. "Paid ₹450 for pizza split 3 ways"'
+   778→                value={nlpInput}
+   779→                onChange={(e) => setNlpInput(e.target.value)}
+   780→                onKeyDown={(e) => e.key === 'Enter' && handleNlpSubmit()}
+   781→                className="h-11 bg-background"
+   782→                disabled={nlpLoading}
+   783→              />
+   784→            </div>
+   785→            <Button
+   786→              onClick={handleNlpSubmit}
+   787→              disabled={nlpLoading || !nlpInput.trim()}
+   788→              className="bg-primary hover:bg-primary/90 text-white h-11 px-4 shrink-0"
+   789→            >
+   790→              {nlpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+   791→            </Button>
+   792→          </div>
+   793→        </CardContent>
+   794→      </Card>
+   795→
+   796→
+   797→      <Card>
+   798→        <CardContent className="p-5 sm:p-6">
+   799→          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+   800→
+   801→            <div className="space-y-2">
+   802→              <Label className="text-sm font-medium">Expense Type</Label>
+   803→              <div className="grid grid-cols-2 gap-3">
+   804→                <button
+   805→                  type="button"
+   806→                  onClick={() => setMode('direct')}
+   807→                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+   808→                    mode === 'direct'
+   809→                      ? 'border-primary bg-primary/10 text-foreground'
+   810→                      : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/40'
+   811→                  }`}
+   812→                >
+   813→                  <Users className="w-4 h-4" />
+   814→                  <span>Direct Split</span>
+   815→                </button>
+   816→                <button
+   817→                  type="button"
+   818→                  onClick={() => setMode('group')}
+   819→                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+   820→                    mode === 'group'
+   821→                      ? 'border-primary bg-primary/10 text-foreground'
+   822→                      : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/40'
+   823→                  }`}
+   824→                >
+   825→                  <Users className="w-4 h-4" />
+   826→                  <span>Group Expense</span>
+   827→                </button>
+   828→              </div>
+   829→              <p className="text-xs text-muted-foreground">
+   830→                {mode === 'direct'
+   831→                  ? 'Split with friends or by email — no group needed'
+   832→                  : 'Split within an existing group'}
+   833→              </p>
+   834→            </div>
+   835→
+   836→
+   837→            <div className="space-y-1.5">
+   838→              <Label htmlFor="desc" className="text-sm">
+   839→                What was it for? <span className="text-red-400">*</span>
+   840→              </Label>
+   841→              <div className="flex gap-2">
+   842→                <div className="flex-1">
+   843→                  <Input
+   844→                    id="desc"
+   845→                    placeholder="e.g., Dinner at Italian restaurant"
+   846→                    value={description}
+   847→                    onChange={(e) => { setDescription(e.target.value); setDescError(''); }}
+   848→                    className={`h-11 ${descError ? 'border-red-300' : ''}`}
+   849→                    autoFocus
+   850→                  />
+   851→                  {descError && <p className="text-xs text-red-500 mt-1">{descError}</p>}
+   852→                </div>
+   853→                <TooltipProvider>
+   854→                  <Tooltip>
+   855→                    <TooltipTrigger asChild>
+   856→                      <Button
+   857→                        type="button"
+   858→                        variant="outline"
+   859→                        size="icon"
+   860→                        className="shrink-0 h-11 w-11"
+   861→                        onClick={handleCategorize}
+   862→                        disabled={categorizeLoading || !description.trim()}
+   863→                      >
+   864→                        {categorizeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-primary" />}
+   865→                      </Button>
+   866→                    </TooltipTrigger>
+   867→                    <TooltipContent className="text-xs">Auto-categorize using AI</TooltipContent>
+   868→                  </Tooltip>
+   869→                </TooltipProvider>
+   870→              </div>
+   871→            </div>
+   872→
+   873→
+   874→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   875→              <div className="space-y-1.5">
+   876→                <Label htmlFor="amount" className="text-sm">
+   877→                  Amount <span className="text-red-400">*</span>
+   878→                </Label>
+   879→                <div className="relative">
+   880→                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₹</span>
+   881→                  <Input
+   882→                    id="amount"
+   883→                    type="number"
+   884→                    step="0.01"
+   885→                    min="0.01"
+   886→                    placeholder="0.00"
+   887→                    value={amount}
+   888→                    onChange={(e) => { setAmount(e.target.value); setAmountError(''); }}
+   889→                    className={`h-11 pl-7 ${amountError ? 'border-red-300' : ''}`}
+   890→                  />
+   891→                </div>
+   892→                {amountError && <p className="text-xs text-red-500 mt-1">{amountError}</p>}
+   893→              </div>
+   894→              <div className="space-y-1.5">
+   895→                <Label htmlFor="date" className="text-sm">Date</Label>
+   896→                <Input
+   897→                  id="date"
+   898→                  type="date"
+   899→                  value={date}
+   900→                  onChange={(e) => setDate(e.target.value)}
+   901→                  className="h-11"
+   902→                  max={new Date().toISOString().split('T')[0]}
+   903→                />
+   904→              </div>
+   905→            </div>
+   906→
+   907→
+   908→            <div className="space-y-1.5">
+   909→              <Label className="text-sm">Category</Label>
+   910→              <Select value={category} onValueChange={setCategory}>
+   911→                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+   912→                <SelectContent>
+   913→                  {CATEGORIES.map((c) => (
+   914→                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+   915→                  ))}
+   916→                </SelectContent>
+   917→              </Select>
+   918→            </div>
+   919→
+   920→
+   921→            {mode === 'group' && (
+   922→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   923→                <div className="space-y-1.5">
+   924→                  <Label className="text-sm">Group <span className="text-red-400">*</span></Label>
+   925→                  <Select value={groupId} onValueChange={setGroupId}>
+   926→                    <SelectTrigger className="h-11">
+   927→                      <SelectValue placeholder={groups.length === 0 ? 'Create a group first' : 'Select group'} />
+   928→                    </SelectTrigger>
+   929→                    <SelectContent>
+   930→                      {groups.map((g) => (
+   931→                        <SelectItem key={g.id} value={g.id}>{g.emoji} {g.name}</SelectItem>
+   932→                      ))}
+   933→                    </SelectContent>
+   934→                  </Select>
+   935→                  {groups.length === 0 && (
+   936→                    <Button variant="link" size="sm" className="h-auto p-0 text-primary" onClick={() => setView('groups')}>
+   937→                      Create a group first
+   938→                    </Button>
+   939→                  )}
+   940→                </div>
+   941→                <div className="space-y-1.5">
+   942→                  <Label className="text-sm">Paid by</Label>
+   943→                  <Select value={paidById} onValueChange={setPaidById}>
+   944→                    <SelectTrigger className="h-11">
+   945→                      <SelectValue placeholder={membersLoading ? 'Loading...' : 'Who paid?'} />
+   946→                    </SelectTrigger>
+   947→                    <SelectContent>
+   948→                      {members.map((m) => (
+   949→                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+   950→                      ))}
+   951→                    </SelectContent>
+   952→                  </Select>
+   953→                </div>
+   954→              </div>
+   955→            )}
+   956→
+   957→
+   958→            {mode === 'direct' && (
+   959→              <div className="space-y-4">
+   960→                <div className="space-y-1.5">
+   961→                  <Label className="text-sm font-medium">Split with Friends</Label>
+   962→                  {friends.length === 0 ? (
+   963→                    <p className="text-xs text-muted-foreground">No friends yet. Add by email below or send a friend request from the Friends page.</p>
+   964→                  ) : (
+   965→                    <div className="flex flex-wrap gap-2">
+   966→                      {friends.map((f) => (
+   967→                        <button
+   968→                          key={f.id}
+   969→                          type="button"
+   970→                          onClick={() => toggleFriend(f.id)}
+   971→                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+   972→                            selectedFriends.includes(f.id)
+   973→                              ? 'bg-primary/10 border-primary/30 text-foreground'
+   974→                              : 'bg-background border-border text-muted-foreground hover:border-muted-foreground/40'
+   975→                          }`}
+   976→                        >
+   977→                          {f.name || f.email}
+   978→                        </button>
+   979→                      ))}
+   980→                    </div>
+   981→                  )}
+   982→                </div>
+   983→
+   984→
+   985→                <div className="space-y-2">
+   986→                  <Label className="text-sm font-medium flex items-center gap-1.5">
+   987→                    <Mail className="w-3.5 h-3.5" />
+   988→                    Add by Email
+   989→                    <span className="text-xs text-muted-foreground font-normal">(for non-users too)</span>
+   990→                  </Label>
+   991→                  <div className="flex gap-2">
+   992→                    <Input
+   993→                      type="email"
+   994→                      placeholder="friend@email.com"
+   995→                      value={newEmail}
+   996→                      onChange={(e) => setNewEmail(e.target.value)}
+   997→                      className="h-9 flex-1"
+   998→                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmailParticipant())}
+   999→                    />
+  1000→                    <Input
+  1001→                      placeholder="Name (optional)"
+  1002→                      value={newName}
+  1003→                      onChange={(e) => setNewName(e.target.value)}
+  1004→                      className="h-9 w-32"
+  1005→                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmailParticipant())}
+  1006→                    />
+  1007→                    <Button
+  1008→                      type="button"
+  1009→                      variant="outline"
+  1010→                      size="sm"
+  1011→                      className="h-9 shrink-0"
+  1012→                      onClick={addEmailParticipant}
+  1013→                      disabled={!newEmail.trim()}
+  1014→                    >
+  1015→                      <Plus className="w-3.5 h-3.5" />
+  1016→                    </Button>
+  1017→                  </div>
+  1018→                  {emailParticipants.length > 0 && (
+  1019→                    <div className="flex flex-wrap gap-2 mt-2">
+  1020→                      {emailParticipants.map((p) => (
+  1021→                        <Badge key={p.email} variant="secondary" className="gap-1.5 py-1 px-2.5">
+  1022→                          <Mail className="w-3 h-3 text-muted-foreground" />
+  1023→                          {p.name}
+  1024→                          <span className="text-muted-foreground">({p.email})</span>
+  1025→                          <button
+  1026→                            type="button"
+  1027→                            onClick={() => removeEmail(p.email)}
+  1028→                            className="ml-1 text-muted-foreground hover:text-red-500"
+  1029→                          >
+  1030→                            <X className="w-3 h-3" />
+  1031→                          </button>
+  1032→                        </Badge>
+  1033→                      ))}
+  1034→                    </div>
+  1035→                  )}
+  1036→                  {emailParticipants.length > 0 && (
+  1037→                    <p className="text-xs text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-lg">
+  1038→                      Email participants who are not on SplitFlow will see the expense once they sign up with that email.
+  1039→                    </p>
+  1040→                  )}
+  1041→                </div>
+  1042→              </div>
+  1043→            )}
+  1044→
+  1045→
+  1046→            <div className="space-y-2">
+  1047→              <div className="flex items-center gap-2">
+  1048→                <Label className="text-sm">Split Type</Label>
+  1049→                <TooltipProvider>
+  1050→                  <Tooltip>
+  1051→                    <TooltipTrigger>
+  1052→                      <Info className="w-3.5 h-3.5 text-muted-foreground" />
+  1053→                    </TooltipTrigger>
+  1054→                    <TooltipContent className="text-xs max-w-xs">
+  1055→                      <strong>Equal:</strong> Split evenly among all participants<br/>
+  1056→                      <strong>By Share:</strong> Split by family/group size (e.g., 4 members vs 3 members = 4:3 ratio)<br/>
+  1057→                      <strong>Exact:</strong> Enter specific amounts per person<br/>
+  1058→                      <strong>Percentage:</strong> Enter percentage each person pays
+  1059→                    </TooltipContent>
+  1060→                  </Tooltip>
+  1061→                </TooltipProvider>
+  1062→              </div>
+  1063→              <div className="flex gap-2">
+  1064→                {(['equal', 'share', 'exact', 'percentage'] as const).map((type) => (
+  1065→                  <Button
+  1066→                    key={type}
+  1067→                    type="button"
+  1068→                    variant={splitType === type ? 'default' : 'outline'}
+  1069→                    className={
+  1070→                      splitType === type
+  1071→                        ? 'bg-primary hover:bg-primary/90 text-white'
+  1072→                        : ''
+  1073→                    }
+  1074→                    onClick={() => setSplitType(type)}
+  1075→                    size="sm"
+  1076→                  >
+  1077→                    {type === 'equal' ? 'Equal' : type === 'share' ? 'By Share 👨‍👩‍👧‍👦' : type === 'exact' ? 'Exact ₹' : 'Percentage %'}
+  1078→                  </Button>
+  1079→                ))}
+  1080→              </div>
+  1081→            </div>
+  1082→
+  1083→
+  1084→            {splitType === 'share' && (
+  1085→              <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+  1086→                <div className="flex items-center justify-between">
+  1087→                  <Label className="text-sm font-medium">
+  1088→                    Family / Group Size 👨‍👩‍👧‍👦
+  1089→                  </Label>
+  1090→                  {(() => {
+  1091→                    const shareParticipants = mode === 'group'
+  1092→                      ? members.map((m) => ({ id: m.id, name: m.name }))
+  1093→                      : allDirectParticipants;
+  1094→                    const totalShares = shareParticipants.reduce((sum, p) => {
+  1095→                      if (p.id === user?.id && mode === 'direct') return sum + ownerShare;
+  1096→                      const s = splits.find((sp) => sp.userId === p.id);
+  1097→                      return sum + (s?.share || 1);
+  1098→                    }, 0) + (mode === 'direct' ? emailParticipants.length : 0);
+  1099→                    const ratioArr = shareParticipants.map((p) => {
+  1100→                      if (p.id === user?.id && mode === 'direct') return ownerShare;
+  1101→                      const s = splits.find((sp) => sp.userId === p.id);
+  1102→                      return s?.share || 1;
+  1103→                    });
+  1104→                    if (mode === 'direct') {
+  1105→                      emailParticipants.forEach(() => ratioArr.push(1));
+  1106→                    }
+  1107→                    const ratioStr = ratioArr.join(' : ');
+  1108→                    return (
+  1109→                      <span className="text-xs text-foreground font-medium bg-primary/10 px-2 py-1 rounded-full">
+  1110→                        Ratio: {ratioStr} = {totalShares} total shares
+  1111→                      </span>
+  1112→                    );
+  1113→                  })()}
+  1114→                </div>
+  1115→                <p className="text-xs text-muted-foreground">
+  1116→                  Set how many people each participant represents. The expense will be split proportionally.
+  1117→                </p>
+  1118→                <div className="space-y-2 max-h-56 overflow-y-auto">
+  1119→
+  1120→                  {mode === 'direct' && user?.id && (() => {
+  1121→                    const shareParticipants = allDirectParticipants;
+  1122→                    const emailShareTotal = emailParticipants.length;
+  1123→                    const totalShares = shareParticipants.reduce((sum, p) => {
+  1124→                      if (p.id === user!.id) return sum + ownerShare;
+  1125→                      const s = splits.find((sp) => sp.userId === p.id);
+  1126→                      return sum + (s?.share || 1);
+  1127→                    }, 0) + emailShareTotal;
+  1128→                    const numAmount = parseFloat(amount) || 0;
+  1129→                    const shareAmount = totalShares > 0
+  1130→                      ? Math.round((numAmount * ownerShare) / totalShares * 100) / 100
+  1131→                      : 0;
+  1132→                    const sharePct = totalShares > 0
+  1133→                      ? Math.round((ownerShare / totalShares) * 1000) / 10
+  1134→                      : 0;
+  1135→                    return (
+  1136→                      <div key={user!.id} className="flex items-center gap-3">
+  1137→                        <div className="flex items-center gap-2 w-28 truncate shrink-0">
+  1138→                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+  1139→                            <User className="w-3 h-3 text-foreground" />
+  1140→                          </div>
+  1141→                          <span className="text-sm font-medium text-foreground">You</span>
+  1142→                        </div>
+  1143→                        <div className="flex items-center gap-1.5 shrink-0">
+  1144→                          <button
+  1145→                            type="button"
+  1146→                            onClick={() => setOwnerShare(Math.max(1, ownerShare - 1))}
+  1147→                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30"
+  1148→                            disabled={ownerShare <= 1}
+  1149→                          >
+  1150→                            −
+  1151→                          </button>
+  1152→                          <input
+  1153→                            type="number"
+  1154→                            min="1"
+  1155→                            max="99"
+  1156→                            value={ownerShare}
+  1157→                            onChange={(e) => setOwnerShare(parseInt(e.target.value) || 1)}
+  1158→                            className="w-10 h-7 text-center text-sm font-medium border border-border rounded-md bg-background"
+  1159→                          />
+  1160→                          <button
+  1161→                            type="button"
+  1162→                            onClick={() => setOwnerShare(ownerShare + 1)}
+  1163→                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted"
+  1164→                          >
+  1165→                            +
+  1166→                          </button>
+  1167→                        </div>
+  1168→                        <span className="text-xs text-muted-foreground shrink-0">{ownerShare === 1 ? 'person' : 'people'}</span>
+  1169→                        <div className="flex-1" />
+  1170→                        <span className="text-sm font-semibold text-foreground shrink-0">₹{shareAmount.toFixed(2)}</span>
+  1171→                        <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
+  1172→                      </div>
+  1173→                    );
+  1174→                  })()}
+  1175→                  {(mode === 'group' ? members : directParticipants).map((p) => {
+  1176→                    const split = splits.find((s) => s.userId === p.id);
+  1177→                    const shareCount = split?.share || 1;
+  1178→                    const shareParticipants = mode === 'group'
+  1179→                      ? members
+  1180→                      : allDirectParticipants;
+  1181→                    const emailShareTotal = mode === 'direct' ? emailParticipants.length : 0;
+  1182→                    const totalShares = shareParticipants.reduce((sum, pp) => {
+  1183→                      if (pp.id === user?.id && mode === 'direct') return sum + ownerShare;
+  1184→                      const s = splits.find((sp) => sp.userId === pp.id);
+  1185→                      return sum + (s?.share || 1);
+  1186→                    }, 0) + emailShareTotal;
+  1187→                    const numAmount = parseFloat(amount) || 0;
+  1188→                    const shareAmount = totalShares > 0
+  1189→                      ? Math.round((numAmount * shareCount) / totalShares * 100) / 100
+  1190→                      : 0;
+  1191→                    const sharePct = totalShares > 0
+  1192→                      ? Math.round((shareCount / totalShares) * 1000) / 10
+  1193→                      : 0;
+  1194→                    return (
+  1195→                      <div key={p.id} className="flex items-center gap-3">
+  1196→                        <span className="text-sm text-foreground w-28 truncate shrink-0">{p.name}</span>
+  1197→                        <div className="flex items-center gap-1.5 shrink-0">
+  1198→                          <button
+  1199→                            type="button"
+  1200→                            onClick={() => updateSplitShare(p.id, shareCount - 1)}
+  1201→                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30"
+  1202→                            disabled={shareCount <= 1}
+  1203→                          >
+  1204→                            −
+  1205→                          </button>
+  1206→                          <input
+  1207→                            type="number"
+  1208→                            min="1"
+  1209→                            max="99"
+  1210→                            value={shareCount}
+  1211→                            onChange={(e) => updateSplitShare(p.id, parseInt(e.target.value) || 1)}
+  1212→                            className="w-10 h-7 text-center text-sm font-medium border border-border rounded-md bg-background"
+  1213→                          />
+  1214→                          <button
+  1215→                            type="button"
+  1216→                            onClick={() => updateSplitShare(p.id, shareCount + 1)}
+  1217→                            className="w-7 h-7 rounded-md border border-border bg-background flex items-center justify-center text-muted-foreground hover:bg-muted"
+  1218→                          >
+  1219→                            +
+  1220→                          </button>
+  1221→                        </div>
+  1222→                        <span className="text-xs text-muted-foreground shrink-0">{shareCount === 1 ? 'person' : 'people'}</span>
+  1223→                        <div className="flex-1" />
+  1224→                        <span className="text-sm font-semibold text-foreground shrink-0">₹{shareAmount.toFixed(2)}</span>
+  1225→                        <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
+  1226→                      </div>
+  1227→                    );
+  1228→                  })}
+  1229→                </div>
+  1230→                {emailParticipants.length > 0 && (
+  1231→                  <div className="mt-2 pt-2 border-t border-emerald-200">
+  1232→                    {emailParticipants.map((ep) => {
+  1233→                      const shareParticipants = mode === 'group' ? members : allDirectParticipants;
+  1234→                      const totalShares = shareParticipants.reduce((sum, p) => {
+  1235→                        if (p.id === user?.id && mode === 'direct') return sum + ownerShare;
+  1236→                        const s = splits.find((sp) => sp.userId === p.id);
+  1237→                        return sum + (s?.share || 1);
+  1238→                      }, 0) + emailParticipants.length;
+  1239→                      const numAmount = parseFloat(amount) || 0;
+  1240→                      const shareAmount = totalShares > 0
+  1241→                        ? Math.round((numAmount * 1) / totalShares * 100) / 100
+  1242→                        : 0;
+  1243→                      const sharePct = totalShares > 0
+  1244→                        ? Math.round((1 / totalShares) * 1000) / 10
+  1245→                        : 0;
+  1246→                      return (
+  1247→                        <div key={ep.email} className="flex items-center gap-3 text-amber-400">
+  1248→                          <div className="flex items-center gap-1.5 w-28 truncate shrink-0">
+  1249→                            <Mail className="w-3.5 h-3.5" />
+  1250→                            <span className="text-sm truncate">{ep.name}</span>
+  1251→                          </div>
+  1252→                          <span className="text-xs bg-amber-500/15 px-2 py-0.5 rounded-full">1 share</span>
+  1253→                          <div className="flex-1" />
+  1254→                          <span className="text-sm font-semibold text-amber-400 shrink-0">₹{shareAmount.toFixed(2)}</span>
+  1255→                          <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
+  1256→                        </div>
+  1257→                      );
+  1258→                    })}
+  1259→                  </div>
+  1260→                )}
+  1261→              </div>
+  1262→            )}
+  1263→
+  1264→
+  1265→            {mode === 'group' && splitType !== 'equal' && splitType !== 'share' && members.length > 0 && (
+  1266→              <div className="space-y-3 p-4 bg-muted rounded-lg">
+  1267→                <Label className="text-sm font-medium">
+  1268→                  Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
+  1269→                </Label>
+  1270→                <div className="space-y-2 max-h-48 overflow-y-auto">
+  1271→                  {members.map((m) => {
+  1272→                    const split = splits.find((s) => s.userId === m.id);
+  1273→                    return (
+  1274→                      <div key={m.id} className="flex items-center gap-3">
+  1275→                        <span className="text-sm text-foreground w-32 truncate shrink-0">{m.name}</span>
+  1276→                        <Input
+  1277→                          type="number"
+  1278→                          step={splitType === 'percentage' ? '1' : '0.01'}
+  1279→                          min="0"
+  1280→                          placeholder="0"
+  1281→                          value={split?.value || ''}
+  1282→                          onChange={(e) => updateSplit(m.id, e.target.value)}
+  1283→                          className="h-9"
+  1284→                        />
+  1285→                        <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+  1286→                      </div>
+  1287→                    );
+  1288→                  })}
+  1289→                </div>
+  1290→              </div>
+  1291→            )}
+  1292→
+  1293→
+  1294→            {mode === 'direct' && (splitType === 'exact' || splitType === 'percentage') && (
+  1295→              <div className="space-y-3 p-4 bg-muted rounded-lg">
+  1296→                <Label className="text-sm font-medium">
+  1297→                  Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
+  1298→                </Label>
+  1299→                <div className="space-y-2 max-h-48 overflow-y-auto">
+  1300→
+  1301→                  <div className="flex items-center gap-3">
+  1302→                    <div className="flex items-center gap-2 w-32 shrink-0">
+  1303→                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+  1304→                        <User className="w-3 h-3 text-foreground" />
+  1305→                      </div>
+  1306→                      <span className="text-sm font-medium text-foreground">You</span>
+  1307→                    </div>
+  1308→                    <Input
+  1309→                      type="number"
+  1310→                      step={splitType === 'percentage' ? '1' : '0.01'}
+  1311→                      min="0"
+  1312→                      placeholder="0"
+  1313→                      value={userSplitValue}
+  1314→                      onChange={(e) => setUserSplitValue(e.target.value)}
+  1315→                      className="h-9"
+  1316→                    />
+  1317→                    <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+  1318→                  </div>
+  1319→
+  1320→                  {directParticipants.length === 0 && emailParticipants.length === 0 && (
+  1321→                    <p className="text-xs text-muted-foreground pl-9">Add friends or emails above to split with others.</p>
+  1322→                  )}
+  1323→                  {directParticipants.map((p) => {
+  1324→                    const split = splits.find((s) => s.userId === p.id);
+  1325→                    return (
+  1326→                      <div key={p.id} className="flex items-center gap-3">
+  1327→                        <span className="text-sm text-foreground w-32 truncate shrink-0">{p.name}</span>
+  1328→                        <Input
+  1329→                          type="number"
+  1330→                          step={splitType === 'percentage' ? '1' : '0.01'}
+  1331→                          min="0"
+  1332→                          placeholder="0"
+  1333→                          value={split?.value || ''}
+  1334→                          onChange={(e) => updateSplit(p.id, e.target.value)}
+  1335→                          className="h-9"
+  1336→                        />
+  1337→                        <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+  1338→                      </div>
+  1339→                    );
+  1340→                  })}
+  1341→
+  1342→                  {emailParticipants.map((ep) => (
+  1343→                    <div key={ep.email} className="flex items-center gap-3">
+  1344→                      <div className="flex items-center gap-2 w-32 shrink-0">
+  1345→                        <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
+  1346→                        <span className="text-sm text-foreground truncate">{ep.name}</span>
+  1347→                      </div>
+  1348→                      <Input
+  1349→                        type="number"
+  1350→                        step={splitType === 'percentage' ? '1' : '0.01'}
+  1351→                        min="0"
+  1352→                        placeholder="0"
+  1353→                        value={emailSplitAmounts[ep.email] || ''}
+  1354→                        onChange={(e) => setEmailSplitAmounts((prev) => ({ ...prev, [ep.email]: e.target.value }))}
+  1355→                        className="h-9"
+  1356→                      />
+  1357→                      <span className="text-xs text-muted-foreground w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+  1358→                    </div>
+  1359→                  ))}
+  1360→                </div>
+  1361→
+  1362→                {(userSplitValue || directParticipants.length > 0 || emailParticipants.length > 0) && (
+  1363→                  <div className="flex items-center justify-between pt-2 border-t border-border">
+  1364→                    <span className="text-xs text-muted-foreground">Total</span>
+  1365→                    <span className={`text-sm font-semibold ${totalSplitOk ? 'text-primary' : 'text-red-500'}`}>
+  1366→                      {splitType === 'percentage'
+  1367→                        ? `${totalSplitAmount.toFixed(1)}% / 100%`
+  1368→                        : `₹${totalSplitAmount.toFixed(2)} / ₹${parseFloat(amount || '0').toFixed(2)}`}
+  1369→                    </span>
+  1370→                  </div>
+  1371→                )}
+  1372→              </div>
+  1373→            )}
+  1374→
+  1375→
+  1376→            {splitType === 'equal' && (
+  1377→              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+  1378→                {mode === 'group' && members.length > 0 ? (
+  1379→                  <p className="text-sm text-foreground">
+  1380→                    Split equally among <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''}: <strong>₹{perPerson}</strong> each
+  1381→                  </p>
+  1382→                ) : mode === 'direct' && totalDirectParticipants > 1 ? (
+  1383→                  <p className="text-sm text-foreground">
+  1384→                    Split equally among <strong>{totalDirectParticipants}</strong> people: <strong>₹{perPersonDirect}</strong> each
+  1385→                    {emailParticipants.length > 0 && (
+  1386→                      <span className="block text-xs text-amber-400 mt-1">
+  1387→                        Including {emailParticipants.length} email participant{emailParticipants.length > 1 ? 's' : ''} who will see this after signing up
+  1388→                      </span>
+  1389→                    )}
+  1390→                  </p>
+  1391→                ) : (
+  1392→                  <p className="text-sm text-foreground">
+  1393→                    Add friends or email participants to split with
+  1394→                  </p>
+  1395→                )}
+  1396→              </div>
+  1397→            )}
+  1398→
+  1399→
+  1400→            <div className="space-y-1.5">
+  1401→              <Label htmlFor="note" className="text-sm">Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
+  1402→              <Textarea
+  1403→                id="note"
+  1404→                placeholder="Any additional details..."
+  1405→                value={note}
+  1406→                onChange={(e) => setNote(e.target.value)}
+  1407→                rows={2}
+  1408→                className="resize-none"
+  1409→              />
+  1410→            </div>
+  1411→
+  1412→
+  1413→
+  1414→
+  1415→
+  1416→            <Button
+  1417→              type="submit"
+  1418→              disabled={submitting}
+  1419→              className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-medium shadow-sm"
+  1420→            >
+  1421→              {submitting ? (
+  1422→                <div className="flex items-center gap-2">
+  1423→                  <Loader2 className="w-4 h-4 animate-spin" />
+  1424→                  Adding Expense...
+  1425→                </div>
+  1426→              ) : (
+  1427→                <div className="flex items-center gap-2">
+  1428→                  <Plus className="w-4 h-4" />
+  1429→                  Add Expense
+  1430→                </div>
+  1431→              )}
+  1432→            </Button>
+  1433→          </form>
+  1434→        </CardContent>
+  1435→      </Card>
+  1436→    </motion.div>
+  1437→  );
+  1438→}
+  1439→
