@@ -253,7 +253,7 @@ export function GroupsView() {
                   </div>
                 </div>
                 <Skeleton className="h-3 w-full" />
-                <div className="pt-2 border-t border-gray-100 space-y-2">
+                <div className="pt-2 border-t border-border space-y-2">
                   <div className="flex justify-between"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-16" /></div>
                   <div className="flex justify-between"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-16" /></div>
                 </div>
@@ -320,7 +320,7 @@ export function GroupsView() {
                   {group.description && (
                     <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">{group.description}</p>
                   )}
-                  <div className="space-y-1.5 pt-2 border-t border-gray-100">
+                  <div className="space-y-1.5 pt-2 border-t border-border">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Total spent</span>
                       <span className="font-medium text-foreground">

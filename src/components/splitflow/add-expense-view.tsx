@@ -1136,7 +1136,7 @@ export function AddExpenseView() {
                     </div>
                   )}
                   {emailParticipants.length > 0 && (
-                    <p className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+                    <p className="text-xs text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-lg">
                       Email participants who are not on SplitFlow will see the expense once they sign up with that email.
                     </p>
                   )}
@@ -1365,7 +1365,7 @@ export function AddExpenseView() {
 
             {/* Split Details for Group mode (exact/percentage) */}
             {mode === 'group' && splitType !== 'equal' && splitType !== 'share' && members.length > 0 && (
-              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+              <div className="space-y-3 p-4 bg-muted rounded-lg">
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
                 </Label>
@@ -1394,7 +1394,7 @@ export function AddExpenseView() {
 
             {/* Split Details for Direct mode (exact/percentage) */}
             {mode === 'direct' && (splitType === 'exact' || splitType === 'percentage') && (
-              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+              <div className="space-y-3 p-4 bg-muted rounded-lg">
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
                 </Label>
@@ -1485,7 +1485,7 @@ export function AddExpenseView() {
                   <p className="text-sm text-foreground">
                     Split equally among <strong>{totalDirectParticipants}</strong> people: <strong>₹{perPersonDirect}</strong> each
                     {emailParticipants.length > 0 && (
-                      <span className="block text-xs text-amber-600 mt-1">
+                      <span className="block text-xs text-amber-400 mt-1">
                         Including {emailParticipants.length} email participant{emailParticipants.length > 1 ? 's' : ''} who will see this after signing up
                       </span>
                     )}

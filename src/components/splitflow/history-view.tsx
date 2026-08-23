@@ -244,7 +244,7 @@ export function HistoryView() {
                         </div>
                         {nonUserCount > 0 && (
                           <div className="flex items-center gap-1 mt-1">
-                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
                               {nonUserCount} email participant{nonUserCount > 1 ? 's' : ''}
                             </span>
                           </div>

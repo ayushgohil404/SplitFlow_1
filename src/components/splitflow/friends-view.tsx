@@ -300,7 +300,7 @@ export function FriendsView() {
             Pending Requests ({pendingReceived.length})
           </h3>
           {pendingReceived.map((req) => (
-            <Card key={req.id} className="border-amber-200 bg-amber-50/30">
+            <Card key={req.id} className="border-amber-500/20 bg-amber-500/10">
               <CardContent className="p-4 flex items-center gap-3">
                 <Avatar className="w-10 h-10">
                   <AvatarFallback className="bg-amber-100 text-amber-700 text-sm font-semibold">
