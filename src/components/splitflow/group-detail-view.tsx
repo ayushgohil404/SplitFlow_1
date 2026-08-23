@@ -14,6 +14,9 @@ import {
   Calendar,
   Scale,
   Mail,
+  Copy,
+  Check,
+  Link,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,6 +119,7 @@ export function GroupDetailView() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Settings dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -318,6 +322,9 @@ export function GroupDetailView() {
               <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><Users className="w-4 h-4" />{group.members.length} members</span>
                 <span className="flex items-center gap-1"><Receipt className="w-4 h-4" />₹{group.totalExpenses?.toFixed(2)} total</span>
+                {group.inviteCode && (
+                  <span className="flex items-center gap-1"><Link className="w-4 h-4" />Code: <span className="font-mono font-semibold text-foreground tracking-wider">{group.inviteCode}</span></span>
+                )}
               </div>
             </div>
 
@@ -383,10 +390,26 @@ export function GroupDetailView() {
 
         {/* Members Tab */}
         <TabsContent value="members" className="mt-4">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end gap-2 mb-4">
             {isAdmin && (
               <Button size="sm" variant="outline" onClick={() => { setInviteOpen(true); setInviteEmail(''); }}>
                 <UserPlus className="w-4 h-4 mr-1.5" />Invite People
+              </Button>
+            )}
+            {group.inviteCode && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const url = `${window.location.origin}/invite/${group.inviteCode}`;
+                  navigator.clipboard.writeText(url);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                  toast.success('Invite link copied!');
+                }}
+              >
+                {copied ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+                {copied ? 'Copied!' : 'Copy Link'}
               </Button>
             )}
           </div>
@@ -587,7 +610,7 @@ export function GroupDetailView() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteGroup} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -603,7 +626,7 @@ export function GroupDetailView() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLeaveGroup} className="bg-red-600 hover:bg-red-700">Leave</AlertDialogAction>
+            <AlertDialogAction onClick={handleLeaveGroup} className="bg-destructive hover:bg-destructive/90">Leave</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

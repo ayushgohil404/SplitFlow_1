@@ -118,13 +118,13 @@ export function HistoryView() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
           <p className="text-xs text-primary font-medium">Total Expenses</p>
           <p className="text-2xl font-bold text-foreground mt-1">{expenses.length}</p>
         </div>
-        <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+        <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
           <p className="text-xs text-blue-400 font-medium">Total Amount</p>
-          <p className="text-2xl font-bold text-blue-700 mt-1">
+          <p className="text-2xl font-bold text-foreground mt-1">
             {'₹'}{(Number(totalAmount) || 0).toFixed(2)}
           </p>
         </div>
@@ -230,7 +230,7 @@ export function HistoryView() {
                               {groupEmoji} {groupName}
                             </span>
                           ) : (
-                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded border border-emerald-200 text-primary inline-flex items-center">
+                            <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded border border-primary/30 text-primary inline-flex items-center">
                               <User className="w-2.5 h-2.5 mr-0.5" /> Direct
                             </span>
                           )}

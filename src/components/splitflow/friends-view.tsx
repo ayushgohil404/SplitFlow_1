@@ -272,7 +272,7 @@ export function FriendsView() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-primary/20">
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <ArrowDownRight className="w-4 h-4 text-primary" />
@@ -281,7 +281,7 @@ export function FriendsView() {
             <p className="text-2xl font-bold text-foreground mt-1">₹{grandTotalOwed.toFixed(2)}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-100">
+        <Card className="bg-destructive/5 border-destructive/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <ArrowUpRight className="w-4 h-4 text-destructive" />
@@ -303,7 +303,7 @@ export function FriendsView() {
             <Card key={req.id} className="border-amber-500/20 bg-amber-500/10">
               <CardContent className="p-4 flex items-center gap-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarFallback className="bg-amber-100 text-amber-700 text-sm font-semibold">
+                  <AvatarFallback className="bg-amber-500/15 text-amber-400 text-sm font-semibold">
                     {req.user.name?.charAt(0)?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>

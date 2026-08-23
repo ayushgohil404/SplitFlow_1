@@ -1072,7 +1072,7 @@ export function AddExpenseView() {
                           onClick={() => toggleFriend(f.id)}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                             selectedFriends.includes(f.id)
-                              ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                              ? 'bg-primary/10 border-primary/30 text-foreground'
                               : 'bg-background border-border text-muted-foreground hover:border-muted-foreground/40'
                           }`}
                         >
@@ -1208,7 +1208,7 @@ export function AddExpenseView() {
                     }
                     const ratioStr = ratioArr.join(' : ');
                     return (
-                      <span className="text-xs text-foreground font-medium bg-emerald-100 px-2 py-1 rounded-full">
+                      <span className="text-xs text-foreground font-medium bg-primary/10 px-2 py-1 rounded-full">
                         Ratio: {ratioStr} = {totalShares} total shares
                       </span>
                     );
@@ -1237,7 +1237,7 @@ export function AddExpenseView() {
                     return (
                       <div key={user!.id} className="flex items-center gap-3">
                         <div className="flex items-center gap-2 w-28 truncate shrink-0">
-                          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
                             <User className="w-3 h-3 text-foreground" />
                           </div>
                           <span className="text-sm font-medium text-foreground">You</span>
@@ -1346,14 +1346,14 @@ export function AddExpenseView() {
                         ? Math.round((1 / totalShares) * 1000) / 10
                         : 0;
                       return (
-                        <div key={ep.email} className="flex items-center gap-3 text-amber-700">
+                        <div key={ep.email} className="flex items-center gap-3 text-amber-400">
                           <div className="flex items-center gap-1.5 w-28 truncate shrink-0">
                             <Mail className="w-3.5 h-3.5" />
                             <span className="text-sm truncate">{ep.name}</span>
                           </div>
-                          <span className="text-xs bg-amber-100 px-2 py-0.5 rounded-full">1 share</span>
+                          <span className="text-xs bg-amber-500/15 px-2 py-0.5 rounded-full">1 share</span>
                           <div className="flex-1" />
-                          <span className="text-sm font-semibold text-amber-700 shrink-0">₹{shareAmount.toFixed(2)}</span>
+                          <span className="text-sm font-semibold text-amber-400 shrink-0">₹{shareAmount.toFixed(2)}</span>
                           <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{sharePct}%</span>
                         </div>
                       );
@@ -1402,7 +1402,7 @@ export function AddExpenseView() {
                   {/* User (You) row — always shown */}
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 w-32 shrink-0">
-                      <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                         <User className="w-3 h-3 text-foreground" />
                       </div>
                       <span className="text-sm font-medium text-foreground">You</span>

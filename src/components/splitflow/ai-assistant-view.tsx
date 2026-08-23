@@ -292,7 +292,7 @@ export function AIAssistantView() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-[calc(100vh-10rem)]">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
             <Bot className="w-4 h-4 text-foreground" />
           </div>
           <div>
@@ -333,7 +333,7 @@ export function AIAssistantView() {
                   <button
                     key={qa.label}
                     onClick={() => sendMessage(qa.prompt)}
-                    className="flex items-center gap-2 px-3 py-2.5 text-left rounded-lg border border-border hover:border-emerald-300 hover:bg-primary/10/50 transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-2.5 text-left rounded-lg border border-border hover:border-primary/30 hover:bg-primary/10/50 transition-colors text-sm"
                   >
                     <qa.icon className="w-4 h-4 text-primary shrink-0" />
                     <span className="text-foreground">{qa.label}</span>
@@ -353,7 +353,7 @@ export function AIAssistantView() {
                   className={
                     msg.role === 'user'
                       ? 'bg-muted text-foreground'
-                      : 'bg-emerald-100 text-foreground'
+                      : 'bg-primary/10 text-foreground'
                   }
                 >
                   {msg.role === 'user' ? (
@@ -441,7 +441,7 @@ export function AIAssistantView() {
           {loading && (
             <div className="flex gap-3">
               <Avatar className="w-8 h-8 shrink-0">
-                <AvatarFallback className="bg-emerald-100 text-foreground">
+                <AvatarFallback className="bg-primary/10 text-foreground">
                   <Bot className="w-4 h-4" />
                 </AvatarFallback>
               </Avatar>
