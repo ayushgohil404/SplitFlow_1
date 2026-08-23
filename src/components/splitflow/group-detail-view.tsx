@@ -181,8 +181,6 @@ export function GroupDetailView() {
     fetchGroup();
   }, [fetchGroup]);
 
-
-
   const handleSendInvite = async () => {
     if (!inviteEmail.trim() || !selectedGroupId) return;
     setInviting(true);

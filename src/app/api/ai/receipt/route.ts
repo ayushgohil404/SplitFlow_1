@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { isGeminiConfigured } from '@/lib/groq'
 
-// Gemini models that support vision (image input)
+
 const VISION_MODEL = 'gemini-2.5-flash';
 
 function extractJSON(text: string): unknown {

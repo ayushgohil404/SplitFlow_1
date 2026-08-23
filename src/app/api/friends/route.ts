@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 
-// GET /api/friends — List friends + pending requests
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/friends — Send friend request (by email or userId)
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -134,7 +134,6 @@ export async function POST(req: NextRequest) {
         if (existing.requesterId === user.id) {
           return NextResponse.json({ error: 'Friend request already sent' }, { status: 409 })
         } else {
-          // They sent us a request, auto-accept
           await db.friendship.update({
             where: { id: existing.id },
             data: { status: 'accepted' },

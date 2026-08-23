@@ -101,7 +101,6 @@ export async function PATCH(
       let finalSplits: { userId: string; amount: number; percentage: number; share: number }[] = []
 
       if (currentSplitType === 'equal' && (!splits || splits.length === 0)) {
-        // Recalculate equal splits among existing splits' users
         const existingSplits = await db.expenseSplit.findMany({
           where: { expenseId: id },
         })
@@ -142,7 +141,6 @@ export async function PATCH(
           share: 0,
         }))
       } else {
-        // No split changes needed
         const expense = await db.expense.update({
           where: { id },
           data: updateData,

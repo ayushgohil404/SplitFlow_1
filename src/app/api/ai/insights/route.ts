@@ -130,7 +130,6 @@ Do NOT wrap in markdown code blocks. Return raw JSON only.`
     try {
       parsed = extractJSON(raw) as typeof parsed
     } catch {
-      // AI returned invalid JSON — return the raw text as insights
       return NextResponse.json({
         insights: raw || 'Unable to generate structured insights.',
         summary: 'AI response could not be parsed.',

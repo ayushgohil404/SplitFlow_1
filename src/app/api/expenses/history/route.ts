@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 
-// GET /api/expenses/history — All expenses for the current user (group + direct)
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10) || 50, 100)
     const offset = Math.max(parseInt(searchParams.get('offset') ?? '0', 10) || 0, 0)
-    const filter = searchParams.get('filter') // 'all' | 'group' | 'direct'
-    const search = searchParams.get('search') // search in description
+    const filter = searchParams.get('filter')
+    const search = searchParams.get('search')
     const category = searchParams.get('category')
 
     // Build where clause
@@ -52,7 +52,6 @@ export async function GET(req: NextRequest) {
       splitExpenses.forEach((e) => expenseIds.add(e.expenseId))
     } catch (idErr: any) {
       console.error('[History] Failed to fetch expense IDs:', idErr?.message || idErr)
-      // Return empty rather than crash
       return NextResponse.json({ expenses: [], total: 0 })
     }
 

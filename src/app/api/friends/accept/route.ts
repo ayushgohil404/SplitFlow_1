@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 
-// POST /api/friends/accept — Accept or decline friend request
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser()

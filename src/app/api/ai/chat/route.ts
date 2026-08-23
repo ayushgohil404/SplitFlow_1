@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
     let categoryTotals: Record<string, number> = {}
 
     try {
-    // Calculate balances (owed to user / user owes)
     for (const membership of memberships) {
       const gid = membership.groupId
       const members = await db.groupMember.findMany({
@@ -313,14 +312,11 @@ Before the JSON block, write a friendly confirmation message like "I've prepared
     if (expenseMatch) {
       try {
         const parsed = JSON.parse(expenseMatch[1].trim())
-        // Validate the parsed expense has minimum required fields
         if (parsed.description && parsed.amount && parsed.amount > 0) {
-          // Ensure splitType is valid
           const validTypes = ['equal', 'exact', 'percentage', 'share', 'single']
           if (!parsed.splitType || !validTypes.includes(parsed.splitType)) {
             parsed.splitType = 'single'
           }
-          // Ensure valid category
           const validCategories = ['food', 'transport', 'entertainment', 'shopping', 'bills', 'rent', 'travel', 'health', 'education', 'groceries', 'utilities', 'other']
           if (!parsed.category || !validCategories.includes(parsed.category)) {
             parsed.category = 'other'
@@ -328,7 +324,6 @@ Before the JSON block, write a friendly confirmation message like "I've prepared
           createExpense = parsed
         }
       } catch {
-        // ignore malformed JSON
       }
     }
 

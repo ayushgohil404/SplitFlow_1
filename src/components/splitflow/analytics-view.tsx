@@ -46,14 +46,14 @@ interface Group {
 }
 
 const CHART_COLORS = [
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#f43f5e', // rose
-  '#8b5cf6', // violet
-  '#0ea5e9', // sky
-  '#f97316', // orange
-  '#14b8a6', // teal
-  '#84cc16', // lime
+  '#10b981',
+  '#f59e0b',
+  '#f43f5e',
+  '#8b5cf6',
+  '#0ea5e9',
+  '#f97316',
+  '#14b8a6',
+  '#84cc16',
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -122,7 +122,6 @@ export function AnalyticsView() {
         setGroups(Array.isArray(data) ? data : data.groups || []);
       }
     } catch {
-      // silent
     } finally {
       setLoading(false);
     }

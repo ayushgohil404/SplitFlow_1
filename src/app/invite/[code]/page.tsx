@@ -66,15 +66,12 @@ export default function InvitePage() {
 
     (async () => {
       try {
-        // Try the Invite table first
         const res = await fetch(`/api/invites/accept?code=${encodeURIComponent(code)}`);
         const data = await res.json();
 
         if (data.id) {
-          // Found in Invite table
           setInvite(data);
         } else {
-          // Not found in Invite table — try Group.inviteCode
           const groupRes = await fetch(`/api/groups/lookup?code=${encodeURIComponent(code)}`);
           if (groupRes.ok) {
             const groupData = await groupRes.json();
@@ -314,7 +311,8 @@ export default function InvitePage() {
     );
   }
 
-  // Logged in — show accept/decline (or just join for group code)
+  
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <motion.div

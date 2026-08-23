@@ -1,15 +1,13 @@
-// Type for AI messages (compatible with Groq SDK type shape)
 export type ChatCompletionMessageParam = { role: string; content: string };
 
-// ─── Gemini-only AI (Groq removed — all models decommissioned) ───────────────
 
 export const CHAT_MODEL = 'gemini-2.5-flash';
 
-// Single model as requested
+
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export function isGroqConfigured(): boolean {
-  return false; // Groq no longer used
+  return false;
 }
 
 export function isGeminiConfigured(): boolean {
@@ -18,9 +16,7 @@ export function isGeminiConfigured(): boolean {
   return true;
 }
 
-/**
- * Call Gemini API with automatic model and endpoint fallback.
- */
+
 export async function chatWithGemini(
   messages: { role: string; content: string }[],
   options: { temperature?: number; max_tokens?: number } = {}
@@ -83,10 +79,7 @@ export async function chatWithGemini(
   throw new Error('Empty response from Gemini');
 }
 
-/**
- * Call AI — now Gemini-only with automatic model/endpoint fallback.
- * Kept the same function signature for compatibility.
- */
+
 export async function chatWithFallback(
   messages: ChatCompletionMessageParam[],
   options: {

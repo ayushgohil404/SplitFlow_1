@@ -18,7 +18,7 @@ function extractJSON(text: string): unknown {
   }
 }
 
-// Abuse prevention: server-side validation limits
+
 const MAX_AMOUNT = 10_000_000
 const MAX_PARTICIPANTS = 50
 const MIN_AMOUNT = 0.01
@@ -355,7 +355,6 @@ export async function POST(req: NextRequest) {
     } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
       userMessage = 'Could not reach AI service. Please check your connection and try again.'
     } else {
-      // Include actual error for debugging unknown issues
       userMessage = `AI error: ${msg || 'unknown'}. Please try again or fill the form manually.`
     }
     return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 200 })

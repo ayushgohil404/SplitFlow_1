@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 
-// POST /api/invites/accept — Accept or decline an invite
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Accept: add user to group
-    // Check if already a member
     const alreadyMember = await db.groupMember.findUnique({
       where: { groupId_userId: { groupId: invite.groupId, userId: user.id } },
     })
@@ -93,7 +92,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/invites/accept?code=xxx — Get invite details (for the invite page)
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)

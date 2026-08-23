@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
     try {
       parsed = extractJSON(raw) as typeof parsed
     } catch {
-      // AI returned invalid JSON — return a sensible default
       return NextResponse.json({
         category: 'other',
         emoji: '\ud83d\udcdd',

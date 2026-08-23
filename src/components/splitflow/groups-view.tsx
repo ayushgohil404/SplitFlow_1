@@ -179,7 +179,6 @@ export function GroupsView() {
       setJoinError('Please enter an invite code');
       return;
     }
-    // Strip URL if user pasted full link
     if (code.includes('/invite/')) {
       code = code.split('/invite/').pop() || '';
     }

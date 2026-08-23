@@ -98,7 +98,6 @@ export function SettleView() {
         setGroupBalances(data.groups || []);
       }
     } catch {
-      // silent
     } finally {
       setLoading(false);
     }
@@ -132,7 +131,6 @@ export function SettleView() {
         })));
       }
     } catch {
-      // silent
     } finally {
       setDetailLoading(false);
     }

@@ -3,7 +3,7 @@ import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
 import crypto from 'crypto'
 
-// POST /api/invites — Create an invite
+
 export async function POST(req: NextRequest) {
   let parsedBody: { groupId: string; email: string } | null = null;
   let authUserId: string | null = null;
@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
       },
     })
     if (existingInvite) {
-      // Return existing invite instead of creating duplicate
       return NextResponse.json({
         id: existingInvite.id,
         code: existingInvite.code,
@@ -60,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // Create invite
     const code = crypto.randomBytes(6).toString('hex').toUpperCase()
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
     const invite = await db.invite.create({
       data: {
@@ -83,9 +82,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error('[Invite] Error creating invite:', error?.message || error, 'Code:', error?.code)
-    // If it's a Prisma unique constraint error (code P2002), the invite code collided
     if (error?.code === 'P2002') {
-      // Retry with a new code
       try {
         const code = crypto.randomBytes(8).toString('hex').toUpperCase()
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -99,11 +96,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to generate invite code. Please try again.' }, { status: 500 })
       }
     }
-    // Prisma foreign key error
     if (error?.code === 'P2003') {
       return NextResponse.json({ error: 'Invalid group or user. Please refresh and try again.' }, { status: 400 })
     }
-    // Prisma record not found
     if (error?.code === 'P2025') {
       return NextResponse.json({ error: 'Group not found. It may have been deleted.' }, { status: 404 })
     }

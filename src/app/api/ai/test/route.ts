@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { chatWithFallback, isGeminiConfigured } from '@/lib/groq'
 
-// GET /api/ai/test — Diagnostic endpoint
+
 export async function GET() {
   const results: any = {
     gemini: { configured: isGeminiConfigured(), keyPrefix: (process.env.GEMINI_API_KEY || '').slice(0, 8) + '...' },

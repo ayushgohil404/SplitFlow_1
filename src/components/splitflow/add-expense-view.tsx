@@ -89,7 +89,6 @@ export function AddExpenseView() {
   // AI NLP input
   const [nlpInput, setNlpInput] = useState('');
   const [nlpLoading, setNlpLoading] = useState(false);
-  // Stores parsed friend split amounts (name → value) from AI parse, applied after useEffect
   const [pendingFriendSplitValues, setPendingFriendSplitValues] = useState<Record<string, string>>({});
 
   // Form fields
@@ -144,7 +143,6 @@ export function AddExpenseView() {
           setFriends(fData.friends || []);
         }
       } catch {
-        // silent
       }
     }
     fetchData();
@@ -171,7 +169,6 @@ export function AddExpenseView() {
           if (me) setPaidById(me.id);
         }
       } catch {
-        // silent
       } finally {
         setMembersLoading(false);
       }
@@ -183,7 +180,6 @@ export function AddExpenseView() {
   const handleNlpSubmit = async () => {
     if (!nlpInput.trim()) return;
     setNlpLoading(true);
-    // Clear pending values from previous parse
     setPendingFriendSplitValues({});
     try {
       const res = await fetch('/api/ai/parse-expense', {
@@ -226,7 +222,6 @@ export function AddExpenseView() {
         if (matchedGroup) {
           setMode('group');
           setGroupId(matchedGroup.id);
-          // Don't process friend/email splits for group expenses
           if (isExactOrPct) {
             setSplitType(sType as 'exact' | 'percentage');
           } else if (sType === 'equal' || sType === 'share') {
@@ -237,7 +232,6 @@ export function AddExpenseView() {
           toast.success(`Expense parsed for group "${matchedGroup.name}"! Review and submit.`);
           return;
         }
-        // Group name not found — fall through to direct mode
       }
 
       // Determine mode: switch to direct if there are email splits or named non-me splits
@@ -327,15 +321,12 @@ export function AddExpenseView() {
           if (!selectedFriends.includes(friendMatch.id)) {
             setSelectedFriends((prev) => [...prev, friendMatch.id]);
           }
-          // For share type, set the friend's share value
           if (sType === 'share' && ns.share != null && ns.share > 0) {
-            // We'll apply share values after the useEffect sets up splits
             friendAmtMap[friendMatch.id] = String(ns.share);
           } else if (isExactOrPct && (ns.amount != null || ns.percentage != null)) {
             friendAmtMap[friendMatch.id] = String(ns.amount ?? ns.percentage);
           }
         } else if (ns.name?.includes('@')) {
-          // Named person looks like an email — add as email participant
           const emailAddr = ns.name.toLowerCase();
           if (!emailSplits?.some((es) => es.email.toLowerCase() === emailAddr)) {
             setEmailParticipants((prev) => [...prev, { email: emailAddr, name: ns.name.split('@')[0] }]);
@@ -344,8 +335,6 @@ export function AddExpenseView() {
             }
           }
         }
-        // If not a friend and not an email, we skip them — user can add manually
-        // (non-registered users need an email to track)
       }
 
       if (Object.keys(friendAmtMap).length > 0) {
@@ -359,7 +348,6 @@ export function AddExpenseView() {
         setSplitType(sType as 'exact' | 'percentage');
       } else if (sType === 'share') {
         setSplitType('share');
-        // Set owner share from AI parse if available
         const meSplit = namedSplits?.find((s) => s.name === 'me');
         if (meSplit?.share && typeof meSplit.share === 'number' && meSplit.share > 0) {
           setOwnerShare(meSplit.share);
@@ -512,9 +500,7 @@ export function AddExpenseView() {
       toast.error('Select at least one friend or add an email to split with');
       valid = false;
     }
-    // For equal split with no participants, auto-switch to owner-only (no splits needed)
     if (mode === 'direct' && selectedFriends.length === 0 && emailParticipants.length === 0 && splitType === 'equal') {
-      // Personal expense — submit without splits
     }
     return valid;
   };
@@ -620,7 +606,6 @@ export function AddExpenseView() {
       if (mode === 'group') {
         body.groupId = groupId;
         if (splitType === 'share') {
-          // Send share values — backend handles proportional calculation
           body.splitType = 'equal';
           body.splits = splits.map((s) => ({
             userId: s.userId,
@@ -638,13 +623,11 @@ export function AddExpenseView() {
           }));
         }
       } else {
-        // Direct expense
         if (splitType === 'equal') {
           body.splits = selectedFriends.map((id) => ({ userId: id, share: 1 }));
           body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
         } else if (splitType === 'share') {
           body.splitType = 'equal';
-          // Include owner's share in direct mode
           const ownerSplit = user?.id ? [{ userId: user.id, share: ownerShare }] : [];
           body.splits = [...ownerSplit, ...splits.map((s) => ({
             userId: s.userId,
@@ -652,7 +635,6 @@ export function AddExpenseView() {
           }))];
           body.nonUserSplits = emailParticipants.map((p) => ({ email: p.email, name: p.name, share: 1 }));
         } else if (splitType === 'exact') {
-          // Include user's own split
           const userAmt = parseFloat(userSplitValue) || 0;
           const bodySplits: any[] = [];
           if (userAmt > 0) {
@@ -663,7 +645,6 @@ export function AddExpenseView() {
             amount: parseFloat(s.value) || 0,
           })));
           body.splits = bodySplits;
-          // Include email participant amounts
           if (emailParticipants.length > 0) {
             body.nonUserSplits = emailParticipants.map((p) => ({
               email: p.email,
@@ -672,7 +653,6 @@ export function AddExpenseView() {
             }));
           }
         } else if (splitType === 'percentage') {
-          // Include user's own split
           const userPct = parseFloat(userSplitValue) || 0;
           const bodySplits: any[] = [];
           if (userPct > 0) {
@@ -683,7 +663,6 @@ export function AddExpenseView() {
             percentage: parseFloat(s.value) || 0,
           })));
           body.splits = bodySplits;
-          // Include email participant percentages
           if (emailParticipants.length > 0) {
             body.nonUserSplits = emailParticipants.map((p) => ({
               email: p.email,
@@ -700,7 +679,6 @@ export function AddExpenseView() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        // If there are non-registered email participants, open email client
         if (emailParticipants.length > 0) {
           openEmailForNonRegistered(emailParticipants, description, amount);
         }
@@ -751,7 +729,6 @@ export function AddExpenseView() {
       if (numAmount <= 0) return;
 
       if (mode === 'direct') {
-        // Calculate total shares in direct mode
         const totalShares =
           ownerShare +
           splits.reduce((sum, s) => sum + (s.share || 1), 0) +
@@ -759,17 +736,14 @@ export function AddExpenseView() {
         if (totalShares <= 0) return;
 
         if (splitType === 'exact') {
-          // Owner's exact amount
           const ownerAmt = Math.round((numAmount * ownerShare) / totalShares * 100) / 100;
           setUserSplitValue(String(ownerAmt));
-          // Friends' exact amounts
           setSplits((prev) =>
             prev.map((s) => {
               const amt = Math.round((numAmount * (s.share || 1)) / totalShares * 100) / 100;
               return { ...s, value: String(amt) };
             })
           );
-          // Email participants' exact amounts
           const emailAmt = Math.round((numAmount * 1) / totalShares * 100) / 100;
           setEmailSplitAmounts((prev) => {
             const next: Record<string, string> = {};
@@ -777,7 +751,6 @@ export function AddExpenseView() {
             return next;
           });
         } else {
-          // Percentage mode
           const ownerPct = Math.round((ownerShare / totalShares) * 1000) / 10;
           setUserSplitValue(String(ownerPct));
           setSplits((prev) =>
@@ -794,7 +767,6 @@ export function AddExpenseView() {
           });
         }
       } else if (mode === 'group' && members.length > 0) {
-        // Group mode: calculate from share values
         const totalShares = members.reduce((sum, m) => {
           const s = splits.find((sp) => sp.userId === m.id);
           return sum + (s?.share || 1);
@@ -824,7 +796,6 @@ export function AddExpenseView() {
   const directParticipants = [
     ...(friends.filter((f) => selectedFriends.includes(f.id)).map((f) => ({ id: f.id, name: f.name }))),
   ];
-  // All participants including owner (for direct share mode display)
   const allDirectParticipants = [
     ...(user?.id ? [{ id: user.id, name: user?.name || 'You' }] : []),
     ...directParticipants,
@@ -838,7 +809,6 @@ export function AddExpenseView() {
         const friendName = friend?.name?.toLowerCase();
         const pendingByName = friendName ? pendingFriendSplitValues[friendName] : undefined;
         const pendingValue = pendingById || pendingByName || '';
-        // For share type, the pending value is the share count
         const pendingShare = splitType === 'share' ? (parseInt(pendingValue) || 1) : 1;
         return { userId: p.id, value: pendingValue, share: pendingShare };
       });

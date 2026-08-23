@@ -123,11 +123,9 @@ export async function POST(req: NextRequest) {
 
     // If no groupId and no splits provided, use the user alone (for direct expenses with email participants)
     if (!groupId && splitUserIds.length === 0) {
-      // Direct expense with only email participants
       userSplits = [{ userId: user.id, amount: 0, percentage: 0, share: 0 }]
     } else if (splitType === 'equal') {
       if (splits && splits.length > 0) {
-        // Include owner in direct splits if not already present
         const allParticipantSplits = !groupId && !splits.some((s) => s.userId === user.id)
           ? [{ userId: user.id, amount: 0, percentage: 0, share: 1 }, ...splits]
           : splits
@@ -153,7 +151,6 @@ export async function POST(req: NextRequest) {
           share: 1,
         }))
       } else {
-        // Direct expense, equal split between all user participants
         const allIds = [user.id, ...splitUserIds.filter((id) => id !== user.id)]
         const perPerson = Math.round((amount / allIds.length) * 100) / 100
         const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * allIds.length
@@ -165,7 +162,6 @@ export async function POST(req: NextRequest) {
         }))
       }
     } else if (splitType === 'exact') {
-      // Collect all split amounts (user splits + email splits)
       const emailTotal = emailSplits?.reduce((sum, s) => sum + (s.amount ?? 0), 0) ?? 0
       const userSplitTotal = splits?.reduce((sum, s) => sum + (s.amount ?? 0), 0) ?? 0
       const splitsTotal = userSplitTotal + emailTotal
@@ -187,7 +183,6 @@ export async function POST(req: NextRequest) {
           share: 0,
         }))
       } else if (!groupId) {
-        // Direct expense: user's share = total - email splits
         const myAmount = Math.round((amount - emailTotal) * 100) / 100
         userSplits = [{ userId: user.id, amount: myAmount, percentage: Math.round((myAmount / amount) * 10000) / 100, share: 0 }]
       }
@@ -267,14 +262,12 @@ export async function POST(req: NextRequest) {
 
     // Process email splits for equal/share modes (exact/percentage already handled above)
     if (emailSplits && emailSplits.length > 0 && splitType !== 'exact' && splitType !== 'percentage') {
-      // Check if any email belongs to a registered user
       for (const es of emailSplits) {
         const existingUser = await db.user.findUnique({
           where: { email: es.email.trim().toLowerCase() },
         })
 
         if (existingUser) {
-          // This email belongs to a registered user — create a regular split instead
           if (splitType === 'equal') {
             const perPerson = Math.round((amount / (userSplits.length + 1)) * 100) / 100
             userSplits.push({
@@ -292,7 +285,6 @@ export async function POST(req: NextRequest) {
             })
           }
         } else {
-          // Non-user — create non-user split
           finalEmailSplits.push({
             email: es.email.trim().toLowerCase(),
             name: es.name || es.email.split('@')[0],
@@ -305,14 +297,12 @@ export async function POST(req: NextRequest) {
 
       // Recalculate splits for all participants (owner + friends + emails)
       if (splitType === 'equal' && emailSplits.length > 0) {
-        // Don't filter out zero-amount splits — recalculate for all participants
 
         // Check if using share-based splitting (any share != 1 or shares differ from count)
         const hasCustomShares = emailSplits.some((es) => (es.share ?? 1) !== 1) ||
           userSplits.some((s) => (s.share ?? 1) !== 1)
 
         if (hasCustomShares) {
-          // Share-based proportional recalculation
           const allShares = [
             ...userSplits.map((s) => s.share || 1),
             ...finalEmailSplits.map((s) => s.share || 1),
@@ -328,7 +318,6 @@ export async function POST(req: NextRequest) {
             s.percentage = Math.round(((s.share || 1) / totalShares) * 10000) / 100
           })
         } else {
-          // Standard equal recalculation
           const totalParticipants = userSplits.length + finalEmailSplits.length
           const perPerson = Math.round((amount / totalParticipants) * 100) / 100
           const remainder = Math.round(amount * 100) - Math.round(perPerson * 100) * totalParticipants

@@ -9,7 +9,6 @@ export function useAuth() {
 
   const checkSession = useCallback(async () => {
     try {
-      // Check NextAuth session first
       const res = await fetch('/api/auth/session');
       const session = await res.json();
       if (session?.user) {
@@ -18,7 +17,6 @@ export function useAuth() {
         return;
       }
       
-      // Fallback: check demo session
       const demoRes = await fetch('/api/auth/demo-session');
       if (demoRes.ok) {
         const demoSession = await demoRes.json();
@@ -42,7 +40,6 @@ export function useAuth() {
 
   const signOut = async () => {
     await fetch('/api/auth/signout', { method: 'POST' });
-    // Clear demo cookie
     document.cookie = 'sf-token=; path=/; max-age=0';
     setUser(null);
     setChecked(false);

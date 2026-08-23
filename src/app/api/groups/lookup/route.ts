@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/groups/lookup?code=xxx — Look up a group by inviteCode (for invite links)
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)

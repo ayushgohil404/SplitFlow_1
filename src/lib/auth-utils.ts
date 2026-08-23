@@ -11,7 +11,6 @@ export interface AuthUser {
 
 export async function getAuthUser(): Promise<AuthUser | null> {
   try {
-    // Try NextAuth session first
     const session = await getServerSession(authOptions);
     if (session?.user) {
       return {

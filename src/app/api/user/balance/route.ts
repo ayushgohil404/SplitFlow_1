@@ -111,7 +111,6 @@ export async function GET(req: NextRequest) {
     )
 
     // 2. Direct expense balances (no group)
-    // Find all direct expenses where user is involved
     const directExpenses = await db.expense.findMany({
       where: {
         groupId: null,
@@ -134,19 +133,15 @@ export async function GET(req: NextRequest) {
 
       // User splits
       for (const split of exp.splits) {
-        if (split.userId === userId) continue // skip self
+        if (split.userId === userId) continue
 
         if (!directBalances[split.userId]) {
           directBalances[split.userId] = { name: split.user.name, image: split.user.image, amount: 0 }
         }
 
         if (isPayer) {
-          // They owe me (I paid, they have a split)
           directBalances[split.userId].amount += Number(split.amount)
         } else {
-          // I owe them (they paid... wait, this is wrong)
-          // If I didn't pay, then someone else paid and I have a split — I owe the payer
-          // This is handled differently: if I have a split in an expense paid by someone else
         }
       }
 
@@ -155,7 +150,6 @@ export async function GET(req: NextRequest) {
         const mySplit = exp.splits.find((s) => s.userId === userId)
         if (mySplit) {
           if (!directBalances[exp.createdBy]) {
-            // We need the payer's name — fetch it
             const payer = await db.user.findUnique({
               where: { id: exp.createdBy },
               select: { name: true, image: true },

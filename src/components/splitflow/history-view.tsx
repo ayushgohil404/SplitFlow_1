@@ -99,7 +99,6 @@ export function HistoryView() {
         if (!map[key]) map[key] = [];
         map[key].push(exp);
       } catch {
-        // skip
       }
     }
     return map;

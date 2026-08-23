@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Compute net balance for each user:
-    // net = total paid (as createdBy of expenses) - total owed (sum of their ExpenseSplit amounts) - total sent as settlements + total received as settlements
     const balances: Map<string, number> = new Map()
 
     for (const m of members) {

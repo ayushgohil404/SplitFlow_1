@@ -97,7 +97,6 @@ export function AIAssistantView() {
           setFriends(fData.friends || []);
         }
       } catch {
-        // silent
       }
     }
     fetchData();
@@ -123,11 +122,9 @@ export function AIAssistantView() {
         category: expense.category,
         splitType: expense.splitType === 'single' ? 'equal' : expense.splitType,
       };
-      // For single/personal expenses, don't send splits — backend creates a self-only split
       if (expense.splitType !== 'single') {
       if (groupId) { body.groupId = groupId; }
       if (expense.splitType === 'exact' && expense.splits) {
-        // Resolve friend names to userIds — include "me" so the backend creates the user's split too
         const allSplits = expense.splits
           .map((s: any) => {
             if (s.name === 'me') return { userId: user?.id, amount: s.amount || 0 };
@@ -174,7 +171,7 @@ export function AIAssistantView() {
           share: es.share || 1,
         }));
       }
-      } // end if (expense.splitType !== 'single')
+      }
       const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -223,7 +220,6 @@ export function AIAssistantView() {
     setLoading(true);
 
     try {
-      // Build conversation history (exclude system messages, just user/assistant pairs)
       const history = messages
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({ role: m.role, content: m.content }));
