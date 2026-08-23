@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -15,6 +16,8 @@ import {
   LogOut,
   ArrowLeft,
   Clock,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -169,21 +172,66 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function ViewErrorFallback({ viewName, onReset }: { viewName: string; onReset: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-3">
+        <AlertCircle className="w-7 h-7 text-red-500" />
+      </div>
+      <h3 className="text-base font-semibold text-gray-900 mb-1">Something went wrong</h3>
+      <p className="text-sm text-gray-500 mb-4 max-w-xs">Failed to load {viewName}. Your data is safe.</p>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={onReset} className="gap-1.5">
+          <RefreshCw className="w-3.5 h-3.5" /> Try Again
+        </Button>
+        <Button size="sm" onClick={() => useAppStore.getState().setView('dashboard')} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+          Go to Dashboard
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+class ViewErrorBoundary extends React.Component<
+  { children: React.ReactNode; viewName: string },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; viewName: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`[SplitFlow] ${this.props.viewName} crashed:`, error, errorInfo);
+  }
+  handleReset = () => this.setState({ hasError: false });
+  render() {
+    if (this.state.hasError) {
+      return <ViewErrorFallback viewName={this.props.viewName} onReset={this.handleReset} />;
+    }
+    return this.props.children;
+  }
+}
+
 function ViewRouter() {
   const { view } = useAppStore();
 
-  const viewComponents: Record<View, React.ReactNode> = {
-    dashboard: <DashboardView />,
-    groups: <GroupsView />,
-    'group-detail': <GroupDetailView />,
-    'add-expense': <AddExpenseView />,
-    settle: <SettleView />,
-    analytics: <AnalyticsView />,
-    activity: <ActivityView />,
-    'ai-assistant': <AIAssistantView />,
-    friends: <FriendsView />,
-    history: <HistoryView />,
+  const viewConfig: Record<View, { label: string; component: React.ReactNode }> = {
+    dashboard: { label: 'Dashboard', component: <DashboardView /> },
+    groups: { label: 'Groups', component: <GroupsView /> },
+    'group-detail': { label: 'Group Details', component: <GroupDetailView /> },
+    'add-expense': { label: 'Add Expense', component: <AddExpenseView /> },
+    settle: { label: 'Settle Up', component: <SettleView /> },
+    analytics: { label: 'Analytics', component: <AnalyticsView /> },
+    activity: { label: 'Activity', component: <ActivityView /> },
+    'ai-assistant': { label: 'AI Assistant', component: <AIAssistantView /> },
+    friends: { label: 'Friends', component: <FriendsView /> },
+    history: { label: 'History', component: <HistoryView /> },
   };
+
+  const current = viewConfig[view];
 
   return (
     <AnimatePresence mode="wait">
@@ -194,7 +242,9 @@ function ViewRouter() {
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.15, ease: 'easeOut' }}
       >
-        {viewComponents[view]}
+        <ViewErrorBoundary key={view} viewName={current.label}>
+          {current.component}
+        </ViewErrorBoundary>
       </motion.div>
     </AnimatePresence>
   );

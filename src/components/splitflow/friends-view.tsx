@@ -400,7 +400,7 @@ export function FriendsView() {
                     <CardContent className="p-4 flex items-center gap-3">
                       <Avatar className="w-10 h-10">
                         <AvatarFallback className="bg-emerald-50 text-emerald-700 text-sm font-semibold">
-                          {friend.name?.charAt(0)?.toUpperCase() || friend.email.charAt(0).toUpperCase()}
+                          {friend.name?.charAt(0)?.toUpperCase() || friend.email?.charAt(0)?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
@@ -438,7 +438,7 @@ export function FriendsView() {
                                 <div key={b.groupId} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
                                   <span className="text-sm text-gray-700">{b.groupEmoji} {b.groupName}</span>
                                   <span className={`text-sm font-medium ${b.amount > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                    {b.amount > 0 ? '+' : ''}₹{b.amount.toFixed(2)}
+                                    {b.amount > 0 ? '+' : ''}₹{(Number(b.amount) || 0).toFixed(2)}
                                   </span>
                                 </div>
                               ))}
@@ -482,7 +482,7 @@ export function FriendsView() {
                   <p className="text-xs text-gray-400">{d.isEmail ? 'Not yet a user' : 'Not friends'}</p>
                 </div>
                 <span className={`text-sm font-bold ${d.amount > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {d.amount > 0 ? '+' : ''}₹{d.amount.toFixed(2)}
+                  {d.amount > 0 ? '+' : ''}₹{(Number(d.amount) || 0).toFixed(2)}
                 </span>
               </CardContent>
             </Card>

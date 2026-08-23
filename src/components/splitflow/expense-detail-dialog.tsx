@@ -144,7 +144,7 @@ export function ExpenseDetailDialog({
                   <Receipt className="w-3 h-3" />Amount
                 </p>
                 <p className="text-lg font-bold text-gray-900">
-                  ₹{expense.amount.toFixed(2)}
+                  ₹{(Number(expense.amount) || 0).toFixed(2)}
                 </p>
               </div>
               <div className="space-y-1">
@@ -191,14 +191,14 @@ export function ExpenseDetailDialog({
                   <div key={split.userId} className="flex items-center gap-2">
                     <Avatar className="w-7 h-7">
                       <AvatarFallback className="bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                        {split.userName.charAt(0).toUpperCase()}
+                        {split.userName?.charAt(0)?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <span className="flex-1 text-sm text-gray-700">
                       {split.userName}
                     </span>
                     <span className="text-sm font-semibold text-gray-900">
-                      ₹{split.amount.toFixed(2)}
+                      ₹{(Number(split.amount) || 0).toFixed(2)}
                     </span>
                   </div>
                 ))}

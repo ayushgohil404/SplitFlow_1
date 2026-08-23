@@ -5,7 +5,7 @@ import type { ChatCompletionMessageParam } from 'groq-sdk/resources/chat/complet
 export const CHAT_MODEL = 'llama-3.3-70b-versatile';
 const FALLBACK_CHAT_MODELS = [
   'llama-3.1-8b-instant',
-  'llama3-70b-8192',
+  'gemma2-9b-it',
 ];
 
 // Vision model for receipt scanning

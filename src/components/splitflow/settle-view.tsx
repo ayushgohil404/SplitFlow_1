@@ -300,7 +300,7 @@ export function SettleView() {
                       }`}
                     >
                       {gb.yourBalance >= 0 ? '+' : ''}
-                      ₹{gb.yourBalance.toFixed(2)}
+                      ₹{(Number(gb.yourBalance) || 0).toFixed(2)}
                     </span>
                   </button>
                 );
@@ -383,7 +383,7 @@ export function SettleView() {
                         {isOwedToYou && <p className="text-xs text-emerald-600 mt-0.5">Owed to you</p>}
                       </div>
                       <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-red-500' : isOwedToYou ? 'text-emerald-600' : 'text-gray-700'}`}>
-                        ₹{b.amount.toFixed(2)}
+                        ₹{(Number(b.amount) || 0).toFixed(2)}
                       </span>
                     </CardContent>
                   </Card>
@@ -406,7 +406,7 @@ export function SettleView() {
                   {simplified.map((p, idx) => (
                     <div key={idx} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-emerald-100">
                       <span className="text-sm flex-1 text-gray-900 font-medium">{p.fromUserId} → {p.toUserId}</span>
-                      <span className="text-sm font-bold text-emerald-700">₹{p.amount.toFixed(2)}</span>
+                      <span className="text-sm font-bold text-emerald-700">₹{(Number(p.amount) || 0).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -426,7 +426,7 @@ export function SettleView() {
                       <p className="text-sm text-gray-900">{s.from?.name} paid {s.to?.name}</p>
                       {s.note && <p className="text-xs text-gray-500">{s.note}</p>}
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">₹{s.amount.toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-gray-700">₹{(Number(s.amount) || 0).toFixed(2)}</span>
                   </div>
                 ))}
               </div>

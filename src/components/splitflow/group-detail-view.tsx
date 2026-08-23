@@ -402,7 +402,7 @@ export function GroupDetailView() {
                       </p>
                     </div>
                     <span className="text-sm font-semibold text-gray-900 shrink-0">
-                      ₹{exp.amount.toFixed(2)}
+                      ₹{(Number(exp.amount) || 0).toFixed(2)}
                     </span>
                   </CardContent>
                 </Card>
@@ -491,7 +491,7 @@ export function GroupDetailView() {
                         </p>
                       </div>
                       <span className={`text-sm font-bold ${isYouOwe ? 'text-red-500' : 'text-emerald-600'}`}>
-                        {isYouOwe ? '-' : '+'}₹{bal.amount.toFixed(2)}
+                        {isYouOwe ? '-' : '+'}₹{(Number(bal.amount) || 0).toFixed(2)}
                       </span>
                     </CardContent>
                   </Card>
