@@ -123,26 +123,28 @@ export function AIAssistantView() {
         category: expense.category,
         splitType: expense.splitType === 'single' ? 'equal' : expense.splitType,
       };
+      // For single/personal expenses, don't send splits — backend creates a self-only split
+      if (expense.splitType !== 'single') {
       if (groupId) { body.groupId = groupId; }
       if (expense.splitType === 'exact' && expense.splits) {
-        // Resolve friend names to userIds
-        const nonMeSplits = expense.splits
-          .filter((s: any) => s.name !== 'me')
+        // Resolve friend names to userIds — include "me" so the backend creates the user's split too
+        const allSplits = expense.splits
           .map((s: any) => {
+            if (s.name === 'me') return { userId: user?.id, amount: s.amount || 0 };
             const friend = friends.find((f) => f.name?.toLowerCase() === s.name?.toLowerCase() || f.email?.split('@')[0].toLowerCase() === s.name?.toLowerCase());
-            return { userId: friend?.id, amount: s.amount || 0 };
+            return friend ? { userId: friend.id, amount: s.amount || 0 } : null;
           })
-          .filter((s: any) => s.userId);
-        if (nonMeSplits.length > 0) body.splits = nonMeSplits;
+          .filter((s: any) => s?.userId);
+        if (allSplits.length > 0) body.splits = allSplits;
       } else if (expense.splitType === 'percentage' && expense.splits) {
-        const nonMeSplits = expense.splits
-          .filter((s: any) => s.name !== 'me')
+        const allSplits = expense.splits
           .map((s: any) => {
+            if (s.name === 'me') return { userId: user?.id, percentage: s.percentage || 0 };
             const friend = friends.find((f) => f.name?.toLowerCase() === s.name?.toLowerCase() || f.email?.split('@')[0].toLowerCase() === s.name?.toLowerCase());
-            return { userId: friend?.id, percentage: s.percentage || 0 };
+            return friend ? { userId: friend.id, percentage: s.percentage || 0 } : null;
           })
-          .filter((s: any) => s.userId);
-        if (nonMeSplits.length > 0) body.splits = nonMeSplits;
+          .filter((s: any) => s?.userId);
+        if (allSplits.length > 0) body.splits = allSplits;
       } else if (expense.splitType === 'share' && expense.splits) {
         body.splitType = 'equal';
         const shareSplits = expense.splits
@@ -172,6 +174,7 @@ export function AIAssistantView() {
           share: es.share || 1,
         }));
       }
+      } // end if (expense.splitType !== 'single')
       const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
