@@ -11,8 +11,8 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const limit = parseInt(searchParams.get('limit') ?? '50', 10)
-    const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+    const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10) || 50, 100)
+    const offset = Math.max(parseInt(searchParams.get('offset') ?? '0', 10) || 0, 0)
     const filter = searchParams.get('filter') // 'all' | 'group' | 'direct'
     const search = searchParams.get('search') // search in description
     const category = searchParams.get('category')
@@ -34,56 +34,78 @@ export async function GET(req: NextRequest) {
       where.category = category.trim()
     }
 
-    // Get all expenses where user is involved:
-    // 1. Expenses the user created (paid for)
-    // 2. Expenses where user has a split
-    const [paidExpenses, splitExpenses] = await Promise.all([
-      db.expense.findMany({
-        where: { ...where, createdBy: user.id },
-        select: { id: true },
-      }),
-      db.expenseSplit.findMany({
-        where: { userId: user.id },
-        select: { expenseId: true },
-      }),
-    ])
+    // Get all expense IDs where user is involved (paid or has a split)
+    let expenseIds: Set<string>
+    try {
+      const [paidExpenses, splitExpenses] = await Promise.all([
+        db.expense.findMany({
+          where: { ...where, createdBy: user.id },
+          select: { id: true },
+        }),
+        db.expenseSplit.findMany({
+          where: { userId: user.id },
+          select: { expenseId: true },
+        }),
+      ])
+      expenseIds = new Set<string>()
+      paidExpenses.forEach((e) => expenseIds.add(e.id))
+      splitExpenses.forEach((e) => expenseIds.add(e.expenseId))
+    } catch (idErr: any) {
+      console.error('[History] Failed to fetch expense IDs:', idErr?.message || idErr)
+      // Return empty rather than crash
+      return NextResponse.json({ expenses: [], total: 0 })
+    }
 
-    const expenseIds = new Set<string>()
-    paidExpenses.forEach((e) => expenseIds.add(e.id))
-    splitExpenses.forEach((e) => expenseIds.add(e.expenseId))
+    if (expenseIds.size === 0) {
+      return NextResponse.json({ expenses: [], total: 0 })
+    }
 
-    const expenses = await db.expense.findMany({
-      where: {
-        id: { in: Array.from(expenseIds) },
-        ...where,
-      },
-      include: {
-        splits: {
-          include: {
-            user: {
-              select: { id: true, name: true, image: true },
+    const idArray = Array.from(expenseIds)
+
+    // Fetch expenses with relations
+    let expenses: any[]
+    try {
+      expenses = await db.expense.findMany({
+        where: {
+          id: { in: idArray },
+          ...where,
+        },
+        include: {
+          splits: {
+            include: {
+              user: {
+                select: { id: true, name: true, image: true },
+              },
             },
           },
+          nonUserSplits: true,
+          paidBy: {
+            select: { id: true, name: true, image: true },
+          },
+          group: {
+            select: { id: true, name: true, emoji: true, currency: true },
+          },
         },
-        nonUserSplits: true,
-        paidBy: {
-          select: { id: true, name: true, image: true },
-        },
-        group: {
-          select: { id: true, name: true, emoji: true, currency: true },
-        },
-      },
-      orderBy: { date: 'desc' },
-      take: limit,
-      skip: offset,
-    })
+        orderBy: { date: 'desc' },
+        take: limit,
+        skip: offset,
+      })
+    } catch (expErr: any) {
+      console.error('[History] Failed to fetch expenses:', expErr?.message || expErr)
+      return NextResponse.json({ expenses: [], total: 0 })
+    }
 
-    const total = await db.expense.count({
-      where: {
-        id: { in: Array.from(expenseIds) },
-        ...where,
-      },
-    })
+    let total: number
+    try {
+      total = await db.expense.count({
+        where: {
+          id: { in: idArray },
+          ...where,
+        },
+      })
+    } catch {
+      total = expenses.length
+    }
 
     return NextResponse.json({ expenses, total })
   } catch (error) {

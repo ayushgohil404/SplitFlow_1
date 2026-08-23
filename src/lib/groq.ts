@@ -32,8 +32,66 @@ export function isGroqConfigured(): boolean {
   return true;
 }
 
+export function isGeminiConfigured(): boolean {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || key.length < 10) return false;
+  return true;
+}
+
 /**
- * Call Groq chat completion with automatic model fallback.
+ * Call Gemini API (free tier) as a last-resort fallback.
+ */
+export async function chatWithGemini(
+  messages: { role: string; content: string }[],
+  options: { temperature?: number; max_tokens?: number } = {}
+): Promise<string> {
+  const { temperature = 0.4, max_tokens = 2048 } = options;
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
+
+  const model = 'gemini-2.0-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  // Separate system prompt from conversation
+  let systemInstruction: string | undefined;
+  const contents: { role: string; parts: { text: string }[] }[] = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      systemInstruction = msg.content;
+    } else {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      });
+    }
+  }
+
+  const body: any = { contents };
+  if (systemInstruction) {
+    body.systemInstruction = { parts: [{ text: systemInstruction }] };
+  }
+  body.generationConfig = { temperature, maxOutputTokens: max_tokens };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Gemini ${model} failed (${res.status}): ${text.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  if (!content) throw new Error('Empty response from Gemini');
+  return content;
+}
+
+/**
+ * Call Groq chat completion with automatic model fallback + Gemini as final fallback.
  */
 export async function chatWithFallback(
   messages: ChatCompletionMessageParam[],
@@ -51,53 +109,74 @@ export async function chatWithFallback(
     fallbackModels = FALLBACK_CHAT_MODELS,
   } = options;
 
-  let groq: Groq;
+  // --- Try Groq models first ---
+  let groq: Groq | null = null;
   try {
     groq = getGroq();
-  } catch (initErr: any) {
-    throw new Error('GROQ_API_KEY is not configured. ' + (initErr.message || ''));
+  } catch {
+    // Groq not configured, will skip to Gemini
   }
 
-  const allModels = [primaryModel, ...fallbackModels];
-  let lastError: any = null;
-  const errors: string[] = [];
+  if (groq) {
+    const allModels = [primaryModel, ...fallbackModels];
+    let lastError: any = null;
+    const errors: string[] = [];
 
-  for (const model of allModels) {
+    for (const model of allModels) {
+      try {
+        const response = await groq.chat.completions.create({
+          model,
+          messages,
+          temperature,
+          max_tokens,
+        });
+        const content = response.choices?.[0]?.message?.content ?? '';
+        if (content) return content;
+        throw new Error('Empty response from model');
+      } catch (err: any) {
+        lastError = err;
+        const status = err.status || '';
+        const code = err.code || '';
+        const msg = err.message || 'unknown';
+        const errInfo = `[Groq] ${model}: status=${status} code=${code} msg=${msg}`;
+        console.error(errInfo);
+        errors.push(errInfo);
+
+        // Don't retry on auth errors
+        if (status === 401 || status === 403) break;
+        // Don't retry on context length exceeded
+        if (msg.includes('context_length') || msg.includes('token limit') || msg.includes('max_tokens')) {
+          throw new Error('Input too long for AI. Please use a shorter message.');
+        }
+      }
+    }
+
+    // If Groq failed with auth error, don't try Gemini for that
+    const lastStatus = lastError?.status;
+    if (lastStatus === 401 || lastStatus === 403) {
+      console.error('[Groq] Auth error, skipping Gemini fallback');
+      throw new Error('AI API key is invalid or expired. Please update GROQ_API_KEY.');
+    }
+
+    console.error('[Groq] All models failed, trying Gemini...');
+  }
+
+  // --- Try Gemini as final fallback ---
+  if (isGeminiConfigured()) {
     try {
-      const response = await groq.chat.completions.create({
-        model,
-        messages,
-        temperature,
-        max_tokens,
-      });
-      const content = response.choices?.[0]?.message?.content ?? '';
-      if (content) return content;
-      throw new Error('Empty response from model');
-    } catch (err: any) {
-      lastError = err;
-      const status = err.status || '';
-      const code = err.code || '';
-      const msg = err.message || 'unknown';
-      const errInfo = `[Groq] ${model}: status=${status} code=${code} msg=${msg}`;
-      console.error(errInfo);
-      errors.push(errInfo);
-
-      // Don't retry on auth errors
-      if (status === 401 || status === 403) {
-        throw new Error('AI API key is invalid or expired. Please update GROQ_API_KEY.');
-      }
-      // Don't retry on context length exceeded
-      if (msg.includes('context_length') || msg.includes('token limit') || msg.includes('max_tokens')) {
-        throw new Error('Input too long for AI. Please use a shorter message.');
-      }
-      // Continue to next model
+      const result = await chatWithGemini(messages as any, { temperature, max_tokens });
+      console.error('[Gemini] Success - Groq all failed');
+      return result;
+    } catch (geminiErr: any) {
+      console.error('[Gemini] Also failed:', geminiErr?.message || geminiErr);
+      throw new Error(
+        `All AI providers failed. Groq: ${(lastError as any)?.message || 'not configured'}. Gemini: ${geminiErr?.message || 'not configured'}`
+      );
     }
   }
 
-  // Log all errors for debugging
-  console.error('[Groq] All models failed:', errors.join(' | '));
-  const status = (lastError as any)?.status || '';
-  const msg = lastError?.message || 'unknown';
-  const detail = status ? `${status}: ${msg}` : msg;
-  throw new Error(`All AI models failed: ${detail}`);
+  // No AI provider available
+  throw new Error(
+    'No AI provider available. Please add GROQ_API_KEY or GEMINI_API_KEY to your environment variables.'
+  );
 }

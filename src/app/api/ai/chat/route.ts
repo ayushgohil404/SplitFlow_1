@@ -346,12 +346,11 @@ Before the JSON block, write a friendly confirmation message like "I've prepared
     const status = error?.status || ''
     let userMessage = 'Something went wrong. Please try again.'
     if (msg.includes('API key') || msg.includes('not configured') || status === 401 || status === 403) {
-      userMessage = 'AI API key is invalid or expired. Please update GROQ_API_KEY in Vercel environment settings.'
+      userMessage = 'AI is not configured. Please add GROQ_API_KEY or GEMINI_API_KEY (free) in your Vercel environment settings.'
     } else if (msg.includes('rate limit') || status === 429) {
       userMessage = 'AI is rate limited. Please wait a moment and try again.'
-    } else if (msg.includes('All AI models failed')) {
-      const detail = msg.replace('All AI models failed: ', '')
-      userMessage = `AI models unavailable (${detail}). Please try again in a few minutes.`
+    } else if (msg.includes('All AI providers failed')) {
+      userMessage = 'All AI services are unavailable right now. Please try again in a few minutes.'
     } else if (msg.includes('too long') || msg.includes('token limit') || msg.includes('context_length')) {
       userMessage = 'Conversation too long. Start a new chat or clear history.'
     } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
