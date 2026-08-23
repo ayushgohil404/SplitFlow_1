@@ -117,11 +117,11 @@ export function DashboardView() {
   if (error && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-4">
           <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
-        <p className="text-sm text-gray-500 mb-6 max-w-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Something went wrong</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
           We couldn&apos;t load your dashboard data. This might be a temporary issue.
         </p>
         <Button onClick={fetchData} variant="outline" className="gap-2">
@@ -139,25 +139,25 @@ export function DashboardView() {
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center py-16 text-center"
       >
-        <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mb-6">
-          <CircleDollarSign className="w-10 h-10 text-emerald-500" />
+        <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-6">
+          <CircleDollarSign className="w-10 h-10 text-emerald-500 dark:text-emerald-400" />
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome to SplitFlow!</h3>
-        <p className="text-gray-500 mb-2 max-w-sm leading-relaxed">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Welcome to SplitFlow!</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-2 max-w-sm leading-relaxed">
           Start splitting expenses in 3 easy steps:
         </p>
         <div className="max-w-xs w-full text-left mb-8 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shrink-0">1</div>
-            <p className="text-sm text-gray-600">Create a group with your friends or roommates</p>
+            <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm font-bold shrink-0">1</div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Create a group with your friends or roommates</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shrink-0">2</div>
-            <p className="text-sm text-gray-600">Add expenses as they happen</p>
+            <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm font-bold shrink-0">2</div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Add expenses as they happen</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shrink-0">3</div>
-            <p className="text-sm text-gray-600">Settle up easily with one click</p>
+            <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm font-bold shrink-0">3</div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Settle up easily with one click</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 justify-center">
@@ -192,13 +192,13 @@ export function DashboardView() {
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-500">You are owed</p>
-                          <p className="text-3xl font-bold text-emerald-600 mt-1">
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You are owed</p>
+                          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                             ₹{balance?.totalOwed?.toFixed(2) || '0.00'}
                           </p>
-                          <p className="text-xs text-gray-400 mt-1">Across all groups</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Across all groups</p>
                         </div>
-                        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
                           <ArrowUpRight className="w-6 h-6 text-emerald-600" />
                         </div>
                       </div>
@@ -222,13 +222,13 @@ export function DashboardView() {
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-500">You owe</p>
-                          <p className="text-3xl font-bold text-red-500 mt-1">
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You owe</p>
+                          <p className="text-3xl font-bold text-red-500 dark:text-red-400 mt-1">
                             ₹{balance?.totalOwing?.toFixed(2) || '0.00'}
                           </p>
-                          <p className="text-xs text-gray-400 mt-1">Across all groups</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Across all groups</p>
                         </div>
-                        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
                           <ArrowDownRight className="w-6 h-6 text-red-500" />
                         </div>
                       </div>

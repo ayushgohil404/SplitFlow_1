@@ -34,7 +34,7 @@ export function AuthPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
@@ -54,14 +54,14 @@ export function AuthPage() {
                 <div className="w-11 h-11 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-200">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">
-                  Split<span className="text-emerald-600">Flow</span>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+                  Split<span className="text-emerald-600 dark:text-emerald-400">Flow</span>
                 </h1>
               </div>
-              <p className="text-xl text-gray-700 font-medium">
+              <p className="text-xl text-gray-700 dark:text-gray-200 font-medium">
                 Split expenses, not friendships.
               </p>
-              <p className="text-sm text-gray-500 max-w-md mx-auto lg:mx-0 leading-relaxed">
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto lg:mx-0 leading-relaxed">
                 The AI-powered expense splitting app that makes managing shared costs effortless. 
                 Smarter than Splitwise, and completely free.
               </p>
@@ -81,12 +81,12 @@ export function AuthPage() {
                   transition={{ delay: 0.4 + i * 0.05 }}
                   className="flex items-start gap-3"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                    <f.icon className="w-4 h-4 text-emerald-600" />
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                    <f.icon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">{f.title}</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{f.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{f.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -99,10 +99,10 @@ export function AuthPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+            <Card className="shadow-xl border border-gray-100 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
               <CardHeader className="text-center pb-4">
-                <CardTitle className="text-2xl">Get Started Free</CardTitle>
-                <CardDescription>Sign in with your GitHub or Google account</CardDescription>
+                <CardTitle className="text-2xl dark:text-white">Get Started Free</CardTitle>
+                <CardDescription className="dark:text-gray-400">Sign in with your GitHub or Google account</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {/* GitHub OAuth */}
@@ -144,7 +144,7 @@ export function AuthPage() {
         </motion.div>
       </div>
 
-      <footer className="text-center py-4 text-xs text-gray-400">
+      <footer className="text-center py-4 text-xs text-gray-400 dark:text-gray-600">
         Free forever. No ads. No premium. Built with care
       </footer>
     </div>

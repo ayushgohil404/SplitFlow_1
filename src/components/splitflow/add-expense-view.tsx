@@ -519,6 +519,88 @@ export function AddExpenseView() {
     return valid;
   };
 
+  // Open email client with pre-drafted HTML for non-registered users
+  const openEmailForNonRegistered = (participants: EmailParticipant[], desc: string, amt: string) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://splitflow-1.vercel.app';
+    const landingUrl = `${baseUrl}/landing`;
+    const toEmails = participants.map((p) => p.email).join(',');
+    const names = participants.map((p) => p.name).join(', ');
+    const userName = user?.name || 'Someone';
+
+    const htmlBody = `
+<html>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#059669,#0d9488);padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);">
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#059669,#0d9488);padding:40px 30px;text-align:center;">
+          <div style="font-size:36px;margin-bottom:10px;">💰</div>
+          <h1 style="margin:0;color:white;font-size:24px;font-weight:800;">Split<span style="color:#a7f3d0;">Flow</span></h1>
+          <p style="margin:8px 0 0;color:#a7f3d0;font-size:14px;">AI-Powered Expense Splitting</p>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="padding:35px 30px;">
+          <h2 style="margin:0 0 15px;color:#111827;font-size:20px;">Hey ${names}! 👋</h2>
+          <p style="margin:0 0 20px;color:#4b5563;font-size:15px;line-height:1.6;">
+            <strong>${userName}</strong> just added an expense on SplitFlow and split it with you!
+          </p>
+          <!-- Expense Card -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:20px;margin-bottom:25px;">
+            <tr>
+              <td style="padding:5px 0;color:#059669;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Expense</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 0;color:#111827;font-size:22px;font-weight:700;">${desc}</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 0;color:#059669;font-size:28px;font-weight:800;">₹${amt}</td>
+            </tr>
+          </table>
+          <p style="margin:0 0 25px;color:#4b5563;font-size:15px;line-height:1.6;">
+            Sign up for <strong>SplitFlow</strong> to see your balance, track shared expenses, and settle up easily. It's <strong>100% free</strong>!
+          </p>
+          <!-- CTA Button -->
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td align="center">
+              <a href="${landingUrl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#0d9488);color:white;text-decoration:none;padding:16px 40px;border-radius:14px;font-size:16px;font-weight:700;box-shadow:0 10px 30px rgba(5,150,105,0.3);">
+                Join SplitFlow Free →
+              </a>
+            </td></tr>
+          </table>
+          <!-- Features -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:30px;border-top:1px solid #f3f4f6;padding-top:25px;">
+            <tr>
+              <td width="33%" style="text-align:center;padding:10px;">
+                <div style="font-size:24px;">🤖</div>
+                <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">AI-Powered</p>
+              </td>
+              <td width="33%" style="text-align:center;padding:10px;">
+                <div style="font-size:24px;">📊</div>
+                <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">Analytics</p>
+              </td>
+              <td width="33%" style="text-align:center;padding:10px;">
+                <div style="font-size:24px;">🧾</div>
+                <p style="margin:5px 0 0;color:#6b7280;font-size:11px;font-weight:600;">Receipt Scan</p>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #f3f4f6;text-align:center;">
+          <p style="margin:0;color:#9ca3af;font-size:12px;">Split expenses, not friendships. • <a href="${landingUrl}" style="color:#059669;">splitflow-1.vercel.app</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const subject = encodeURIComponent(`You've been added to an expense on SplitFlow - ${desc}`);
+    const bodyParam = encodeURIComponent(htmlBody);
+    window.open(`mailto:${toEmails}?subject=${subject}&body=${bodyParam}`, '_self');
+  };
+
   // Submit expense
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -618,6 +700,10 @@ export function AddExpenseView() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        // If there are non-registered email participants, open email client
+        if (emailParticipants.length > 0) {
+          openEmailForNonRegistered(emailParticipants, description, amount);
+        }
         toast.success('Expense added!');
         if (mode === 'group' && groupId) {
           navigateToGroup(groupId);
@@ -764,16 +850,16 @@ export function AddExpenseView() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Add Expense</h2>
-        <p className="text-sm text-gray-500 mt-1">Record a new expense and split it.</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add Expense</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Record a new expense and split it.</p>
       </div>
 
       {/* AI Natural Language Input */}
-      <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
+      <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/30 dark:to-teal-950/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2.5">
             <Sparkles className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-semibold text-gray-900 text-sm">Quick Add with AI</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Quick Add with AI</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
