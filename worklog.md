@@ -1,18 +1,21 @@
 ---
 Task ID: 1
-Agent: main
-Task: Fix Prisma error and AI chat issues
+Agent: Main
+Task: Fix AI decommissioned model error + History page "Something went wrong" crash
 
 Work Log:
-- Identified root cause: AI chat route used `db.user.findMany({ where: { sentFriendRequests: ... } })` which fails on deployed Prisma client
-- Replaced with `db.friendship.findMany()` direct query (same pattern as working /api/friends)
-- Added `prisma generate` to build script to prevent stale client issues on Vercel
-- Fixed confirmExpense bug: exact/percentage splits were filtering out "me", causing user's own split to be lost
-- Added single expense guard: skip splits processing for personal expenses
-- Audited all 15+ API routes - no other Prisma relation field issues found
+- Diagnosed AI error: Groq decommissioned `llama3-70b-8192`, replaced with `gemma2-9b-it` in groq.ts
+- Built project successfully - no compile errors found for history page
+- Ran subagent audit of all 8 view components for render-time crash risks
+- Found crash bugs in friends-view.tsx (friend.email.charAt(0) without optional chaining), settle-view.tsx (.toFixed(2) on null amounts), expense-detail-dialog.tsx (same issues)
+- Root cause: ErrorBoundary wrapped entire AppShell, so ANY view crash killed the whole app including history
+- Added per-view ViewErrorBoundary in app-shell.tsx ViewRouter - each view now isolated
+- Fixed all .toFixed(2) calls on raw API data across 5 files to use (Number(x) || 0).toFixed(2)
+- Fixed split.userName.charAt(0) and friend.email.charAt(0) with optional chaining
+- Verified build passes, pushed to GitHub
 
 Stage Summary:
-- AI chat now works: friends query uses db.friendship.findMany() instead of User relation fields
-- AI expense creation: exact/percentage splits now correctly include "me" with user's ID
-- Build script runs prisma generate before next build
-- All fixes pushed to GitHub (commits 9eead03, 12285c3)
+- AI fix: llama3-70b-8192 → gemma2-9b-it in fallback models
+- History fix: Per-view error boundaries prevent one crash from killing entire app
+- Defensive fixes: 10+ .toFixed() and .charAt() null safety fixes across 5 files
+- Deployed: commit 1d1238f pushed to main
