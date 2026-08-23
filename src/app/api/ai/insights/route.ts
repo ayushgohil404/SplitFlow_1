@@ -19,6 +19,23 @@ function extractJSON(text: string): unknown {
   }
 }
 
+function getDateFilter(range: string): Date | null {
+  const now = new Date()
+  switch (range) {
+    case 'month':
+      return new Date(now.getFullYear(), now.getMonth(), 1)
+    case '3months': {
+      const start = new Date(now)
+      start.setMonth(start.getMonth() - 3)
+      return start
+    }
+    case 'year':
+      return new Date(now.getFullYear(), 0, 1)
+    default:
+      return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser()
@@ -31,31 +48,45 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { groupId } = body as { groupId: string }
+    const { groupId, dateRange } = body as { groupId: string | null; dateRange?: string }
 
-    if (!groupId) {
-      return NextResponse.json({ error: 'groupId is required' }, { status: 400 })
+    const dateFilter = getDateFilter(dateRange || 'all')
+
+    let whereClause: any = {}
+    if (groupId) {
+      const membership = await db.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: user.id } },
+      })
+      if (!membership) {
+        return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
+      }
+      whereClause.groupId = groupId
+    } else {
+      whereClause.OR = [
+        { createdBy: user.id },
+        { splits: { some: { userId: user.id } } },
+      ]
     }
 
-    const membership = await db.groupMember.findUnique({
-      where: { groupId_userId: { groupId, userId: user.id } },
-    })
-    if (!membership) {
-      return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
+    if (dateFilter) {
+      whereClause.date = { gte: dateFilter }
     }
 
     const expenses = await db.expense.findMany({
-      where: { groupId },
+      where: whereClause,
       include: {
         splits: { include: { user: { select: { id: true, name: true } } } },
         paidBy: { select: { id: true, name: true } },
+        ...(groupId ? { group: { select: { name: true } } } : {}),
       },
       orderBy: { date: 'desc' },
     })
 
     if (expenses.length === 0) {
       return NextResponse.json({
-        insights: 'No expenses found in this group yet. Add some expenses to get insights!',
+        insights: groupId
+          ? 'No expenses found in this group yet. Add some expenses to get insights!'
+          : 'No expenses found yet. Add some expenses to get AI-powered insights!',
         summary: 'No data available',
       })
     }
@@ -63,10 +94,16 @@ export async function POST(req: NextRequest) {
     const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0)
     const categoryTotals: Record<string, number> = {}
     const memberTotals: Record<string, { name: string; paid: number; share: number }> = {}
+    const groupTotals: Record<string, number> = {}
 
     for (const expense of expenses) {
       const cat = expense.category ?? 'other'
       categoryTotals[cat] = (categoryTotals[cat] ?? 0) + expense.amount
+
+      if (expense.groupId) {
+        const gName = (expense as any).group?.name ?? 'Unknown Group'
+        groupTotals[gName] = (groupTotals[gName] ?? 0) + expense.amount
+      }
 
       const payerName = expense.paidBy?.name ?? 'Unknown'
       if (!memberTotals[expense.createdBy]) {
@@ -83,7 +120,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const expenseData = {
+    const expenseData: Record<string, unknown> = {
       totalExpenses: expenses.length,
       totalAmount: Math.round(totalAmount * 100) / 100,
       categoryBreakdown: categoryTotals,
@@ -97,7 +134,7 @@ export async function POST(req: NextRequest) {
         earliest: expenses[expenses.length - 1]?.date.toISOString() ?? null,
         latest: expenses[0]?.date.toISOString() ?? null,
       },
-      recentExpenses: expenses.slice(0, 20).map((e) => ({
+      recentExpenses: expenses.slice(0, 30).map((e) => ({
         description: e.description,
         amount: e.amount,
         category: e.category,
@@ -107,21 +144,27 @@ export async function POST(req: NextRequest) {
       })),
     }
 
+    if (Object.keys(groupTotals).length > 0) {
+      expenseData.groupBreakdown = groupTotals
+    }
+
+    const scopeLabel = groupId ? "this group's" : 'your overall'
+
     const systemPrompt = `You are a financial insights assistant for SplitFlow. Analyze the provided expense data and generate actionable insights.
 
 Return ONLY valid JSON:
 {
-  "insights": "detailed markdown analysis with sections: top categories, patterns, unusual items, trends, member comparisons, savings tips. Use headers, bullets, bold.",
+  "insights": "detailed analysis with sections: top categories, spending patterns, unusual items, trends over time, member comparisons, savings tips. Use headers (**), bullets (-), bold. Be specific with actual numbers and amounts.",
   "summary": "2-3 sentence summary"
 }
 
-Be specific with numbers. Reference actual amounts and categories. Provide practical tips.
+Be specific with numbers. Reference actual amounts and categories. Provide practical, actionable tips.
 Do NOT wrap in markdown code blocks. Return raw JSON only.`
 
     const raw = await chatWithFallback(
       [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Analyze this group's expense data:\n\n${JSON.stringify(expenseData, null, 2)}` },
+        { role: 'user', content: `Analyze ${scopeLabel} expense data:\n\n${JSON.stringify(expenseData, null, 2)}` },
       ],
       { temperature: 0.3, max_tokens: 2048 }
     )

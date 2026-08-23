@@ -183,16 +183,12 @@ export function AnalyticsView() {
   }, [filteredExpenses]);
 
   const handleAIInsights = async () => {
-    if (selectedGroupId === 'all') {
-      toast.error('Select a specific group to generate AI insights');
-      return;
-    }
     setAiLoading(true);
     try {
       const res = await fetch('/api/ai/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: selectedGroupId, dateRange }),
+        body: JSON.stringify({ groupId: selectedGroupId === 'all' ? null : selectedGroupId, dateRange }),
       });
       const data = await res.json();
       if (data.error) {
