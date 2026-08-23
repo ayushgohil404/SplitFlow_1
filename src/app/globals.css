@@ -43,75 +43,75 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ─── Light theme ─── */
+/* ─── Cherry Blossom & Pastel Garden — Light ─── */
 :root {
-  --radius: 0.625rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #059669;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1e293b;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #1e293b;
-  --destructive: #ef4444;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #059669;
-  --chart-1: #059669;
-  --chart-2: #0ea5e9;
-  --chart-3: #8b5cf6;
-  --chart-4: #f59e0b;
-  --chart-5: #ef4444;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #059669;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #1e293b;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #059669;
+  --radius: 0.75rem;
+  --background: #FFFAFB;
+  --foreground: #2D1F2E;
+  --card: #FFFFFF;
+  --card-foreground: #2D1F2E;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D1F2E;
+  --primary: #DB2777;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FDF2F8;
+  --secondary-foreground: #831843;
+  --muted: #FFF1F2;
+  --muted-foreground: #7C5E72;
+  --accent: #ECFDF5;
+  --accent-foreground: #065F46;
+  --destructive: #E11D48;
+  --border: #FECDD3;
+  --input: #FECDD3;
+  --ring: #DB2777;
+  --chart-1: #EC4899;
+  --chart-2: #A78BFA;
+  --chart-3: #34D399;
+  --chart-4: #FBBF24;
+  --chart-5: #FB7185;
+  --sidebar: #FFFBFC;
+  --sidebar-foreground: #2D1F2E;
+  --sidebar-primary: #DB2777;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #FDF2F8;
+  --sidebar-accent-foreground: #831843;
+  --sidebar-border: #FECDD3;
+  --sidebar-ring: #DB2777;
 }
 
-/* Dark theme - bright readable text */
+/* ─── Cherry Blossom Night — Dark ─── */
 .dark {
-  --background: #0a0a0f;
-  --foreground: #fafafa;
-  --card: #16161e;
-  --card-foreground: #fafafa;
-  --popover: #16161e;
-  --popover-foreground: #fafafa;
-  --primary: #22d3a7;
-  --primary-foreground: #042f2e;
-  --secondary: #1e1e2a;
-  --secondary-foreground: #e4e4e7;
-  --muted: #1c1c26;
-  --muted-foreground: #d4d4d8;
-  --accent: #1e1e2a;
-  --accent-foreground: #e4e4e7;
-  --destructive: #f87171;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #22d3a7;
-  --chart-1: #22d3a7;
-  --chart-2: #38bdf8;
-  --chart-3: #a78bfa;
-  --chart-4: #fbbf24;
-  --chart-5: #f87171;
-  --sidebar: #111118;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #22d3a7;
-  --sidebar-primary-foreground: #042f2e;
-  --sidebar-accent: #1e1e2a;
-  --sidebar-accent-foreground: #e4e4e7;
-  --sidebar-border: #27272a;
-  --sidebar-ring: #22d3a7;
+  --background: #0D0A0F;
+  --foreground: #FFF1F2;
+  --card: #1A1018;
+  --card-foreground: #FFF1F2;
+  --popover: #1A1018;
+  --popover-foreground: #FFF1F2;
+  --primary: #F9A8D4;
+  --primary-foreground: #1A0A12;
+  --secondary: #2D1B28;
+  --secondary-foreground: #F9A8D4;
+  --muted: #231520;
+  --muted-foreground: #D4B2C7;
+  --accent: #1B2A1E;
+  --accent-foreground: #A7F3D0;
+  --destructive: #FB7185;
+  --border: #3B2035;
+  --input: #3B2035;
+  --ring: #F9A8D4;
+  --chart-1: #F9A8D4;
+  --chart-2: #C4B5FD;
+  --chart-3: #6EE7B7;
+  --chart-4: #FDE68A;
+  --chart-5: #FB7185;
+  --sidebar: #110C14;
+  --sidebar-foreground: #FFF1F2;
+  --sidebar-primary: #F9A8D4;
+  --sidebar-primary-foreground: #1A0A12;
+  --sidebar-accent: #2D1B28;
+  --sidebar-accent-foreground: #F9A8D4;
+  --sidebar-border: #3B2035;
+  --sidebar-ring: #F9A8D4;
 }
 
 @layer base {
@@ -132,30 +132,35 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #F9A8D4;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #F472B6;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #3B2035;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #5C2D4A;
 }
 
-/* Dark mode premium card glow */
+/* Light mode — soft card warmth */
+.bg-card {
+  box-shadow: 0 1px 3px rgba(219,39,119,0.04), 0 1px 2px rgba(0,0,0,0.02);
+}
+
+/* Dark mode premium card glow — cherry blossom aura */
 .dark .bg-card {
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 0 0 1px rgba(249,168,212,0.06), 0 2px 12px rgba(0,0,0,0.35);
 }
 
-/* Dark mode subtle gradient on main bg */
+/* Dark mode subtle gradient on main bg — night garden */
 .dark main.bg-muted\/30 {
-  background: linear-gradient(180deg, rgba(30,30,42,0.3) 0%, rgba(10,10,15,0.5) 100%);
+  background: linear-gradient(180deg, rgba(45,27,40,0.3) 0%, rgba(13,10,15,0.5) 100%);
 }
 
-/* Dark mode input focus ring glow */
+/* Dark mode input focus ring glow — sakura pink */
 .dark input:focus, .dark textarea:focus, .dark select:focus {
-  box-shadow: 0 0 0 2px rgba(34,211,167,0.15);
+  box-shadow: 0 0 0 2px rgba(249,168,212,0.15);
 }

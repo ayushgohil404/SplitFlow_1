@@ -122,8 +122,8 @@ export function HistoryView() {
           <p className="text-xs text-primary font-medium">Total Expenses</p>
           <p className="text-2xl font-bold text-foreground mt-1">{expenses.length}</p>
         </div>
-        <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-          <p className="text-xs text-blue-400 font-medium">Total Amount</p>
+        <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-4">
+          <p className="text-xs text-violet-500 font-medium">Total Amount</p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {'₹'}{(Number(totalAmount) || 0).toFixed(2)}
           </p>
