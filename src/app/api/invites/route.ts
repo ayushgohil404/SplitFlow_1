@@ -5,14 +5,17 @@ import crypto from 'crypto'
 
 // POST /api/invites — Create an invite
 export async function POST(req: NextRequest) {
+  let parsedBody: { groupId: string; email: string } | null = null;
+  let authUserId: string | null = null;
   try {
     const user = await getAuthUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    authUserId = user.id;
 
-    const body = await req.json()
-    const { groupId, email } = body as { groupId: string; email: string }
+    parsedBody = await req.json() as { groupId: string; email: string }
+    const { groupId, email } = parsedBody
 
     if (!groupId || !email?.trim()) {
       return NextResponse.json({ error: 'groupId and email are required' }, { status: 400 })
@@ -78,8 +81,32 @@ export async function POST(req: NextRequest) {
       inviteLink: `${baseUrl}/invite/${code}`,
       expiresAt: invite.expiresAt,
     })
-  } catch (error) {
-    console.error('Error creating invite:', error)
+  } catch (error: any) {
+    console.error('[Invite] Error creating invite:', error?.message || error, 'Code:', error?.code)
+    // If it's a Prisma unique constraint error (code P2002), the invite code collided
+    if (error?.code === 'P2002') {
+      // Retry with a new code
+      try {
+        const code = crypto.randomBytes(8).toString('hex').toUpperCase()
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        const invite = await db.invite.create({
+          data: { code, groupId: parsedBody!.groupId, inviterId: authUserId!, inviteeEmail: parsedBody!.email?.trim().toLowerCase() || '', inviteeId: null, expiresAt },
+        })
+        const baseUrl = process.env.NEXTAUTH_URL || 'https://splitflow-1.vercel.app'
+        return NextResponse.json({ id: invite.id, code: invite.code, inviteLink: `${baseUrl}/invite/${code}`, expiresAt: invite.expiresAt })
+      } catch (retryErr: any) {
+        console.error('[Invite] Retry also failed:', retryErr?.message || retryErr)
+        return NextResponse.json({ error: 'Failed to generate invite code. Please try again.' }, { status: 500 })
+      }
+    }
+    // Prisma foreign key error
+    if (error?.code === 'P2003') {
+      return NextResponse.json({ error: 'Invalid group or user. Please refresh and try again.' }, { status: 400 })
+    }
+    // Prisma record not found
+    if (error?.code === 'P2025') {
+      return NextResponse.json({ error: 'Group not found. It may have been deleted.' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'Failed to create invite. Please try again.' }, { status: 500 })
   }
 }

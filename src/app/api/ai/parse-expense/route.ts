@@ -349,11 +349,16 @@ export async function POST(req: NextRequest) {
     } else if (msg.includes('rate limit') || status === 429) {
       userMessage = 'AI is rate limited. Please wait a moment and try again.'
     } else if (msg.includes('All AI models failed')) {
-      userMessage = 'AI models are currently unavailable. Please try again in a few minutes or fill the form manually.'
+      // Extract the actual detail from the error
+      const detail = msg.replace('All AI models failed: ', '')
+      userMessage = `AI models unavailable (${detail}). Please try again in a few minutes or fill the form manually.`
     } else if (msg.includes('too long') || msg.includes('token limit') || msg.includes('context_length')) {
       userMessage = 'Input is too long for AI. Please use a shorter description.'
     } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
       userMessage = 'Could not reach AI service. Please check your connection and try again.'
+    } else {
+      // Include actual error for debugging unknown issues
+      userMessage = `AI error: ${msg || 'unknown'}. Please try again or fill the form manually.`
     }
     return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 200 })
   }

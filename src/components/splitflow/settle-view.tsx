@@ -64,8 +64,8 @@ interface Settlement {
 }
 
 interface SimplifiedPayment {
-  from: string;
-  to: string;
+  fromUserId: string;
+  toUserId: string;
   amount: number;
 }
 
@@ -155,7 +155,7 @@ export function SettleView() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSimplified(data.payments || []);
+        setSimplified(data.settlements || []);
         toast.success('Optimal payment plan calculated!');
       }
     } catch {
@@ -405,7 +405,7 @@ export function SettleView() {
                 <div className="space-y-2">
                   {simplified.map((p, idx) => (
                     <div key={idx} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-emerald-100">
-                      <span className="text-sm flex-1 text-gray-900 font-medium">{p.from} → {p.to}</span>
+                      <span className="text-sm flex-1 text-gray-900 font-medium">{p.fromUserId} → {p.toUserId}</span>
                       <span className="text-sm font-bold text-emerald-700">₹{p.amount.toFixed(2)}</span>
                     </div>
                   ))}

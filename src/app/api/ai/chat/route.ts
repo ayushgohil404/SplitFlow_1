@@ -336,11 +336,14 @@ Before the JSON block, write a friendly confirmation message like "I've prepared
     } else if (msg.includes('rate limit') || status === 429) {
       userMessage = 'AI is rate limited. Please wait a moment and try again.'
     } else if (msg.includes('All AI models failed')) {
-      userMessage = 'All AI models are currently unavailable. Please try again in a few minutes.'
+      const detail = msg.replace('All AI models failed: ', '')
+      userMessage = `AI models unavailable (${detail}). Please try again in a few minutes.`
     } else if (msg.includes('too long') || msg.includes('token limit') || msg.includes('context_length')) {
       userMessage = 'Conversation too long. Start a new chat or clear history.'
     } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
       userMessage = 'Could not reach AI service. Please check your connection and try again.'
+    } else {
+      userMessage = `AI error: ${msg || 'unknown'}. Please try again.`
     }
     return NextResponse.json({ error: userMessage, code: 'AI_ERROR' }, { status: 200 })
   }

@@ -155,14 +155,15 @@ export function GroupDetailView() {
           paidBy: e.paidBy || { id: e.createdBy, name: 'Unknown' },
           splits: (e.splits || []).map((s: any) => ({
             userId: s.userId,
-            userName: 'User',
+            userName: s.user?.name || 'Unknown',
             amount: Number(s.amount),
           })),
         }));
         const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+        const memberMap = new Map(members.map(m => [m.id, m.name]));
         const balances = apiBalances.map((b: any) => ({
-          from: { id: b.fromUserId, name: 'User' },
-          to: { id: b.toUserId, name: 'User' },
+          from: { id: b.fromUserId, name: memberMap.get(b.fromUserId) || 'Unknown' },
+          to: { id: b.toUserId, name: memberMap.get(b.toUserId) || 'Unknown' },
           amount: Number(b.amount),
         }));
         setGroup({ ...g, members, expenses, totalExpenses, balances } as GroupData);
@@ -291,7 +292,7 @@ export function GroupDetailView() {
       const res = await fetch(`/api/groups/${selectedGroupId}/members`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId: user?.id }),
+        body: JSON.stringify({ userId: user?.id }),
       });
       if (res.ok) {
         toast.success('Left group');

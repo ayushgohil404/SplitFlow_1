@@ -80,7 +80,7 @@ export function ExpenseDetailDialog({
         if (res.ok) return res.json();
         throw new Error();
       })
-      .then((data) => setExpense(data))
+      .then((data) => setExpense(data.expense || data))
       .catch(() => toast.error('Failed to load expense'))
       .finally(() => setLoading(false));
   }, [open, expenseId]);

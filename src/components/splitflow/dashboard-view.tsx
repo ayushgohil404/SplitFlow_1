@@ -76,11 +76,21 @@ export function DashboardView() {
       ]);
       if (balRes.status === 'fulfilled' && balRes.value.ok) {
         const balData = await balRes.value.json();
-        setBalance(balData);
+        const allBalances = [
+          ...(balData.groups || []).flatMap((g: any) => g.balances || []),
+          ...(balData.direct || []),
+        ];
+        const totalOwed = allBalances
+          .filter((b: any) => Number(b.amount) > 0)
+          .reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+        const totalOwing = allBalances
+          .filter((b: any) => Number(b.amount) < 0)
+          .reduce((sum: number, b: any) => sum + Math.abs(Number(b.amount)), 0);
+        setBalance({ totalOwed, totalOwing, net: totalOwed - totalOwing });
       }
       if (actRes.status === 'fulfilled' && actRes.value.ok) {
         const actData = await actRes.value.json();
-        setActivities(Array.isArray(actData) ? actData : actData.items || []);
+        setActivities(Array.isArray(actData) ? actData : actData.activities || []);
       }
       if (grpRes.status === 'fulfilled' && grpRes.value.ok) {
         const grpData = await grpRes.value.json();

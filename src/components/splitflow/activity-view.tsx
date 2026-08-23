@@ -48,10 +48,12 @@ export function ActivityView() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const { on } = useSocket();
 
   const fetchActivities = useCallback(async (append = false) => {
-    const offset = append ? activities.length : 0;
+    const currentPage = append ? page : 0;
+    const offset = currentPage * 20;
     if (append) setLoadingMore(true);
     else setLoading(true);
     try {
@@ -60,22 +62,29 @@ export function ActivityView() {
       const res = await fetch(`/api/activity?${params}`);
       if (res.ok) {
         const data = await res.json();
-        const items = Array.isArray(data) ? data : data.items || [];
+        const items = Array.isArray(data) ? data : data.activities || [];
         if (append) {
           setActivities((prev) => [...prev, ...items]);
+          setPage((prev) => prev + 1);
         } else {
           setActivities(items);
+          setPage(0);
         }
         setHasMore(items.length === 20);
       }
     } catch {
-      // silent
+      console.error('Failed to fetch activities');
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filterGroup, activities.length]);
+  }, [filterGroup, page]);
 
+  useEffect(() => {
+    fetchActivities();
+  }, [fetchActivities]);
+
+  // Fetch groups for filter tabs
   useEffect(() => {
     async function fetchGroups() {
       try {
@@ -85,15 +94,16 @@ export function ActivityView() {
           setGroups(Array.isArray(data) ? data : data.groups || []);
         }
       } catch {
-        // silent
+        console.error('Failed to fetch groups for activity filter');
       }
     }
     fetchGroups();
   }, []);
 
+  // Reset page when filter changes
   useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
+    setPage(0);
+  }, [filterGroup]);
 
   // WebSocket real-time updates
   useEffect(() => {

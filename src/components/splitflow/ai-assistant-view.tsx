@@ -53,6 +53,12 @@ interface Group {
   emoji: string;
 }
 
+interface Friend {
+  id: string;
+  name: string;
+  email: string;
+}
+
 const QUICK_ACTIONS = [
   { label: 'Analyze my spending', icon: TrendingUp, prompt: 'Analyze my spending patterns and give me insights on where my money is going.' },
   { label: 'Suggest savings', icon: PiggyBank, prompt: 'Suggest ways I can save money based on my recent expenses.' },
@@ -66,27 +72,35 @@ export function AIAssistantView() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('all');
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    async function fetchGroups() {
+    async function fetchData() {
       try {
-        const res = await fetch('/api/groups');
-        if (res.ok) {
-          const data = await res.json();
+        const [groupsRes, friendsRes] = await Promise.all([
+          fetch('/api/groups'),
+          fetch('/api/friends'),
+        ]);
+        if (groupsRes.ok) {
+          const data = await groupsRes.json();
           const list = Array.isArray(data) ? data : data.groups || [];
           setGroups(list);
           if (list.length > 0) {
             setSelectedGroupId(list[0].id);
           }
         }
+        if (friendsRes.ok) {
+          const fData = await friendsRes.json();
+          setFriends(fData.friends || []);
+        }
       } catch {
         // silent
       }
     }
-    fetchGroups();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -111,16 +125,42 @@ export function AIAssistantView() {
       };
       if (groupId) { body.groupId = groupId; }
       if (expense.splitType === 'exact' && expense.splits) {
-        const nonMeSplits = expense.splits.filter((s: any) => s.name !== 'me').map((s: any) => ({ amount: s.amount || 0 }));
+        // Resolve friend names to userIds
+        const nonMeSplits = expense.splits
+          .filter((s: any) => s.name !== 'me')
+          .map((s: any) => {
+            const friend = friends.find((f) => f.name?.toLowerCase() === s.name?.toLowerCase() || f.email?.split('@')[0].toLowerCase() === s.name?.toLowerCase());
+            return { userId: friend?.id, amount: s.amount || 0 };
+          })
+          .filter((s: any) => s.userId);
         if (nonMeSplits.length > 0) body.splits = nonMeSplits;
       } else if (expense.splitType === 'percentage' && expense.splits) {
-        const nonMeSplits = expense.splits.filter((s: any) => s.name !== 'me').map((s: any) => ({ percentage: s.percentage || 0 }));
+        const nonMeSplits = expense.splits
+          .filter((s: any) => s.name !== 'me')
+          .map((s: any) => {
+            const friend = friends.find((f) => f.name?.toLowerCase() === s.name?.toLowerCase() || f.email?.split('@')[0].toLowerCase() === s.name?.toLowerCase());
+            return { userId: friend?.id, percentage: s.percentage || 0 };
+          })
+          .filter((s: any) => s.userId);
         if (nonMeSplits.length > 0) body.splits = nonMeSplits;
       } else if (expense.splitType === 'share' && expense.splits) {
         body.splitType = 'equal';
-        body.splits = expense.splits.map((s: any) => ({ share: s.share || 1 }));
+        const shareSplits = expense.splits
+          .map((s: any) => {
+            if (s.name === 'me') return { userId: user?.id, share: s.share || 1 };
+            const friend = friends.find((f) => f.name?.toLowerCase() === s.name?.toLowerCase() || f.email?.split('@')[0].toLowerCase() === s.name?.toLowerCase());
+            return friend ? { userId: friend.id, share: s.share || 1 } : null;
+          })
+          .filter(Boolean);
+        if (shareSplits.length > 0) body.splits = shareSplits;
       } else if (expense.splitType === 'equal' && expense.splits) {
-        const nonMeSplits = expense.splits.filter((s: any) => s.name !== 'me').map((s: any) => ({ share: 1 }));
+        const nonMeSplits = expense.splits
+          .filter((s: any) => s.name !== 'me')
+          .map((s: any) => {
+            const friend = friends.find((f) => f.name?.toLowerCase() === s.name?.toLowerCase() || f.email?.split('@')[0].toLowerCase() === s.name?.toLowerCase());
+            return friend ? { userId: friend.id, share: 1 } : null;
+          })
+          .filter(Boolean);
         if (nonMeSplits.length > 0) body.splits = nonMeSplits;
       }
       if (expense.emailSplits && expense.emailSplits.length > 0) {
@@ -157,7 +197,7 @@ export function AIAssistantView() {
         m.id === msgId ? { ...m, pendingExpense: undefined } : m
       ));
     }
-  }, [groups]);
+  }, [groups, friends, user]);
 
   const dismissExpense = useCallback((msgId: string) => {
     setMessages((prev) =>

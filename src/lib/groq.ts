@@ -1,13 +1,11 @@
 import Groq from 'groq-sdk';
 import type { ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions';
 
-// Primary model for chat/assistant
+// Models that are reliably available on Groq (verified list)
 export const CHAT_MODEL = 'llama-3.3-70b-versatile';
-// Fallback models in order of preference
 const FALLBACK_CHAT_MODELS = [
   'llama-3.1-8b-instant',
   'llama3-70b-8192',
-  'gemma2-9b-it',
 ];
 
 // Vision model for receipt scanning
@@ -30,15 +28,12 @@ export function getGroq(): Groq {
 
 export function isGroqConfigured(): boolean {
   const key = process.env.GROQ_API_KEY;
-  if (!key || key === 'gsk_placeholder') return false;
-  // Check if key looks valid (basic format check)
-  if (key.length < 10) return false;
+  if (!key || key === 'gsk_placeholder' || key.length < 10) return false;
   return true;
 }
 
 /**
  * Call Groq chat completion with automatic model fallback.
- * Tries primary model, then fallbacks on failure.
  */
 export async function chatWithFallback(
   messages: ChatCompletionMessageParam[],
@@ -64,7 +59,7 @@ export async function chatWithFallback(
   }
 
   const allModels = [primaryModel, ...fallbackModels];
-  let lastError: Error | null = null;
+  let lastError: any = null;
   const errors: string[] = [];
 
   for (const model of allModels) {
@@ -80,15 +75,19 @@ export async function chatWithFallback(
       throw new Error('Empty response from model');
     } catch (err: any) {
       lastError = err;
-      const errInfo = `[Groq] Model ${model} failed: ${err.message || err.status || err.code || 'unknown'}`;
+      const status = err.status || '';
+      const code = err.code || '';
+      const msg = err.message || 'unknown';
+      const errInfo = `[Groq] ${model}: status=${status} code=${code} msg=${msg}`;
       console.error(errInfo);
       errors.push(errInfo);
+
       // Don't retry on auth errors
-      if (err.status === 401 || err.status === 403) {
+      if (status === 401 || status === 403) {
         throw new Error('AI API key is invalid or expired. Please update GROQ_API_KEY.');
       }
       // Don't retry on context length exceeded
-      if (err.message?.includes('context_length') || err.message?.includes('token limit')) {
+      if (msg.includes('context_length') || msg.includes('token limit') || msg.includes('max_tokens')) {
         throw new Error('Input too long for AI. Please use a shorter message.');
       }
       // Continue to next model
@@ -96,7 +95,9 @@ export async function chatWithFallback(
   }
 
   // Log all errors for debugging
-  console.error('[Groq] All models failed. Errors:', errors.join(' | '));
-  const detail = (lastError as any)?.status || lastError?.message || 'unknown error';
+  console.error('[Groq] All models failed:', errors.join(' | '));
+  const status = (lastError as any)?.status || '';
+  const msg = lastError?.message || 'unknown';
+  const detail = status ? `${status}: ${msg}` : msg;
   throw new Error(`All AI models failed: ${detail}`);
 }

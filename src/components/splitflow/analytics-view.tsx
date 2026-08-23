@@ -110,7 +110,7 @@ export function AnalyticsView() {
     setLoading(true);
     try {
       const [expRes, grpRes] = await Promise.allSettled([
-        fetch('/api/expenses'),
+        fetch('/api/expenses/history'),
         fetch('/api/groups'),
       ]);
       if (expRes.status === 'fulfilled' && expRes.value.ok) {
