@@ -284,7 +284,7 @@ export async function POST(req: NextRequest) {
 
     if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: 'AI is not configured. Please set GROQ_API_KEY in environment variables.', code: 'NOT_CONFIGURED' },
+        { error: 'AI is not configured. Please set GEMINI_API_KEY in environment variables.', code: 'NOT_CONFIGURED' },
         { status: 200 }
       )
     }
@@ -341,10 +341,10 @@ export async function POST(req: NextRequest) {
     const status = error?.status || ''
     let userMessage = 'AI is temporarily unavailable. Please try again or fill the form manually.'
     if (msg.includes('API key') || msg.includes('not configured') || status === 401 || status === 403) {
-      userMessage = 'AI API key is invalid or expired. Please update GROQ_API_KEY in your Vercel environment settings.'
+      userMessage = 'AI API key is invalid or expired. Please update GEMINI_API_KEY in your Vercel environment settings.'
     } else if (msg.includes('rate limit') || status === 429) {
       userMessage = 'AI is rate limited. Please wait a moment and try again.'
-    } else if (msg.includes('All Gemini models failed')) {
+    } else if (msg.includes('All Gemini models failed') || msg.includes('Gemini API failed')) {
       userMessage = 'AI models are currently unavailable. Please try again in a few minutes or fill the form manually.'
     } else if (msg.includes('too long') || msg.includes('token limit') || msg.includes('context_length')) {
       userMessage = 'Input is too long for AI. Please use a shorter description.'

@@ -185,7 +185,7 @@ export function AddExpenseView() {
       if (data.error) {
         console.log('[AI Parse] Error response:', data);
         if (data.code === 'NOT_CONFIGURED') {
-          toast.error('AI is not configured. Please set a valid GROQ_API_KEY in Vercel environment variables.');
+          toast.error('AI is not configured. Please set a valid GEMINI_API_KEY in Vercel environment variables.');
         } else if (data.code === 'AI_ERROR') {
           toast.error(data.error);
         } else {

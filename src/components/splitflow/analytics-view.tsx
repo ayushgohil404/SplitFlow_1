@@ -197,7 +197,7 @@ export function AnalyticsView() {
       const data = await res.json();
       if (data.error) {
         if (data.code === 'NOT_CONFIGURED') {
-          toast.error('AI is not configured. Add GROQ_API_KEY in Vercel settings.');
+          toast.error('AI is not configured. Add GEMINI_API_KEY in Vercel settings.');
         } else {
           toast.error(data.error);
         }
