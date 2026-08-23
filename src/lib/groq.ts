@@ -91,7 +91,8 @@ export async function chatWithGemini(
 }
 
 /**
- * Call Groq chat completion with automatic model fallback + Gemini as final fallback.
+ * Call AI with automatic fallback: Groq models → Gemini.
+ * Fixed: lastError properly scoped, auth errors don't block Gemini fallback.
  */
 export async function chatWithFallback(
   messages: ChatCompletionMessageParam[],
@@ -109,18 +110,20 @@ export async function chatWithFallback(
     fallbackModels = FALLBACK_CHAT_MODELS,
   } = options;
 
+  let lastError: any = null;
+  let groqTried = false;
+
   // --- Try Groq models first ---
   let groq: Groq | null = null;
   try {
     groq = getGroq();
   } catch {
-    // Groq not configured, will skip to Gemini
+    // Groq not configured, skip to Gemini
   }
 
   if (groq) {
+    groqTried = true;
     const allModels = [primaryModel, ...fallbackModels];
-    let lastError: any = null;
-    const errors: string[] = [];
 
     for (const model of allModels) {
       try {
@@ -131,46 +134,43 @@ export async function chatWithFallback(
           max_tokens,
         });
         const content = response.choices?.[0]?.message?.content ?? '';
-        if (content) return content;
+        if (content) {
+          console.error(`[AI] Success with ${model}`);
+          return content;
+        }
         throw new Error('Empty response from model');
       } catch (err: any) {
         lastError = err;
         const status = err.status || '';
-        const code = err.code || '';
         const msg = err.message || 'unknown';
-        const errInfo = `[Groq] ${model}: status=${status} code=${code} msg=${msg}`;
-        console.error(errInfo);
-        errors.push(errInfo);
+        console.error(`[Groq] ${model} failed: status=${status} msg=${msg.slice(0, 150)}`);
 
-        // Don't retry on auth errors
-        if (status === 401 || status === 403) break;
-        // Don't retry on context length exceeded
+        // Only stop retrying on context length errors
         if (msg.includes('context_length') || msg.includes('token limit') || msg.includes('max_tokens')) {
           throw new Error('Input too long for AI. Please use a shorter message.');
         }
+        // For 401/403/400, continue to next model (don't break!)
       }
     }
-
-    // If Groq had auth error, still try Gemini (different provider)
     console.error('[Groq] All models failed, trying Gemini...');
   }
 
-  // --- Try Gemini as final fallback ---
+  // --- Try Gemini as fallback ---
   if (isGeminiConfigured()) {
     try {
       const result = await chatWithGemini(messages as any, { temperature, max_tokens });
-      console.error('[Gemini] Success - Groq all failed');
+      console.error('[AI] Success with Gemini (Groq failed)');
       return result;
     } catch (geminiErr: any) {
-      console.error('[Gemini] Also failed:', geminiErr?.message || geminiErr);
-      throw new Error(
-        `All AI providers failed. Groq: ${(lastError as any)?.message || 'not configured'}. Gemini: ${geminiErr?.message || 'not configured'}`
-      );
+      console.error('[Gemini] Failed:', geminiErr?.message?.slice(0, 150) || geminiErr);
+      const groqMsg = lastError?.message?.slice(0, 100) || (groqTried ? 'all models failed' : 'not configured');
+      throw new Error(`All AI providers failed. Groq: ${groqMsg}. Gemini: ${geminiErr?.message?.slice(0, 100) || 'failed'}`);
     }
   }
 
-  // No AI provider available
-  throw new Error(
-    'No AI provider available. Please add GROQ_API_KEY or GEMINI_API_KEY to your environment variables.'
-  );
+  // No provider worked
+  const groqInfo = groqTried
+    ? `Groq: ${lastError?.message?.slice(0, 100) || 'unknown error'}`
+    : 'Groq: not configured';
+  throw new Error(`AI not working. ${groqInfo}. Gemini: not configured. Add GROQ_API_KEY or GEMINI_API_KEY.`);
 }
