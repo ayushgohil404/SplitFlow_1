@@ -3,13 +3,7 @@ import { getAuthUser } from '@/lib/auth-utils'
 import { isGeminiConfigured } from '@/lib/groq'
 
 // Gemini models that support vision (image input)
-const VISION_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-]
-
-const ENDPOINTS = ['v1beta', 'v1']
+const VISION_MODEL = 'gemini-2.5-flash';
 
 function extractJSON(text: string): unknown {
   try {
@@ -54,52 +48,33 @@ async function callGeminiVision(base64: string, mimeType: string): Promise<strin
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured')
 
-  let lastError: Error | null = null
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${VISION_MODEL}:generateContent?key=${apiKey}`
 
-  for (const model of VISION_MODELS) {
-    for (const endpoint of ENDPOINTS) {
-      const url = `https://generativelanguage.googleapis.com/${endpoint}/models/${model}:generateContent?key=${apiKey}`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: 'Analyze this receipt image and extract all the information.' },
+          { inlineData: { mimeType, data: base64 } },
+        ],
+      }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+    }),
+  })
 
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [{
-              role: 'user',
-              parts: [
-                { text: 'Analyze this receipt image and extract all the information.' },
-                { inlineData: { mimeType, data: base64 } },
-              ],
-            }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
-          }),
-        })
-
-        if (!res.ok) {
-          const text = await res.text().catch(() => '')
-          lastError = new Error(`Gemini ${model} (${endpoint}) failed (${res.status}): ${text.slice(0, 150)}`)
-          if (res.status === 404) break // try next model
-          if (res.status === 401 || res.status === 403) throw lastError
-          continue
-        }
-
-        const data = await res.json()
-        const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-        if (content) return content
-
-        lastError = new Error(`Empty response from ${model}`)
-      } catch (err: unknown) {
-        if (err instanceof Error && (err.message.includes('unauthorized') || err.message.includes('invalid'))) {
-          throw err
-        }
-        lastError = err instanceof Error ? err : new Error(String(err))
-      }
-    }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Gemini vision failed (${res.status}): ${text.slice(0, 200)}`)
   }
 
-  throw lastError || new Error('All vision models failed')
+  const data = await res.json()
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  if (content) return content
+  throw new Error('Empty response from vision model')
 }
 
 export async function POST(req: NextRequest) {

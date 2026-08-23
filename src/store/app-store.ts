@@ -5,7 +5,6 @@ export type View =
   | 'groups' 
   | 'group-detail' 
   | 'add-expense' 
-  | 'settle' 
   | 'analytics' 
   | 'activity' 
   | 'ai-assistant'

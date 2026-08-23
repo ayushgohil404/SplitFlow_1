@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Users,
-  HandCoins,
   BarChart3,
   Activity,
   Bot,
@@ -36,7 +35,6 @@ import { DashboardView } from './dashboard-view';
 import { GroupsView } from './groups-view';
 import { GroupDetailView } from './group-detail-view';
 import { AddExpenseView } from './add-expense-view';
-import { SettleView } from './settle-view';
 import { AnalyticsView } from './analytics-view';
 import { ActivityView } from './activity-view';
 import { AIAssistantView } from './ai-assistant-view';
@@ -55,7 +53,6 @@ const navItems: NavItem[] = [
   { view: 'history', label: 'History', icon: Clock, description: 'All expense records' },
   { view: 'groups', label: 'Groups', icon: Users, description: 'Manage groups' },
   { view: 'friends', label: 'Friends', icon: UserPlus, description: 'Friends & balances' },
-  { view: 'settle', label: 'Settle Up', icon: HandCoins, description: 'Record payments' },
   { view: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Spending insights' },
   { view: 'activity', label: 'Activity', icon: Activity, description: 'Recent actions' },
   { view: 'ai-assistant', label: 'AI Assistant', icon: Bot, description: 'Ask AI anything' },
@@ -66,7 +63,6 @@ const viewLabels: Record<View, string> = {
   groups: 'Groups',
   'group-detail': 'Group Details',
   'add-expense': 'Add Expense',
-  settle: 'Settle Up',
   analytics: 'Analytics',
   activity: 'Activity',
   'ai-assistant': 'AI Assistant',
@@ -223,7 +219,6 @@ function ViewRouter() {
     groups: { label: 'Groups', component: <GroupsView /> },
     'group-detail': { label: 'Group Details', component: <GroupDetailView /> },
     'add-expense': { label: 'Add Expense', component: <AddExpenseView /> },
-    settle: { label: 'Settle Up', component: <SettleView /> },
     analytics: { label: 'Analytics', component: <AnalyticsView /> },
     activity: { label: 'Activity', component: <ActivityView /> },
     'ai-assistant': { label: 'AI Assistant', component: <AIAssistantView /> },

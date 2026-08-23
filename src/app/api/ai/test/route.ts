@@ -1,41 +1,35 @@
 import { NextResponse } from 'next/server'
 import { chatWithFallback, isGeminiConfigured } from '@/lib/groq'
 
-// GET /api/ai/test — Diagnostic endpoint (Gemini-only)
+// GET /api/ai/test — Diagnostic endpoint
 export async function GET() {
   const results: any = {
     gemini: { configured: isGeminiConfigured(), keyPrefix: (process.env.GEMINI_API_KEY || '').slice(0, 8) + '...' },
-    models: [],
   }
 
-  // Test each Gemini model
+  // Test the model directly
   if (isGeminiConfigured()) {
-    for (const model of ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']) {
-      for (const endpoint of ['v1beta', 'v1']) {
-        try {
-          const apiKey = process.env.GEMINI_API_KEY!
-          const url = `https://generativelanguage.googleapis.com/${endpoint}/models/${model}:generateContent?key=${apiKey}`
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: 'Say hi' }] }],
-              generationConfig: { maxOutputTokens: 10 },
-            }),
-          })
-          const data = await res.json().catch(() => ({}))
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-          results.models.push({
-            model,
-            endpoint,
-            status: res.ok ? 'ok' : 'error',
-            code: res.status,
-            message: res.ok ? text.slice(0, 50) : JSON.stringify(data).slice(0, 150),
-          })
-        } catch (err: any) {
-          results.models.push({ model, endpoint, status: 'error', message: (err.message || '').slice(0, 200) })
-        }
+    try {
+      const apiKey = process.env.GEMINI_API_KEY!
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: 'Say hi' }] }],
+          generationConfig: { maxOutputTokens: 10 },
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      results.model = {
+        name: 'gemini-2.5-flash',
+        status: res.ok ? 'ok' : 'error',
+        code: res.status,
+        response: res.ok ? text.slice(0, 50) : JSON.stringify(data).slice(0, 200),
       }
+    } catch (err: any) {
+      results.model = { status: 'error', message: (err.message || '').slice(0, 200) }
     }
   }
 

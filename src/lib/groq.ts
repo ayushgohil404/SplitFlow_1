@@ -3,21 +3,10 @@ export type ChatCompletionMessageParam = { role: string; content: string };
 
 // ─── Gemini-only AI (Groq removed — all models decommissioned) ───────────────
 
-export const CHAT_MODEL = 'gemini-2.0-flash';
+export const CHAT_MODEL = 'gemini-2.5-flash';
 
-// Models to try in order
-const GEMINI_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro',
-];
-
-// API endpoint variants to try
-const GEMINI_ENDPOINTS = [
-  'v1beta',
-  'v1',
-];
+// Single model as requested
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export function isGroqConfigured(): boolean {
   return false; // Groq no longer used
@@ -61,68 +50,37 @@ export async function chatWithGemini(
   }
   body.generationConfig = { temperature, maxOutputTokens: max_tokens };
 
-  let lastError: Error | null = null;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
-  // Try each model
-  for (const model of GEMINI_MODELS) {
-    // Try each endpoint variant
-    for (const endpoint of GEMINI_ENDPOINTS) {
-      const url = `https://generativelanguage.googleapis.com/${endpoint}/models/${model}:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          const errMsg = `Gemini ${model} (${endpoint}) failed (${res.status}): ${text.slice(0, 150)}`;
-          console.error(`[AI] ${errMsg}`);
-          lastError = new Error(errMsg);
-
-          // If model not found (404), try next model
-          if (res.status === 404) break; // break inner loop, try next model
-          // If auth error (401/403), no point retrying
-          if (res.status === 401 || res.status === 403) {
-            throw new Error(`Gemini API key invalid or unauthorized (${res.status}). Check your GEMINI_API_KEY.`);
-          }
-          // For other errors (400, 429, 500), try next endpoint/model
-          continue;
-        }
-
-        const data = await res.json();
-        const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        if (content) {
-          console.error(`[AI] Success with Gemini ${model} (${endpoint})`);
-          return content;
-        }
-
-        // Check for safety blocks
-        const blockReason = data?.candidates?.[0]?.finishReason;
-        if (blockReason && blockReason !== 'STOP') {
-          lastError = new Error(`Gemini response blocked: ${blockReason}`);
-          console.error(`[AI] ${lastError.message}`);
-          continue; // try next model
-        }
-
-        lastError = new Error('Empty response from Gemini');
-        console.error(`[AI] ${lastError.message}`);
-      } catch (err: unknown) {
-        if (err instanceof Error && (err.message.includes('unauthorized') || err.message.includes('invalid'))) {
-          throw err; // Re-throw auth errors immediately
-        }
-        lastError = err instanceof Error ? err : new Error(String(err));
-        console.error(`[AI] Gemini ${model} (${endpoint}) exception:`, lastError.message);
-      }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    const errMsg = `Gemini ${GEMINI_MODEL} failed (${res.status}): ${text.slice(0, 200)}`;
+    console.error(`[AI] ${errMsg}`);
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(`Gemini API key invalid or unauthorized (${res.status}). Check your GEMINI_API_KEY.`);
     }
+    throw new Error(errMsg);
   }
 
-  throw new Error(
-    `All Gemini models failed. Last error: ${lastError?.message || 'unknown'}. `
-    + `Models tried: ${GEMINI_MODELS.join(', ')}`
-  );
+  const data = await res.json();
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  if (content) {
+    console.error(`[AI] Success with Gemini ${GEMINI_MODEL}`);
+    return content;
+  }
+
+  const blockReason = data?.candidates?.[0]?.finishReason;
+  if (blockReason && blockReason !== 'STOP') {
+    throw new Error(`Gemini response blocked: ${blockReason}`);
+  }
+
+  throw new Error('Empty response from Gemini');
 }
 
 /**

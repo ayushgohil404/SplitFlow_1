@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
-  HandCoins,
   Users,
   ArrowUpRight,
   ArrowDownRight,
@@ -248,9 +247,6 @@ export function DashboardView() {
         <motion.div variants={item} className="flex flex-wrap gap-2">
           <Button onClick={() => setView('add-expense')} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
             <Plus className="w-4 h-4 mr-1.5" />Add Expense
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setView('settle')}>
-            <HandCoins className="w-4 h-4 mr-1.5" />Settle Up
           </Button>
           <Button variant="outline" size="sm" onClick={() => setView('groups')}>
             <Users className="w-4 h-4 mr-1.5" />Groups
