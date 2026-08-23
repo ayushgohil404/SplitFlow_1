@@ -43,75 +43,75 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ─── Cherry Blossom & Pastel Garden — Light ─── */
+/* ─── Ink Wash (水墨) — Light ─── */
 :root {
   --radius: 0.75rem;
-  --background: #FFFAFB;
-  --foreground: #2D1F2E;
-  --card: #FFFFFF;
-  --card-foreground: #2D1F2E;
-  --popover: #FFFFFF;
-  --popover-foreground: #2D1F2E;
-  --primary: #DB2777;
+  --background: #F7F4EE;
+  --foreground: #1C1917;
+  --card: #FDFCFA;
+  --card-foreground: #1C1917;
+  --popover: #FDFCFA;
+  --popover-foreground: #1C1917;
+  --primary: #3730A3;
   --primary-foreground: #FFFFFF;
-  --secondary: #FDF2F8;
-  --secondary-foreground: #831843;
-  --muted: #FFF1F2;
-  --muted-foreground: #7C5E72;
-  --accent: #ECFDF5;
-  --accent-foreground: #065F46;
-  --destructive: #E11D48;
-  --border: #FECDD3;
-  --input: #FECDD3;
-  --ring: #DB2777;
-  --chart-1: #EC4899;
-  --chart-2: #A78BFA;
-  --chart-3: #34D399;
-  --chart-4: #FBBF24;
-  --chart-5: #FB7185;
-  --sidebar: #FFFBFC;
-  --sidebar-foreground: #2D1F2E;
-  --sidebar-primary: #DB2777;
+  --secondary: #EEEBE4;
+  --secondary-foreground: #374151;
+  --muted: #F0EDE6;
+  --muted-foreground: #78716C;
+  --accent: #E8E5DE;
+  --accent-foreground: #374151;
+  --destructive: #B91C1C;
+  --border: #D6D3CC;
+  --input: #D6D3CC;
+  --ring: #3730A3;
+  --chart-1: #3730A3;
+  --chart-2: #78716C;
+  --chart-3: #B45309;
+  --chart-4: #991B1B;
+  --chart-5: #065F46;
+  --sidebar: #F2EFE8;
+  --sidebar-foreground: #1C1917;
+  --sidebar-primary: #3730A3;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #FDF2F8;
-  --sidebar-accent-foreground: #831843;
-  --sidebar-border: #FECDD3;
-  --sidebar-ring: #DB2777;
+  --sidebar-accent: #E8E5DE;
+  --sidebar-accent-foreground: #374151;
+  --sidebar-border: #D6D3CC;
+  --sidebar-ring: #3730A3;
 }
 
-/* ─── Cherry Blossom Night — Dark ─── */
+/* ─── Emerald Lapis Twilight — Dark ─── */
 .dark {
-  --background: #0D0A0F;
-  --foreground: #FFF1F2;
-  --card: #1A1018;
-  --card-foreground: #FFF1F2;
-  --popover: #1A1018;
-  --popover-foreground: #FFF1F2;
-  --primary: #F9A8D4;
-  --primary-foreground: #1A0A12;
-  --secondary: #2D1B28;
-  --secondary-foreground: #F9A8D4;
-  --muted: #231520;
-  --muted-foreground: #D4B2C7;
-  --accent: #1B2A1E;
-  --accent-foreground: #A7F3D0;
+  --background: #060D11;
+  --foreground: #E8E2D8;
+  --card: #0D1820;
+  --card-foreground: #E8E2D8;
+  --popover: #0D1820;
+  --popover-foreground: #E8E2D8;
+  --primary: #34D399;
+  --primary-foreground: #042F2E;
+  --secondary: #1E1B4B;
+  --secondary-foreground: #C4B5FD;
+  --muted: #111D25;
+  --muted-foreground: #B8AFA5;
+  --accent: #1C1325;
+  --accent-foreground: #C084FC;
   --destructive: #FB7185;
-  --border: #3B2035;
-  --input: #3B2035;
-  --ring: #F9A8D4;
-  --chart-1: #F9A8D4;
-  --chart-2: #C4B5FD;
-  --chart-3: #6EE7B7;
+  --border: #1A2F38;
+  --input: #1A2F38;
+  --ring: #34D399;
+  --chart-1: #34D399;
+  --chart-2: #818CF8;
+  --chart-3: #C084FC;
   --chart-4: #FDE68A;
   --chart-5: #FB7185;
-  --sidebar: #110C14;
-  --sidebar-foreground: #FFF1F2;
-  --sidebar-primary: #F9A8D4;
-  --sidebar-primary-foreground: #1A0A12;
-  --sidebar-accent: #2D1B28;
-  --sidebar-accent-foreground: #F9A8D4;
-  --sidebar-border: #3B2035;
-  --sidebar-ring: #F9A8D4;
+  --sidebar: #050A0E;
+  --sidebar-foreground: #E8E2D8;
+  --sidebar-primary: #34D399;
+  --sidebar-primary-foreground: #042F2E;
+  --sidebar-accent: #0D1820;
+  --sidebar-accent-foreground: #A7F3D0;
+  --sidebar-border: #1A2F38;
+  --sidebar-ring: #34D399;
 }
 
 @layer base {
@@ -123,7 +123,7 @@
   }
 }
 
-/* Scrollbar */
+/* Scrollbar — ink wash tones */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -132,35 +132,35 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #F9A8D4;
+  background: #C4BDB4;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #F472B6;
+  background: #A39E96;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #3B2035;
+  background: #1A2F38;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #5C2D4A;
+  background: #2A4555;
 }
 
-/* Light mode — soft card warmth */
+/* Light mode — rice paper card warmth */
 .bg-card {
-  box-shadow: 0 1px 3px rgba(219,39,119,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 3px rgba(55,48,163,0.03), 0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* Dark mode premium card glow — cherry blossom aura */
+/* Dark mode — emerald lapis card glow */
 .dark .bg-card {
-  box-shadow: 0 0 0 1px rgba(249,168,212,0.06), 0 2px 12px rgba(0,0,0,0.35);
+  box-shadow: 0 0 0 1px rgba(52,211,153,0.06), 0 2px 12px rgba(0,0,0,0.4);
 }
 
-/* Dark mode subtle gradient on main bg — night garden */
+/* Dark mode — twilight gradient on main bg */
 .dark main.bg-muted\/30 {
-  background: linear-gradient(180deg, rgba(45,27,40,0.3) 0%, rgba(13,10,15,0.5) 100%);
+  background: linear-gradient(180deg, rgba(13,24,32,0.4) 0%, rgba(6,13,17,0.6) 100%);
 }
 
-/* Dark mode input focus ring glow — sakura pink */
+/* Dark mode — emerald focus ring glow */
 .dark input:focus, .dark textarea:focus, .dark select:focus {
-  box-shadow: 0 0 0 2px rgba(249,168,212,0.15);
+  box-shadow: 0 0 0 2px rgba(52,211,153,0.15);
 }
