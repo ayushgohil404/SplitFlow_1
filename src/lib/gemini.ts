@@ -8,10 +8,6 @@ export function isGeminiConfigured(): boolean {
   return true;
 }
 
-export function isGroqConfigured(): boolean {
-  return isGeminiConfigured();
-}
-
 async function callGeminiAPI(
   messages: { role: string; content: string }[],
   options: { temperature?: number; max_tokens?: number } = {}

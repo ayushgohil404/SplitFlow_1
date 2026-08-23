@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-utils'
 import { db } from '@/lib/db'
-import { chatWithFallback, isGeminiConfigured } from '@/lib/groq'
+import { chatWithFallback, isGeminiConfigured } from '@/lib/gemini'
 
 function extractJSON(text: string): unknown {
   try {
