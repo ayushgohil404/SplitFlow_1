@@ -62,10 +62,10 @@ interface ExpenseItem {
   date: string;
   splitType: string;
   createdBy: string;
-  paidBy: { id: string; name: string; image: string | null };
+  paidBy: { id: string; name: string; image: string | null } | null;
   group: { id: string; name: string; emoji: string } | null;
-  splits: { userId: string; userName: string; amount: number }[];
-  nonUserSplits: { email: string; name: string; amount: number }[];
+  splits: { userId: string; amount: number; user?: { id: string; name: string | null; image: string | null } }[];
+  nonUserSplits: { email: string; name: string | null; amount: number }[];
 }
 
 export function HistoryView() {
@@ -92,7 +92,15 @@ export function HistoryView() {
       const res = await fetch(`/api/expenses/history?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setExpenses(data.expenses || []);
+        // Normalize API response to handle any missing fields
+        const normalized = (data.expenses || []).map((e: any) => ({
+          ...e,
+          splits: Array.isArray(e.splits) ? e.splits : [],
+          nonUserSplits: Array.isArray(e.nonUserSplits) ? e.nonUserSplits : [],
+          paidBy: e.paidBy || null,
+          group: e.group || null,
+        }));
+        setExpenses(normalized);
         setTotal(data.total || 0);
       } else {
         toast.error('Failed to load history');
@@ -111,7 +119,7 @@ export function HistoryView() {
   // Group expenses by date
   const groupedExpenses: Record<string, ExpenseItem[]> = {};
   for (const exp of expenses) {
-    const dateKey = new Date(exp.date).toLocaleDateString('en-IN', {
+    const dateKey = new Date(exp.date || Date.now()).toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -216,9 +224,7 @@ export function HistoryView() {
               </div>
               <div className="space-y-2">
                 {dayExpenses.map((exp) => {
-                  const isPayer = true; // We're looking at expenses we're involved in
-                  const splitCount = exp.splits.length + (exp.nonUserSplits?.length || 0);
-                  const myShare = exp.splits.find(s => s.userName === 'User')?.amount || 0;
+                  const splitCount = (exp.splits?.length || 0) + (exp.nonUserSplits?.length || 0);
 
                   return (
                     <Card key={exp.id} className="hover:shadow-sm transition-shadow">

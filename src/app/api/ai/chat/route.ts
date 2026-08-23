@@ -53,10 +53,14 @@ export async function POST(req: NextRequest) {
       return isRequester ? f.addressee : f.requester
     })
 
-    // Calculate balances (owed to user / user owes)
-    const balanceSummary: { name: string; amount: number; direction: 'owes_me' | 'i_owe' }[] = []
+    // Fetch detailed context — wrapped so AI still works if this fails
+    let balanceSummary: { name: string; amount: number; direction: 'owes_me' | 'i_owe' }[] = []
+    let expenseSummary: { description: string; amount: number; category: string; date: string; paidBy: string; group: string; splitWith: string[] }[] = []
+    let thisMonthTotal = 0
+    let categoryTotals: Record<string, number> = {}
 
-    // Group-based balances
+    try {
+    // Calculate balances (owed to user / user owes)
     for (const membership of memberships) {
       const gid = membership.groupId
       const members = await db.groupMember.findMany({
@@ -119,7 +123,7 @@ export async function POST(req: NextRequest) {
       const isPayer = exp.createdBy === user.id
       for (const split of exp.splits) {
         if (split.userId === user.id) continue
-        const key = split.user.name || split.userId
+        const key = split.user?.name || split.userId
         if (!directBalances[key]) directBalances[key] = 0
         if (isPayer) {
           directBalances[key] += Number(split.amount)
@@ -161,14 +165,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const totalOwedToMe = balanceSummary
-      .filter((b) => b.direction === 'owes_me')
-      .reduce((s, b) => s + b.amount, 0)
-    const totalIOwe = balanceSummary
-      .filter((b) => b.direction === 'i_owe')
-      .reduce((s, b) => s + Math.abs(b.amount), 0)
-    const netBalance = Math.round((totalOwedToMe - totalIOwe) * 100) / 100
-
     // Recent expenses
     const recentExpenses = await db.expense.findMany({
       where: {
@@ -187,14 +183,14 @@ export async function POST(req: NextRequest) {
       take: 30,
     })
 
-    const expenseSummary = recentExpenses.map((e) => ({
+    expenseSummary = recentExpenses.map((e) => ({
       description: e.description,
       amount: e.amount,
       category: e.category,
       date: e.date.toISOString().split('T')[0],
       paidBy: e.paidBy?.name || 'Unknown',
       group: e.group?.name || 'Direct',
-      splitWith: e.splits.map((s) => s.user.name).filter(Boolean),
+      splitWith: e.splits.map((s) => s.user?.name).filter(Boolean) as string[],
     }))
 
     // Monthly totals
@@ -203,13 +199,24 @@ export async function POST(req: NextRequest) {
     const thisMonthExpenses = await db.expense.findMany({
       where: { createdBy: user.id, date: { gte: thisMonthStart } },
     })
-    const thisMonthTotal = thisMonthExpenses.reduce((s, e) => s + e.amount, 0)
+    thisMonthTotal = thisMonthExpenses.reduce((s, e) => s + e.amount, 0)
 
-    const categoryTotals: Record<string, number> = {}
+    categoryTotals = {}
     for (const e of thisMonthExpenses) {
       const cat = e.category || 'other'
       categoryTotals[cat] = (categoryTotals[cat] || 0) + e.amount
     }
+    } catch (ctxErr: any) {
+      console.error('[AI Chat] Context fetch failed, using basic data:', ctxErr?.message || ctxErr)
+    }
+
+    const totalOwedToMe = balanceSummary
+      .filter((b) => b.direction === 'owes_me')
+      .reduce((s, b) => s + b.amount, 0)
+    const totalIOwe = balanceSummary
+      .filter((b) => b.direction === 'i_owe')
+      .reduce((s, b) => s + Math.abs(b.amount), 0)
+    const netBalance = Math.round((totalOwedToMe - totalIOwe) * 100) / 100
 
     // Build system prompt — full chatbot
     const systemPrompt = `You are SplitFlow AI, a friendly and helpful expense-splitting assistant. You help users with ANY request about their expenses, balances, groups, friends, and the app itself.
