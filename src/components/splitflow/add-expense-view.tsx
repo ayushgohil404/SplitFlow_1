@@ -850,16 +850,16 @@ export function AddExpenseView() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add Expense</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Record a new expense and split it.</p>
+        <h2 className="text-xl font-bold text-foreground">Add Expense</h2>
+        <p className="text-sm text-muted-foreground mt-1">Record a new expense and split it.</p>
       </div>
 
       {/* AI Natural Language Input */}
-      <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/30 dark:to-teal-950/20">
+      <Card className="border-primary/30 bg-primary/5">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2.5">
             <Sparkles className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Quick Add with AI</h3>
+            <h3 className="font-semibold text-foreground text-sm">Quick Add with AI</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>

@@ -2,7 +2,7 @@
 
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export function ThemeToggle() {
   const { theme, setTheme } = useAppStore();
@@ -15,43 +15,44 @@ export function ThemeToggle() {
   return (
     <button
       onClick={cycle}
-      className="relative w-8 h-8 rounded-lg flex items-center justify-center
-        bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
-        transition-all duration-200 group"
-      aria-label={`Current theme: ${theme}. Click to switch.`}
+      className="relative h-9 w-9 rounded-lg flex items-center justify-center
+        hover:bg-accent active:bg-accent
+        text-muted-foreground hover:text-foreground
+        transition-colors duration-150"
+      aria-label={`Theme: ${theme}`}
     >
       <AnimatePresence mode="wait" initial={false}>
         {theme === 'light' && (
           <motion.span
             key="light"
-            initial={{ rotate: -90, scale: 0, opacity: 0 }}
-            animate={{ rotate: 0, scale: 1, opacity: 1 }}
-            exit={{ rotate: 90, scale: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ rotate: -90, scale: 0 }}
+            animate={{ rotate: 0, scale: 1 }}
+            exit={{ rotate: 90, scale: 0 }}
+            transition={{ duration: 0.15 }}
           >
-            <Sun className="w-4 h-4 text-amber-500" />
+            <Sun className="w-[18px] h-[18px]" />
           </motion.span>
         )}
         {theme === 'dark' && (
           <motion.span
             key="dark"
-            initial={{ rotate: 90, scale: 0, opacity: 0 }}
-            animate={{ rotate: 0, scale: 1, opacity: 1 }}
-            exit={{ rotate: -90, scale: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ rotate: 90, scale: 0 }}
+            animate={{ rotate: 0, scale: 1 }}
+            exit={{ rotate: -90, scale: 0 }}
+            transition={{ duration: 0.15 }}
           >
-            <Moon className="w-4 h-4 text-blue-400" />
+            <Moon className="w-[18px] h-[18px]" />
           </motion.span>
         )}
         {theme === 'system' && (
           <motion.span
             key="system"
-            initial={{ y: -8, scale: 0, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 8, scale: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ y: -6, scale: 0 }}
+            animate={{ y: 0, scale: 1 }}
+            exit={{ y: 6, scale: 0 }}
+            transition={{ duration: 0.15 }}
           >
-            <Monitor className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <Monitor className="w-[18px] h-[18px]" />
           </motion.span>
         )}
       </AnimatePresence>

@@ -19,7 +19,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -48,17 +48,16 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
-  gradient?: string;
 };
 
 const navItems: NavItem[] = [
-  { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview & balances', gradient: 'from-blue-500 to-indigo-600' },
-  { view: 'history', label: 'History', icon: Clock, description: 'All expense records', gradient: 'from-amber-500 to-orange-600' },
-  { view: 'groups', label: 'Groups', icon: Users, description: 'Manage groups', gradient: 'from-purple-500 to-pink-600' },
-  { view: 'friends', label: 'Friends', icon: UserPlus, description: 'Friends & balances', gradient: 'from-cyan-500 to-blue-600' },
-  { view: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Spending insights', gradient: 'from-emerald-500 to-teal-600' },
-  { view: 'activity', label: 'Activity', icon: Activity, description: 'Recent actions', gradient: 'from-rose-500 to-red-600' },
-  { view: 'ai-assistant', label: 'AI Assistant', icon: Bot, description: 'Ask AI anything', gradient: 'from-violet-500 to-purple-600' },
+  { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview & balances' },
+  { view: 'history', label: 'History', icon: Clock, description: 'All expense records' },
+  { view: 'groups', label: 'Groups', icon: Users, description: 'Manage groups' },
+  { view: 'friends', label: 'Friends', icon: UserPlus, description: 'Friends & balances' },
+  { view: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Spending insights' },
+  { view: 'activity', label: 'Activity', icon: Activity, description: 'Recent actions' },
+  { view: 'ai-assistant', label: 'AI Assistant', icon: Bot, description: 'Ask AI anything' },
 ];
 
 const viewLabels: Record<View, string> = {
@@ -87,22 +86,22 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 pt-5 pb-3 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-          <Wallet className="w-5 h-5 text-white" />
+      <div className="h-16 px-5 flex items-center gap-3 shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+          <Wallet className="w-[18px] h-[18px] text-primary-foreground" />
         </div>
-        <div>
-          <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Split<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Flow</span>
+        <div className="flex flex-col">
+          <span className="text-base font-bold text-foreground tracking-tight leading-tight">
+            Split<span className="text-primary">Flow</span>
           </span>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 -mt-0.5 font-medium">AI-Powered Splitting</p>
+          <span className="text-[10px] text-muted-foreground leading-tight">AI-Powered Splitting</span>
         </div>
       </div>
 
-      <Separator className="mx-3 my-2 bg-gray-100 dark:bg-gray-800" />
+      <Separator />
 
       {/* Nav items */}
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 px-3 py-3">
         <nav className="space-y-1" role="navigation" aria-label="Main navigation">
           {navItems.map((item) => {
             const isActive = view === item.view;
@@ -110,43 +109,23 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <TooltipProvider key={item.view} delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <motion.button
+                    <button
                       onClick={() => handleNav(item.view)}
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.15 }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left relative overflow-hidden
-                        transition-all duration-200
+                      className={`w-full flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-medium text-left transition-colors duration-150
                         ${
                           isActive
-                            ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/20 text-emerald-700 dark:text-emerald-400 shadow-sm'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`
-                      }
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                        }`}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeNav"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-gradient-to-b from-emerald-500 to-teal-500"
-                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                        />
-                      )}
-                      <item.icon
-                        className={`w-5 h-5 shrink-0 transition-colors duration-200 ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}
-                      />
+                      <item.icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-primary' : ''}`} />
                       <span className="flex-1">{item.label}</span>
-                      {isActive && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-1.5 h-1.5 rounded-full bg-emerald-500"
-                        />
-                      )}
-                    </motion.button>
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="text-xs">
                     <p className="font-medium">{item.label}</p>
-                    <p className="text-gray-400">{item.description}</p>
+                    <p className="text-muted-foreground">{item.description}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -156,24 +135,24 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </ScrollArea>
 
       {/* User info */}
-      <Separator className="mx-3 bg-gray-100 dark:bg-gray-800" />
-      <div className="px-3 py-3">
-        <div className="flex items-center gap-3 px-2 mb-2">
-          <Avatar className="w-9 h-9 ring-2 ring-emerald-100 dark:ring-emerald-900/50">
-            <AvatarFallback className="bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold">
+      <Separator />
+      <div className="p-3">
+        <div className="flex items-center gap-3 px-2 py-2 mb-1">
+          <Avatar className="w-8 h-8">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
+            <p className="text-sm font-medium text-foreground truncate leading-tight">{user?.name || 'User'}</p>
+            <p className="text-[11px] text-muted-foreground truncate leading-tight">{user?.email || ''}</p>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={signOut}
-          className="w-full justify-start gap-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 rounded-xl transition-colors"
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-2 h-9"
         >
           <LogOut className="w-4 h-4" />
           Sign Out
@@ -186,16 +165,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 function ViewErrorFallback({ viewName, onReset }: { viewName: string; onReset: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-3">
-        <AlertCircle className="w-7 h-7 text-red-500" />
+      <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+        <AlertCircle className="w-7 h-7 text-destructive" />
       </div>
-      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Something went wrong</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-xs">Failed to load {viewName}. Your data is safe.</p>
+      <h3 className="text-base font-semibold text-foreground mb-1">Something went wrong</h3>
+      <p className="text-sm text-muted-foreground mb-4 max-w-xs">Failed to load {viewName}. Your data is safe.</p>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onReset} className="gap-1.5 rounded-xl">
+        <Button variant="outline" size="sm" onClick={onReset} className="gap-1.5">
           <RefreshCw className="w-3.5 h-3.5" /> Try Again
         </Button>
-        <Button size="sm" onClick={() => useAppStore.getState().setView('dashboard')} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 rounded-xl">
+        <Button size="sm" onClick={() => useAppStore.getState().setView('dashboard')} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5">
           Go to Dashboard
         </Button>
       </div>
@@ -211,9 +190,7 @@ class ViewErrorBoundary extends React.Component<
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
+  static getDerivedStateFromError() { return { hasError: true }; }
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error(`[SplitFlow] ${this.props.viewName} crashed:`, error, errorInfo);
   }
@@ -247,10 +224,10 @@ function ViewRouter() {
     <AnimatePresence mode="wait">
       <motion.div
         key={view}
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
       >
         <ViewErrorBoundary key={view} viewName={current.label}>
           {current.component}
@@ -263,45 +240,39 @@ function ViewRouter() {
 export function AppShell() {
   const { view, setView, setSidebarOpen, sidebarOpen } = useAppStore();
 
-  const handleMobileNav = () => {
-    setSidebarOpen(false);
-  };
+  const handleMobileNav = () => setSidebarOpen(false);
 
   const handleBack = () => {
-    if (view === 'group-detail') {
-      setView('groups');
-    } else if (view === 'add-expense') {
-      setView('dashboard');
-    } else {
-      setView('dashboard');
-    }
+    if (view === 'group-detail') setView('groups');
+    else if (view === 'add-expense') setView('dashboard');
+    else setView('dashboard');
   };
 
   const showBack = detailViews.includes(view);
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-gray-950 overflow-hidden transition-colors duration-300">
+    <div className="h-screen flex bg-background overflow-hidden">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-colors duration-300">
+      <aside className="hidden lg:flex w-60 flex-col border-r border-border bg-sidebar">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar (Sheet) */}
+      {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={(open) => setSidebarOpen(open)}>
-        <SheetContent side="left" className="w-72 p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+        <SheetContent side="left" className="w-64 p-0 bg-sidebar border-border">
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <SidebarContent onNavigate={handleMobileNav} />
         </SheetContent>
       </Sheet>
 
-      {/* Main area */}
+      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="h-14 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl flex items-center px-4 gap-2 shrink-0 transition-colors duration-300">
+        {/* Header - fixed height, properly aligned */}
+        <header className="h-14 shrink-0 border-b border-border bg-background flex items-center px-4 gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden -ml-1 shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="lg:hidden -ml-1 shrink-0 h-9 w-9"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open navigation"
           >
@@ -312,15 +283,15 @@ export function AppShell() {
             <Button
               variant="ghost"
               size="sm"
-              className="shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 -ml-1 rounded-xl transition-colors"
+              className="shrink-0 h-9 -ml-1 gap-1.5 text-muted-foreground hover:text-foreground"
               onClick={handleBack}
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back</span>
             </Button>
           )}
 
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+          <h1 className="text-base font-semibold text-foreground truncate">
             {viewLabels[view]}
           </h1>
 
@@ -329,39 +300,31 @@ export function AppShell() {
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto" role="main">
-          <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto bg-muted/30" role="main">
+          <div className="p-4 sm:p-6 max-w-5xl mx-auto">
             <ViewRouter />
           </div>
         </main>
       </div>
 
-      {/* FAB - Add Expense (bottom-right) */}
-      <motion.button
+      {/* FAB - Add Expense — fixed bottom-right, properly positioned */}
+      <button
         onClick={() => setView('add-expense')}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-50 group
-          bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600
-          text-white rounded-2xl px-5 py-3.5
-          shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40
-          flex items-center gap-2.5
-          transition-shadow duration-300"
+        className="fixed bottom-6 right-6 z-50
+          h-14 w-14 sm:h-auto sm:w-auto sm:px-5 sm:py-3
+          bg-primary hover:bg-primary/90 text-primary-foreground
+          rounded-full sm:rounded-xl
+          shadow-lg hover:shadow-xl
+          flex items-center justify-center sm:gap-2.5
+          transition-all duration-200 active:scale-95"
         aria-label="Add Expense"
       >
-        <motion.div
-          animate={{ rotate: view === 'add-expense' ? 45 : 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-        >
-          <Plus className="w-5 h-5" />
-        </motion.div>
+        <Plus className="w-5 h-5 shrink-0" />
         <span className="font-semibold text-sm hidden sm:inline">Add Expense</span>
-        {/* Pulse ring */}
-        <span className="absolute inset-0 rounded-2xl bg-emerald-500/30 animate-pulse pointer-events-none" />
-      </motion.button>
+      </button>
 
-      {/* Floating AI Bubble (bottom-left) */}
+      {/* Floating AI Bubble - bottom-left */}
       <FloatingAIBubble />
     </div>
   );

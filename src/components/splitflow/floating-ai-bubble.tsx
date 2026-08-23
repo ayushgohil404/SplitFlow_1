@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
-import { useRef, useEffect } from 'react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,7 +25,7 @@ export function FloatingAIBubble() {
   }, [messages, isTyping]);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
   const sendMessage = async () => {
@@ -48,10 +47,7 @@ export function FloatingAIBubble() {
       if (data.reply) {
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
       } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: data.error || 'Sorry, I couldn\'t process that.' },
-        ]);
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.error || 'Sorry, I could not process that.' }]);
       }
     } catch {
       setIsTyping(false);
@@ -67,55 +63,49 @@ export function FloatingAIBubble() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="fixed bottom-24 left-5 z-[60] w-[360px] max-w-[calc(100vw-40px)]
-              bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed bottom-20 left-5 z-[60] w-[340px] max-w-[calc(100vw-2.5rem)]
+              bg-card border border-border rounded-xl shadow-2xl
               overflow-hidden flex flex-col"
-            style={{ height: 'min(500px, calc(100vh - 160px))' }}
+            style={{ height: 'min(460px, calc(100vh - 8rem))' }}
           >
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm">SplitFlow AI</h3>
-                <p className="text-xs text-emerald-100">Ask me anything about expenses</p>
-              </div>
+            <div className="flex items-center gap-3 h-12 px-4 bg-primary text-primary-foreground shrink-0">
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span className="flex-1 text-sm font-semibold">SplitFlow AI</span>
               <button
-                onClick={() => setView('ai-assistant')}
-                className="text-xs bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 transition-colors"
+                onClick={() => { setOpen(false); setView('ai-assistant'); }}
+                className="text-xs font-medium bg-primary-foreground/15 hover:bg-primary-foreground/25 rounded-md px-2 py-1 transition-colors"
               >
                 Full View
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                className="w-6 h-6 rounded-md bg-primary-foreground/15 hover:bg-primary-foreground/25 flex items-center justify-center transition-colors"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.length === 0 && (
-                <div className="text-center py-8">
-                  <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-3">
-                    <Bot className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="text-center py-6">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                    <Bot className="w-5 h-5 text-primary" />
                   </div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Hey! I'm SplitFlow AI</p>
-                  <p className="text-xs text-gray-400 mt-1">Ask about expense insights, tips, or anything</p>
-                  <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium text-foreground">Hey! I'm SplitFlow AI</p>
+                  <p className="text-xs text-muted-foreground mt-1">Ask about expenses, tips, or anything</p>
+                  <div className="mt-4 space-y-1.5">
                     {['How to split rent fairly?', 'Show me spending tips', 'Categorize my expenses'].map((q) => (
                       <button
                         key={q}
-                        onClick={() => { setInput(q); }}
+                        onClick={() => setInput(q)}
                         className="block w-full text-left text-xs px-3 py-2 rounded-lg
-                          bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700
-                          text-gray-600 dark:text-gray-400 transition-colors"
+                          bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {q}
                       </button>
@@ -124,116 +114,74 @@ export function FloatingAIBubble() {
                 </div>
               )}
               {messages.map((msg, i) => (
-                <motion.div
+                <div
                   key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                    className={`max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-emerald-600 text-white rounded-br-md'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-md'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-foreground'
                     }`}
                   >
                     {msg.content}
                   </div>
-                </motion.div>
+                </div>
               ))}
               {isTyping && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-start"
-                >
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-xl px-4 py-3">
                     <div className="flex gap-1.5">
-                      <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
-            <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex gap-2">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Ask AI anything..."
-                  className="flex-1 h-10 px-3.5 rounded-xl text-sm
-                    bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-                    focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500
-                    text-gray-900 dark:text-gray-100 placeholder:text-gray-400
-                    transition-all duration-200"
-                />\n                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || loading}
-                  className="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white
-                    flex items-center justify-center transition-all duration-200
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    shadow-sm hover:shadow-md"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
+            <div className="h-14 px-3 border-t border-border flex items-center gap-2 shrink-0">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Ask AI anything..."
+                className="flex-1 h-9 px-3 rounded-lg text-sm bg-background border border-input
+                  focus:outline-none focus:ring-2 focus:ring-ring
+                  text-foreground placeholder:text-muted-foreground"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || loading}
+                className="h-9 w-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground
+                  flex items-center justify-center transition-colors
+                  disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* FAB Button */}
-      <motion.button
+      <button
         onClick={() => setOpen(!open)}
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-5 left-5 z-50 w-14 h-14 rounded-full
-          bg-gradient-to-br from-emerald-500 to-teal-600 text-white
-          shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40
+        className="fixed bottom-5 left-5 z-50 h-12 w-12 rounded-full
+          bg-primary hover:bg-primary/90 text-primary-foreground
+          shadow-lg hover:shadow-xl
           flex items-center justify-center
-          transition-shadow duration-300 group"
+          transition-all duration-200 active:scale-95"
         aria-label="AI Assistant"
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {open ? (
-            <motion.span
-              key="close"
-              initial={{ rotate: -90, scale: 0 }}
-              animate={{ rotate: 0, scale: 1 }}
-              exit={{ rotate: 90, scale: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <X className="w-6 h-6" />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="bot"
-              initial={{ rotate: 90, scale: 0 }}
-              animate={{ rotate: 0, scale: 1 }}
-              exit={{ rotate: -90, scale: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Bot className="w-6 h-6" />
-            </motion.span>
-          )}
-        </AnimatePresence>
-        {/* Ping ring */}
-        {!open && (
-          <span className="absolute inset-0 rounded-full bg-emerald-500/40 animate-ping" />
-        )}
-      </motion.button>
+        {open ? <X className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
+      </button>
     </>
   );
 }
