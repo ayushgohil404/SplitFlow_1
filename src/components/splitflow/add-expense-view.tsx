@@ -1312,75 +1312,76 @@ export function AddExpenseView() {
                 <Label className="text-sm font-medium">
                   Split Details {splitType === 'percentage' ? '(%)' : '(₹)'}
                 </Label>
-                {directParticipants.length === 0 && emailParticipants.length === 0 ? (
-                  <p className="text-xs text-gray-400">Select friends or add emails above to set split amounts.</p>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {/* User (You) row */}
-                    <div className="flex items-center gap-3">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {/* User (You) row — always shown */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 w-32 shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <User className="w-3 h-3 text-emerald-700" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">You</span>
+                    </div>
+                    <Input
+                      type="number"
+                      step={splitType === 'percentage' ? '1' : '0.01'}
+                      min="0"
+                      placeholder="0"
+                      value={userSplitValue}
+                      onChange={(e) => setUserSplitValue(e.target.value)}
+                      className="h-9"
+                    />
+                    <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                  </div>
+                  {/* Selected friends */}
+                  {directParticipants.length === 0 && emailParticipants.length === 0 && (
+                    <p className="text-xs text-gray-400 pl-9">Add friends or emails above to split with others.</p>
+                  )}
+                  {directParticipants.map((p) => {
+                    const split = splits.find((s) => s.userId === p.id);
+                    return (
+                      <div key={p.id} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-700 w-32 truncate shrink-0">{p.name}</span>
+                        <Input
+                          type="number"
+                          step={splitType === 'percentage' ? '1' : '0.01'}
+                          min="0"
+                          placeholder="0"
+                          value={split?.value || ''}
+                          onChange={(e) => updateSplit(p.id, e.target.value)}
+                          className="h-9"
+                        />
+                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
+                      </div>
+                    );
+                  })}
+                  {/* Email participants */}
+                  {emailParticipants.map((ep) => (
+                    <div key={ep.email} className="flex items-center gap-3">
                       <div className="flex items-center gap-2 w-32 shrink-0">
-                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <User className="w-3 h-3 text-emerald-700" />
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">You</span>
+                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                        <span className="text-sm text-gray-700 truncate">{ep.name}</span>
                       </div>
                       <Input
                         type="number"
                         step={splitType === 'percentage' ? '1' : '0.01'}
                         min="0"
                         placeholder="0"
-                        value={userSplitValue}
-                        onChange={(e) => setUserSplitValue(e.target.value)}
+                        value={emailSplitAmounts[ep.email] || ''}
+                        onChange={(e) => setEmailSplitAmounts((prev) => ({ ...prev, [ep.email]: e.target.value }))}
                         className="h-9"
                       />
                       <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
                     </div>
-                    {/* Selected friends */}
-                    {directParticipants.map((p) => {
-                      const split = splits.find((s) => s.userId === p.id);
-                      return (
-                        <div key={p.id} className="flex items-center gap-3">
-                          <span className="text-sm text-gray-700 w-32 truncate shrink-0">{p.name}</span>
-                          <Input
-                            type="number"
-                            step={splitType === 'percentage' ? '1' : '0.01'}
-                            min="0"
-                            placeholder="0"
-                            value={split?.value || ''}
-                            onChange={(e) => updateSplit(p.id, e.target.value)}
-                            className="h-9"
-                          />
-                          <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
-                        </div>
-                      );
-                    })}
-                    {/* Email participants */}
-                    {emailParticipants.map((ep) => (
-                      <div key={ep.email} className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 w-32 shrink-0">
-                          <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-                          <span className="text-sm text-gray-700 truncate">{ep.name}</span>
-                        </div>
-                        <Input
-                          type="number"
-                          step={splitType === 'percentage' ? '1' : '0.01'}
-                          min="0"
-                          placeholder="0"
-                          value={emailSplitAmounts[ep.email] || ''}
-                          onChange={(e) => setEmailSplitAmounts((prev) => ({ ...prev, [ep.email]: e.target.value }))}
-                          className="h-9"
-                        />
-                        <span className="text-xs text-gray-400 w-4">{splitType === 'percentage' ? '%' : '₹'}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Total check */}
-                {(directParticipants.length > 0 || emailParticipants.length > 0) && (
+                  ))}
+                </div>
+                {/* Total check — always show when there's a value */}
+                {(userSplitValue || directParticipants.length > 0 || emailParticipants.length > 0) && (
                   <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                     <span className="text-xs text-gray-500">Total</span>
                     <span className={`text-sm font-semibold ${totalSplitOk ? 'text-emerald-600' : 'text-red-500'}`}>
-                      ₹{totalSplitAmount.toFixed(2)} / ₹{parseFloat(amount || '0').toFixed(2)}
+                      {splitType === 'percentage'
+                        ? `${totalSplitAmount.toFixed(1)}% / 100%`
+                        : `₹${totalSplitAmount.toFixed(2)} / ₹${parseFloat(amount || '0').toFixed(2)}`}
                     </span>
                   </div>
                 )}
