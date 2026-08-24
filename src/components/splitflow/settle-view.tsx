@@ -65,7 +65,9 @@ interface Settlement {
 
 interface SimplifiedPayment {
   fromUserId: string;
+  fromUserName: string;
   toUserId: string;
+  toUserName: string;
   amount: number;
 }
 
@@ -379,9 +381,28 @@ export function SettleView() {
                         {isYouOwe && <p className="text-xs text-destructive mt-0.5">You need to pay</p>}
                         {isOwedToYou && <p className="text-xs text-primary mt-0.5">Owed to you</p>}
                       </div>
-                      <span className={`text-sm font-bold shrink-0 ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-foreground'}`}>
-                        ₹{(Number(b.amount) || 0).toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-sm font-bold ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-foreground'}`}>
+                          ₹{(Number(b.amount) || 0).toFixed(2)}
+                        </span>
+                        {(isYouOwe || isOwedToYou) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`h-7 text-xs ${isYouOwe ? 'border-destructive/30 text-destructive hover:bg-destructive/10' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPayFrom(b.from?.id || '');
+                              setPayTo(b.to?.id || '');
+                              setPayAmount(String(Number(b.amount).toFixed(2)));
+                              setPayNote('');
+                              setRecordOpen(true);
+                            }}
+                          >
+                            Settle
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -402,7 +423,7 @@ export function SettleView() {
                 <div className="space-y-2">
                   {simplified.map((p, idx) => (
                     <div key={idx} className="flex items-center gap-3 p-2.5 bg-background rounded-lg border border-primary/20">
-                      <span className="text-sm flex-1 text-foreground font-medium">{p.fromUserId} → {p.toUserId}</span>
+                      <span className="text-sm flex-1 text-foreground font-medium">{p.fromUserName} → {p.toUserName}</span>
                       <span className="text-sm font-bold text-foreground">₹{(Number(p.amount) || 0).toFixed(2)}</span>
                     </div>
                   ))}

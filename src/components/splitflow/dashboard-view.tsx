@@ -12,6 +12,7 @@ import {
   CircleDollarSign,
   RefreshCw,
   AlertCircle,
+  HandCoins,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,6 +110,7 @@ export function DashboardView() {
     return `${sign}₹${Math.abs(amount).toFixed(2)}`;
   };
 
+  const hasBalance = (balance?.totalOwed ?? 0) > 0 || (balance?.totalOwing ?? 0) > 0;
   const isEmpty = !loading && !error && !balance?.totalOwed && !balance?.totalOwing && groups.length === 0;
 
   if (error && !loading) {
@@ -210,6 +212,9 @@ export function DashboardView() {
         <motion.div variants={item} className="flex flex-wrap gap-2">
           <Button onClick={() => setView('add-expense')} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="w-4 h-4 mr-1.5" />Add Expense</Button>
           <Button variant="outline" size="sm" onClick={() => setView('groups')}><Users className="w-4 h-4 mr-1.5" />Groups</Button>
+          {hasBalance && (
+            <Button variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10" onClick={() => setView('settle')}><HandCoins className="w-4 h-4 mr-1.5" />Settle Up</Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setView('ai-assistant')}><TrendingUp className="w-4 h-4 mr-1.5" />Ask AI</Button>
         </motion.div>
       )}

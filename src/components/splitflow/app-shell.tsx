@@ -17,6 +17,7 @@ import {
   Clock,
   AlertCircle,
   RefreshCw,
+  HandCoins,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -40,6 +41,7 @@ import { ActivityView } from './activity-view';
 import { AIAssistantView } from './ai-assistant-view';
 import { FriendsView } from './friends-view';
 import { HistoryView } from './history-view';
+import { SettleView } from './settle-view';
 import { ThemeToggle } from './theme-toggle';
 
 type NavItem = {
@@ -54,6 +56,7 @@ const navItems: NavItem[] = [
   { view: 'history', label: 'History', icon: Clock, description: 'All expense records' },
   { view: 'groups', label: 'Groups', icon: Users, description: 'Manage groups' },
   { view: 'friends', label: 'Friends', icon: UserPlus, description: 'Friends & balances' },
+  { view: 'settle', label: 'Settle Up', icon: HandCoins, description: 'Settle balances' },
   { view: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Spending insights' },
   { view: 'activity', label: 'Activity', icon: Activity, description: 'Recent actions' },
   { view: 'ai-assistant', label: 'AI Assistant', icon: Bot, description: 'Ask AI anything' },
@@ -68,6 +71,7 @@ const viewLabels: Record<View, string> = {
   activity: 'Activity',
   'ai-assistant': 'AI Assistant',
   friends: 'Friends',
+  settle: 'Settle Up',
   history: 'History',
 };
 
@@ -214,6 +218,7 @@ function ViewRouter() {
     activity: { label: 'Activity', component: <ActivityView /> },
     'ai-assistant': { label: 'AI Assistant', component: <AIAssistantView /> },
     friends: { label: 'Friends', component: <FriendsView /> },
+    settle: { label: 'Settle Up', component: <SettleView /> },
     history: { label: 'History', component: <HistoryView /> },
   };
 
@@ -243,7 +248,7 @@ export function AppShell() {
 
   const handleBack = () => {
     if (view === 'group-detail') setView('groups');
-    else if (view === 'add-expense') setView('dashboard');
+    else if (view === 'add-expense' || view === 'settle') setView('dashboard');
     else setView('dashboard');
   };
 

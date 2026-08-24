@@ -108,7 +108,26 @@ export async function POST(req: NextRequest) {
       if (creditors[j].amount <= 0.005) j++
     }
 
-    return NextResponse.json({ settlements: simplified })
+    if (simplified.length === 0) {
+      return NextResponse.json({ settlements: [] })
+    }
+
+    const allUserIds = [...new Set(simplified.flatMap((s) => [s.fromUserId, s.toUserId]))]
+    const users = await db.user.findMany({
+      where: { id: { in: allUserIds } },
+      select: { id: true, name: true },
+    })
+    const nameMap = new Map(users.map((u) => [u.id, u.name || 'Unknown']))
+
+    const result = simplified.map((s) => ({
+      fromUserId: s.fromUserId,
+      fromUserName: nameMap.get(s.fromUserId) || 'Unknown',
+      toUserId: s.toUserId,
+      toUserName: nameMap.get(s.toUserId) || 'Unknown',
+      amount: s.amount,
+    }))
+
+    return NextResponse.json({ settlements: result })
   } catch (error) {
     console.error('Error simplifying debts:', error)
     return NextResponse.json({ error: 'Failed to simplify debts. Please try again.' }, { status: 500 })

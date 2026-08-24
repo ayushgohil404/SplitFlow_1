@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   Link,
+  HandCoins,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -451,6 +452,15 @@ export function GroupDetailView() {
 
 
         <TabsContent value="balances" className="mt-4">
+          <div className="flex justify-end gap-2 mb-4">
+            <Button
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-white"
+              onClick={() => setView('settle')}
+            >
+              <HandCoins className="w-4 h-4 mr-1.5" />Settle Up
+            </Button>
+          </div>
           {(!group.balances || group.balances.length === 0) ? (
             <Card>
               <CardContent className="p-12 text-center">
