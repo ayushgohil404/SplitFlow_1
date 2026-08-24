@@ -60,6 +60,7 @@ const item = {
 export function DashboardView() {
   const { navigateToGroup, setView } = useAppStore();
   const [balance, setBalance] = useState<BalanceData | null>(null);
+  const [groupBalances, setGroupBalances] = useState<any[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,9 @@ export function DashboardView() {
           .filter((b: any) => Number(b.amount) < 0)
           .reduce((sum: number, b: any) => sum + Math.abs(Number(b.amount)), 0);
         setBalance({ totalOwed, totalOwing, net: totalOwed - totalOwing });
+
+        // Store balance data for group cards
+        setGroupBalances((balData.groups || []) as any[]);
       }
       if (actRes.status === 'fulfilled' && actRes.value.ok) {
         const actData = await actRes.value.json();
@@ -227,7 +231,12 @@ export function DashboardView() {
             <Button variant="ghost" size="sm" className="text-primary" onClick={() => setView('groups')}>View all</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groups.map((group) => (
+            {groups.map((group) => {
+              const balGroup = groupBalances.find((g: any) => g.groupId === group.id);
+              const yourBalance = balGroup
+                ? (balGroup.balances || []).reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0)
+                : 0;
+              return (
               <Card key={group.id} className="cursor-pointer hover:shadow-md transition-all duration-200" onClick={() => navigateToGroup(group.id)}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-2">
@@ -239,11 +248,12 @@ export function DashboardView() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Your balance</span>
-                    <span className={`text-sm font-semibold ${(group.yourBalance || 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatCurrency(group.yourBalance || 0)}</span>
+                    <span className={`text-sm font-semibold ${yourBalance >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatCurrency(yourBalance)}</span>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       )}

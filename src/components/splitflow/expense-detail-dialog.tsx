@@ -82,7 +82,23 @@ export function ExpenseDetailDialog({
         if (res.ok) return res.json();
         throw new Error();
       })
-      .then((data) => setExpense(data.expense || data))
+      .then((data) => {
+        const raw = data.expense || data;
+        // Map splits to flatten user.name into userName
+        const mapped = {
+          ...raw,
+          splits: (raw.splits || []).map((s: any) => ({
+            ...s,
+            userName: s.user?.name || s.userName || 'Unknown',
+          })),
+          paidBy: raw.paidBy
+            ? { name: raw.paidBy.name || 'Unknown', id: raw.paidBy.id }
+            : { name: 'Unknown', id: '' },
+          groupName: raw.group?.name || '',
+          categoryEmoji: CATEGORY_EMOJIS[raw.category || ''] || '\u{1F4CB}',
+        };
+        setExpense(mapped);
+      })
       .catch(() => toast.error('Failed to load expense'))
       .finally(() => setLoading(false));
   }, [open, expenseId]);
