@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { signOut as nextAuthSignOut } from 'next-auth/react';
 import { useAppStore } from '@/store/app-store';
 
 export function useAuth() {
@@ -28,10 +29,16 @@ export function useAuth() {
   }, [checkSession]);
 
   const signOut = async () => {
-    await fetch('/api/auth/signout', { method: 'POST' });
-    document.cookie = 'sf-token=; path=/; max-age=0';
+    // Clear all auth cookies
+    document.cookie.split(';').forEach((c) => {
+      const name = c.split('=')[0].trim();
+      document.cookie = `${name}=; path=/; max-age=0; domain=${window.location.hostname}`;
+      document.cookie = `${name}=; path=/; max-age=0`;
+    });
     setUser(null);
     setChecked(false);
+    // Use NextAuth's signOut which handles CSRF token properly
+    await nextAuthSignOut({ redirect: false });
     window.location.href = '/app';
   };
 

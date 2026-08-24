@@ -12,6 +12,8 @@ import {
   X,
   UserPlus,
   User,
+  Wallet,
+  Split,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,6 +112,51 @@ export function AddExpenseView() {
   const [categorizeLoading, setCategorizeLoading] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Multi-payer state
+  const [splitPayment, setSplitPayment] = useState(false);
+  const [payments, setPayments] = useState<Record<string, string>>({});
+
+  // Initialize payments when members/group change
+  useEffect(() => {
+    if (splitPayment && mode === 'group' && members.length > 0) {
+      const totalAmt = parseFloat(amount) || 0;
+      if (totalAmt <= 0) {
+        setPayments({});
+        return;
+      }
+      // If no payments set yet, default to paidById paying full amount
+      const currentPayments = payments;
+      const hasPayments = members.some(m => {
+        const val = parseFloat(currentPayments[m.id] || '0');
+        return val > 0;
+      });
+      if (!hasPayments) {
+        setPayments({ [paidById]: String(totalAmt) });
+      }
+    }
+  }, [splitPayment, mode, members.length, paidById]);
+
+  const totalPayments = Object.values(payments).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+  const paymentsOk = !splitPayment || Math.abs(totalPayments - (parseFloat(amount) || 0)) < 0.5;
+
+  const updatePayment = (userId: string, value: string) => {
+    setPayments(prev => ({ ...prev, [userId]: value }));
+  };
+
+  const addPayer = (userId: string) => {
+    if (!payments[userId]) {
+      setPayments(prev => ({ ...prev, [userId]: '' }));
+    }
+  };
+
+  const removePayer = (userId: string) => {
+    setPayments(prev => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -526,14 +573,26 @@ export function AddExpenseView() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      // Build payments array for multi-payer support
+      const paymentList: { userId: string; amount: number }[] = [];
+      if (splitPayment) {
+        for (const [uid, val] of Object.entries(payments)) {
+          const amt = parseFloat(val) || 0;
+          if (amt > 0) paymentList.push({ userId: uid, amount: amt });
+        }
+      } else {
+        paymentList.push({ userId: paidById, amount: parseFloat(amount) });
+      }
+
       const body: any = {
         description: description.trim(),
         amount: parseFloat(amount),
         category,
         date,
-        paidById,
+        paidById: splitPayment ? paymentList[0]?.userId : paidById,
         splitType,
         note: note.trim(),
+        payments: paymentList,
       };
 
       if (mode === 'group') {
@@ -937,21 +996,156 @@ export function AddExpenseView() {
                     </Button>
                   )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Paid by</Label>
-                  <Select value={paidById} onValueChange={setPaidById}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder={membersLoading ? 'Loading...' : 'Who paid?'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {members.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!splitPayment && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Paid by</Label>
+                    <Select value={paidById} onValueChange={setPaidById}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder={membersLoading ? 'Loading...' : 'Who paid?'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
+
+
+            {/* Paid By Section - Multi-payer toggle + payment inputs */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">
+                    <Wallet className="w-3.5 h-3.5 inline mr-1" />
+                    {mode === 'group' ? 'Who paid?' : 'Paid by'}
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs max-w-xs">
+                        <strong>Single payer:</strong> One person paid the full amount.<br/>
+                        <strong>Split payment:</strong> Multiple people paid different amounts.<br/>
+                        <br/>
+                        Example: A paid ₹100, B paid ₹200, total ₹300 split equally = ₹100 each. A owes nothing, C owes ₹100 to B.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSplitPayment(!splitPayment);
+                    if (!splitPayment) {
+                      // Turning on split payment - initialize with current payer
+                      const numAmt = parseFloat(amount) || 0;
+                      setPayments(numAmt > 0 ? { [paidById]: String(numAmt) } : {});
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                    splitPayment
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'bg-background border-border text-muted-foreground hover:border-muted-foreground/40'
+                  }`}
+                >
+                  <Split className="w-3 h-3" />
+                  Split Payment
+                </button>
+              </div>
+
+              {!splitPayment ? (
+                <div>
+                  {mode === 'direct' ? (
+                    <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+                      <User className="w-3 h-3 inline mr-1" />
+                      You (default payer) — toggle <strong>Split Payment</strong> if multiple people paid
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  {/* Existing payers */}
+                  {Object.entries(payments).map(([uid, val]) => {
+                    const member = members.find(m => m.id === uid);
+                    const friend = friends.find(f => f.id === uid);
+                    const isMe = uid === user?.id;
+                    const name = isMe ? 'You' : (member?.name || friend?.name || 'Unknown');
+                    return (
+                      <div key={uid} className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 w-28 truncate shrink-0">
+                          {isMe ? (
+                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-3 h-3 text-foreground" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm text-foreground truncate">{name}</span>
+                        </div>
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0"
+                            value={val}
+                            onChange={(e) => updatePayment(uid, e.target.value)}
+                            className="h-9 pl-7"
+                          />
+                        </div>
+                        {(!isMe || Object.keys(payments).length > 1) && (
+                          <button
+                            type="button"
+                            onClick={() => removePayer(uid)}
+                            className="text-muted-foreground hover:text-red-500 p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Add payer dropdown */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-muted-foreground">Add payer:</span>
+                    {(mode === 'group' ? members : allDirectParticipants)
+                      .filter(p => !payments[p.id])
+                      .map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => addPayer(p.id)}
+                          className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                        >
+                          {p.id === user?.id ? 'You' : p.name}
+                        </button>
+                      ))}
+                  </div>
+
+                  {/* Payment total indicator */}
+                  <div className={`flex items-center justify-between pt-2 border-t ${paymentsOk ? 'border-border' : 'border-red-300'}`}>
+                    <span className="text-xs text-muted-foreground">Total paid</span>
+                    <span className={`text-sm font-semibold ${paymentsOk ? 'text-primary' : 'text-red-500'}`}>
+                      ₹{totalPayments.toFixed(2)} / ₹{(parseFloat(amount) || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  {!paymentsOk && parseFloat(amount) > 0 && (
+                    <p className="text-xs text-red-500">
+                      Payment amounts must equal the expense total
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
 
             {mode === 'direct' && (
@@ -1414,7 +1608,7 @@ export function AddExpenseView() {
 
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (splitPayment && !paymentsOk)}
               className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-medium shadow-sm"
             >
               {submitting ? (

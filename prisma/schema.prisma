@@ -127,12 +127,13 @@ model Expense {
 }
 
 model ExpenseSplit {
-  id        String  @id @default(cuid())
-  expenseId String
-  userId    String
-  amount    Float
+  id         String  @id @default(cuid())
+  expenseId  String
+  userId     String
+  amount     Float
   percentage Float?
-  share     Float  @default(1)
+  share      Float  @default(1)
+  paidAmount Float  @default(0)
 
   expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)

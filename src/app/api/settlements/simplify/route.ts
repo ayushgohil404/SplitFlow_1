@@ -25,32 +25,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ settlements: [] })
     }
 
+    // Calculate each member's net balance using paidAmount from splits
     const balances: Map<string, number> = new Map()
-
     for (const m of members) {
       balances.set(m.userId, 0)
     }
 
-    const paidByUser = await db.expense.groupBy({
-      by: ['createdBy'],
-      where: { groupId },
-      _sum: { amount: true },
-    })
-    for (const entry of paidByUser) {
-      const val = balances.get(entry.createdBy) ?? 0
-      balances.set(entry.createdBy, val + (entry._sum.amount ?? 0))
-    }
-
-    const owedByUser = await db.expenseSplit.groupBy({
-      by: ['userId'],
+    // Get all splits with expense info for backward compatibility
+    const allSplits = await db.expenseSplit.findMany({
       where: { expense: { groupId } },
-      _sum: { amount: true },
+      select: {
+        userId: true,
+        amount: true,
+        paidAmount: true,
+        expenseId: true,
+        expense: { select: { createdBy: true, amount: true } },
+      },
     })
-    for (const entry of owedByUser) {
-      const val = balances.get(entry.userId) ?? 0
-      balances.set(entry.userId, val - (entry._sum.amount ?? 0))
+
+    // Group splits by expense for backward compatibility
+    const expenseSplitsMap = new Map<string, typeof allSplits>()
+    for (const split of allSplits) {
+      if (!expenseSplitsMap.has(split.expenseId)) {
+        expenseSplitsMap.set(split.expenseId, [])
+      }
+      expenseSplitsMap.get(split.expenseId)!.push(split)
     }
 
+    for (const [, splits] of expenseSplitsMap) {
+      const hasAnyPayment = splits.some(s => (s.paidAmount || 0) > 0.005)
+
+      if (!hasAnyPayment) {
+        // Legacy expense: createdBy paid the full amount
+        const createdBy = splits[0].expense.createdBy
+        const totalAmount = splits[0].expense.amount
+        for (const split of splits) {
+          const paidAmt = split.userId === createdBy ? totalAmount : 0
+          const net = paidAmt - Number(split.amount)
+          const current = balances.get(split.userId) ?? 0
+          balances.set(split.userId, Math.round((current + net) * 100) / 100)
+        }
+      } else {
+        for (const split of splits) {
+          const net = (split.paidAmount || 0) - Number(split.amount)
+          const current = balances.get(split.userId) ?? 0
+          balances.set(split.userId, Math.round((current + net) * 100) / 100)
+        }
+      }
+    }
+
+    // Subtract completed settlements
     const sentSettlements = await db.settlement.groupBy({
       by: ['fromUserId'],
       where: { groupId, status: 'completed' },
@@ -58,7 +82,7 @@ export async function POST(req: NextRequest) {
     })
     for (const entry of sentSettlements) {
       const val = balances.get(entry.fromUserId) ?? 0
-      balances.set(entry.fromUserId, val - (entry._sum.amount ?? 0))
+      balances.set(entry.fromUserId, Math.round((val - (entry._sum.amount ?? 0)) * 100) / 100)
     }
 
     const receivedSettlements = await db.settlement.groupBy({
@@ -68,7 +92,7 @@ export async function POST(req: NextRequest) {
     })
     for (const entry of receivedSettlements) {
       const val = balances.get(entry.toUserId) ?? 0
-      balances.set(entry.toUserId, val + (entry._sum.amount ?? 0))
+      balances.set(entry.toUserId, Math.round((val + (entry._sum.amount ?? 0)) * 100) / 100)
     }
 
     const debtors: { userId: string; amount: number }[] = []

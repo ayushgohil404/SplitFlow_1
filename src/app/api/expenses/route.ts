@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
       date,
       isRecurring,
       recurringFrequency,
+      paidById,
+      payments,
     } = body as {
       groupId?: string
       description: string
@@ -83,6 +85,8 @@ export async function POST(req: NextRequest) {
       date?: string
       isRecurring?: boolean
       recurringFrequency?: string
+      paidById?: string
+      payments?: { userId: string; amount: number }[]
     }
 
     if (!description?.trim() || !amount || amount <= 0 || !splitType) {
@@ -92,18 +96,46 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Determine the creator/payer for the Expense.createdBy field (legacy compatibility)
+    const creatorId = paidById || user.id
+
     if (groupId) {
+      // Verify the creator is a member of the group
       const membership = await db.groupMember.findUnique({
         where: {
-          groupId_userId: { groupId, userId: user.id },
+          groupId_userId: { groupId, userId: creatorId },
         },
       })
       if (!membership) {
-        return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
+        // Also check if the logged-in user is a member
+        const userMembership = await db.groupMember.findUnique({
+          where: { groupId_userId: { groupId, userId: user.id } },
+        })
+        if (!userMembership) {
+          return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 })
+        }
       }
     }
 
-    let userSplits: { userId: string; amount: number; percentage: number; share: number }[] = []
+    // Build payment map: userId -> paidAmount
+    const paymentMap = new Map<string, number>()
+    if (payments && payments.length > 0) {
+      const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      if (Math.abs(totalPayments - amount) > 0.5) {
+        return NextResponse.json(
+          { error: `Payment amounts (₹${totalPayments.toFixed(2)}) must equal total (₹${amount.toFixed(2)})` },
+          { status: 400 }
+        )
+      }
+      for (const p of payments) {
+        paymentMap.set(p.userId, (paymentMap.get(p.userId) || 0) + (p.amount || 0))
+      }
+    } else {
+      // Single payer mode: the paidById person paid the full amount
+      paymentMap.set(creatorId, amount)
+    }
+
+    let userSplits: { userId: string; amount: number; percentage: number; share: number; paidAmount: number }[] = []
     let finalEmailSplits: { email: string; name: string; amount: number; percentage: number; share: number }[] = []
 
     let groupMembers: { userId: string }[] = []
@@ -117,7 +149,13 @@ export async function POST(req: NextRequest) {
     const splitUserIds = splits?.map((s) => s.userId) || []
 
     if (!groupId && splitUserIds.length === 0) {
-      userSplits = [{ userId: user.id, amount: 0, percentage: 0, share: 0 }]
+      userSplits = [{
+        userId: user.id,
+        amount: 0,
+        percentage: 0,
+        share: 0,
+        paidAmount: paymentMap.get(user.id) || 0,
+      }]
     } else if (splitType === 'equal') {
       if (splits && splits.length > 0) {
         const allParticipantSplits = !groupId && !splits.some((s) => s.userId === user.id)
@@ -129,6 +167,7 @@ export async function POST(req: NextRequest) {
           amount: s.amount ?? 0,
           percentage: 0,
           share: s.share ?? 1,
+          paidAmount: paymentMap.get(s.userId) || 0,
         }))
         const totalShares = userSplits.reduce((sum, s) => sum + s.share, 0) || 1
         for (const s of userSplits) {
@@ -143,6 +182,7 @@ export async function POST(req: NextRequest) {
           amount: i === 0 ? perPerson + remainder / 100 : perPerson,
           percentage: Math.round((100 / groupMembers.length) * 100) / 100,
           share: 1,
+          paidAmount: paymentMap.get(m.userId) || 0,
         }))
       } else {
         const allIds = [user.id, ...splitUserIds.filter((id) => id !== user.id)]
@@ -153,6 +193,7 @@ export async function POST(req: NextRequest) {
           amount: i === 0 ? perPerson + remainder / 100 : perPerson,
           percentage: Math.round((100 / allIds.length) * 100) / 100,
           share: 1,
+          paidAmount: paymentMap.get(id) || 0,
         }))
       }
     } else if (splitType === 'exact') {
@@ -174,10 +215,17 @@ export async function POST(req: NextRequest) {
           amount: s.amount ?? 0,
           percentage: Math.round(((s.amount ?? 0) / safeAmount) * 100 * 100) / 100,
           share: 0,
+          paidAmount: paymentMap.get(s.userId) || 0,
         }))
       } else if (!groupId) {
         const myAmount = Math.round((amount - emailTotal) * 100) / 100
-        userSplits = [{ userId: user.id, amount: myAmount, percentage: Math.round((myAmount / amount) * 10000) / 100, share: 0 }]
+        userSplits = [{
+          userId: user.id,
+          amount: myAmount,
+          percentage: Math.round((myAmount / amount) * 10000) / 100,
+          share: 0,
+          paidAmount: paymentMap.get(user.id) || 0,
+        }]
       }
 
       if (emailSplits && emailSplits.length > 0) {
@@ -191,6 +239,7 @@ export async function POST(req: NextRequest) {
               amount: es.amount ?? 0,
               percentage: Math.round(((es.amount ?? 0) / (amount || 1)) * 100 * 100) / 100,
               share: 0,
+              paidAmount: paymentMap.get(existingUser.id) || 0,
             })
           } else {
             finalEmailSplits.push({
@@ -221,10 +270,17 @@ export async function POST(req: NextRequest) {
           amount: Math.round(amount * ((s.percentage ?? 0) / 100) * 100) / 100,
           percentage: s.percentage ?? 0,
           share: 0,
+          paidAmount: paymentMap.get(s.userId) || 0,
         }))
       } else if (!groupId) {
         const myPct = Math.round((100 - emailPctTotal) * 100) / 100
-        userSplits = [{ userId: user.id, amount: Math.round(amount * myPct / 100 * 100) / 100, percentage: myPct, share: 0 }]
+        userSplits = [{
+          userId: user.id,
+          amount: Math.round(amount * myPct / 100 * 100) / 100,
+          percentage: myPct,
+          share: 0,
+          paidAmount: paymentMap.get(user.id) || 0,
+        }]
       }
 
       if (emailSplits && emailSplits.length > 0) {
@@ -238,6 +294,7 @@ export async function POST(req: NextRequest) {
               amount: Math.round(amount * ((es.percentage ?? 0) / 100) * 100) / 100,
               percentage: es.percentage ?? 0,
               share: 0,
+              paidAmount: paymentMap.get(existingUser.id) || 0,
             })
           } else {
             finalEmailSplits.push({
@@ -266,6 +323,7 @@ export async function POST(req: NextRequest) {
               amount: perPerson,
               percentage: Math.round((100 / (userSplits.length + 1)) * 100) / 100,
               share: 1,
+              paidAmount: paymentMap.get(existingUser.id) || 0,
             })
           } else {
             userSplits.push({
@@ -273,6 +331,7 @@ export async function POST(req: NextRequest) {
               amount: es.amount ?? 0,
               percentage: es.percentage ?? 0,
               share: es.share ?? 1,
+              paidAmount: paymentMap.get(existingUser.id) || 0,
             })
           }
         } else {
@@ -287,7 +346,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (splitType === 'equal' && emailSplits.length > 0) {
-
         const hasCustomShares = emailSplits.some((es) => (es.share ?? 1) !== 1) ||
           userSplits.some((s) => (s.share ?? 1) !== 1)
 
@@ -337,13 +395,14 @@ export async function POST(req: NextRequest) {
         date: date ? new Date(date) : new Date(),
         isRecurring: isRecurring ?? false,
         recurringFrequency: recurringFrequency ?? null,
-        createdBy: user.id,
+        createdBy: creatorId,
         splits: {
           create: userSplits.map((s) => ({
             userId: s.userId,
             amount: s.amount,
             percentage: s.percentage,
             share: s.share,
+            paidAmount: s.paidAmount,
           })),
         },
         nonUserSplits: {
