@@ -157,8 +157,8 @@ export function GroupDetailView() {
         const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
         const memberMap = new Map(members.map(m => [m.id, m.name]));
         const balances = apiBalances.map((b: any) => ({
-          from: { id: b.fromUserId, name: memberMap.get(b.fromUserId) || 'Unknown' },
-          to: { id: b.toUserId, name: memberMap.get(b.toUserId) || 'Unknown' },
+          from: b.from || { id: b.fromUserId, name: memberMap.get(b.fromUserId) || 'Unknown' },
+          to: b.to || { id: b.toUserId, name: memberMap.get(b.toUserId) || 'Unknown' },
           amount: Number(b.amount),
         }));
         setGroup({ ...g, members, expenses, totalExpenses, balances } as GroupData);

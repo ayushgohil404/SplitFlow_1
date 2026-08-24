@@ -12,12 +12,15 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  Users,
+  ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -48,10 +51,23 @@ interface GroupBalance {
   yourBalance: number;
 }
 
+interface DirectBalance {
+  userId: string;
+  userName: string | null;
+  userImage: string | null;
+  amount: number;
+  isEmail?: boolean;
+}
+
 interface BalanceDetail {
   from: { id: string; name: string };
   to: { id: string; name: string };
   amount: number;
+}
+
+interface GroupMember {
+  userId: string;
+  userName: string;
 }
 
 interface Settlement {
@@ -71,10 +87,15 @@ interface SimplifiedPayment {
   amount: number;
 }
 
+type Tab = 'overall' | 'group';
+
 export function SettleView() {
   const { user } = useAppStore();
+  const [tab, setTab] = useState<Tab>('overall');
   const [groupBalances, setGroupBalances] = useState<GroupBalance[]>([]);
+  const [directBalances, setDirectBalances] = useState<DirectBalance[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [balances, setBalances] = useState<BalanceDetail[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [simplified, setSimplified] = useState<SimplifiedPayment[]>([]);
@@ -90,13 +111,21 @@ export function SettleView() {
   const [payNote, setPayNote] = useState('');
   const [recording, setRecording] = useState(false);
 
-  const fetchGroupBalances = useCallback(async () => {
+  const fetchOverviewData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/user/balance');
       if (res.ok) {
         const data = await res.json();
-        setGroupBalances(data.groups || []);
+        setGroupBalances((data.groups || []).map((g: any) => ({
+          groupId: g.groupId,
+          groupName: g.groupName,
+          groupEmoji: g.groupEmoji,
+          yourBalance: g.balances
+            ? g.balances.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0)
+            : 0,
+        })));
+        setDirectBalances(data.direct || []);
       }
     } catch {
     } finally {
@@ -105,8 +134,8 @@ export function SettleView() {
   }, []);
 
   useEffect(() => {
-    fetchGroupBalances();
-  }, [fetchGroupBalances]);
+    fetchOverviewData();
+  }, [fetchOverviewData]);
 
   const fetchGroupDetail = useCallback(async (groupId: string) => {
     setDetailLoading(true);
@@ -118,7 +147,20 @@ export function SettleView() {
       ]);
       if (groupRes.ok) {
         const data = await groupRes.json();
-        setBalances(data.balances || []);
+        const g = data.group || data;
+        // Extract member list for the "record payment" dialog
+        const memberList = ((g.members || []) as any[]).map((m: any) => ({
+          userId: m.user?.id || m.userId || m.id,
+          userName: m.user?.name || m.name || 'Unknown',
+        }));
+        setGroupMembers(memberList);
+        // The API now returns balances with from/to objects
+        const rawBalances = data.balances || [];
+        setBalances(rawBalances.map((b: any) => ({
+          from: b.from || { id: b.fromUserId, name: 'Unknown' },
+          to: b.to || { id: b.toUserId, name: 'Unknown' },
+          amount: Number(b.amount) || 0,
+        })));
       }
       if (settleRes.ok) {
         const sData = await settleRes.json();
@@ -200,7 +242,7 @@ export function SettleView() {
         setPayAmount('');
         setPayNote('');
         fetchGroupDetail(selectedGroupId);
-        fetchGroupBalances();
+        fetchOverviewData();
       } else {
         toast.error('Failed to record payment');
       }
@@ -211,17 +253,25 @@ export function SettleView() {
     }
   };
 
-  const totalOwed = groupBalances
-    .filter((g) => g.yourBalance > 0)
-    .reduce((sum, g) => sum + g.yourBalance, 0);
-  const totalOwing = groupBalances
-    .filter((g) => g.yourBalance < 0)
-    .reduce((sum, g) => sum + Math.abs(g.yourBalance), 0);
+  // Calculate totals from overview data
+  const groupOwed = groupBalances.filter(g => g.yourBalance > 0).reduce((s, g) => s + g.yourBalance, 0);
+  const groupOwing = groupBalances.filter(g => g.yourBalance < 0).reduce((s, g) => s + Math.abs(g.yourBalance), 0);
+  const directOwed = directBalances.filter(d => d.amount > 0).reduce((s, d) => s + d.amount, 0);
+  const directOwing = directBalances.filter(d => d.amount < 0).reduce((s, d) => s + Math.abs(d.amount), 0);
+  const totalOwed = groupOwed + directOwed;
+  const totalOwing = groupOwing + directOwing;
   const hasAnyBalance = totalOwed > 0 || totalOwing > 0;
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-foreground">Settle Up</h2>
+        <p className="text-sm text-muted-foreground mt-1">See who owes whom and record payments.</p>
+      </div>
+
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-5">
@@ -229,6 +279,7 @@ export function SettleView() {
               <div>
                 <p className="text-sm text-muted-foreground">Others owe you</p>
                 <p className="text-2xl font-bold text-primary mt-1">₹{totalOwed.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Groups: ₹{groupOwed.toFixed(2)} · Direct: ₹{directOwed.toFixed(2)}</p>
               </div>
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <ArrowUpRight className="w-6 h-6 text-primary" />
@@ -242,6 +293,7 @@ export function SettleView() {
               <div>
                 <p className="text-sm text-muted-foreground">You owe others</p>
                 <p className="text-2xl font-bold text-destructive mt-1">₹{totalOwing.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Groups: ₹{groupOwing.toFixed(2)} · Direct: ₹{directOwing.toFixed(2)}</p>
               </div>
               <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
                 <ArrowDownRight className="w-6 h-6 text-destructive" />
@@ -251,209 +303,363 @@ export function SettleView() {
         </Card>
       </div>
 
+      {/* Tab Switcher */}
+      <div className="flex gap-1 p-1 bg-muted rounded-lg">
+        <button
+          type="button"
+          onClick={() => setTab('overall')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+            tab === 'overall' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <HandCoins className="w-4 h-4" />
+          Overall
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('group')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+            tab === 'group' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          By Group
+        </button>
+      </div>
 
-      {loading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}><CardContent className="p-4 flex items-center gap-3">
-            <Skeleton className="w-10 h-10 rounded-full" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-32" />
-            </div>
-            <Skeleton className="h-8 w-20 rounded-lg" />
-          </CardContent></Card>
-        ))}</div>
-      ) : !hasAnyBalance ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-foreground mb-1">All settled up!</h3>
-            <p className="text-sm text-muted-foreground">You don&apos;t owe anyone and no one owes you. Nice!</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Select a group to settle</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-gray-100">
-              {groupBalances.map((gb) => {
-                const isActive = selectedGroupId === gb.groupId;
-                return (
-                  <button
-                    key={gb.groupId}
-                    className={`w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left ${
-                      isActive ? 'bg-primary/10/50 border-l-2 border-l-emerald-500' : ''
-                    }`}
-                    onClick={() => setSelectedGroupId(gb.groupId)}
-                  >
-                    <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm">{gb.groupName}</p>
-                      {isActive && <p className="text-xs text-primary mt-0.5">Selected</p>}
-                    </div>
-                    <span
-                      className={`text-sm font-semibold ${
-                        gb.yourBalance >= 0 ? 'text-primary' : 'text-destructive'
-                      }`}
-                    >
-                      {gb.yourBalance >= 0 ? '+' : ''}
-                      ₹{(Number(gb.yourBalance) || 0).toFixed(2)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-
-      {selectedGroupId && (
+      {/* OVERALL TAB - Splitwise-like list of all people you owe / owe you */}
+      {tab === 'overall' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-foreground">Detailed Balances</h3>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-primary hover:bg-primary/90 text-white"
-                onClick={() => setRecordOpen(true)}
-              >
-                <CreditCard className="w-4 h-4 mr-1.5" />Record Payment
-              </Button>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button size="sm" variant="outline" onClick={handleSimplify} disabled={simplifyLoading}>
-                      {simplifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
-                      Simplify
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="text-xs max-w-xs">
-                    Calculates the minimum number of payments needed to settle all debts
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-
-          {detailLoading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+          {loading ? (
+            <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => (
               <Card key={i}><CardContent className="p-4 flex items-center gap-3">
                 <Skeleton className="w-10 h-10 rounded-full" />
                 <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-4 w-28" />
                   <Skeleton className="h-3 w-20" />
                 </div>
-                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-8 w-20 rounded-lg" />
               </CardContent></Card>
             ))}</div>
-          ) : balances.length === 0 ? (
+          ) : !hasAnyBalance ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground font-medium">All settled up in this group!</p>
-                <p className="text-xs text-muted-foreground mt-1">No outstanding balances</p>
+              <CardContent className="p-12 text-center">
+                <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">All settled up!</h3>
+                <p className="text-sm text-muted-foreground">You don&apos;t owe anyone and no one owes you. Nice!</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-2">
-              {balances.map((b, idx) => {
-                const isYouOwe = b.from?.id === user?.id;
-                const isOwedToYou = b.to?.id === user?.id;
-                return (
-                  <Card key={idx} className={isYouOwe || isOwedToYou ? 'ring-1 ring-emerald-100' : ''}>
+              {/* People who owe you */}
+              {groupBalances.filter(g => g.yourBalance > 0).length + directBalances.filter(d => d.amount > 0).length > 0 && (
+                <p className="text-xs font-semibold text-primary uppercase tracking-wider">Friends owe you</p>
+              )}
+              {/* Group balances where you're owed */}
+              {groupBalances
+                .filter(g => g.yourBalance > 0)
+                .map(g => (
+                  <Card key={g.groupId}>
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isYouOwe ? 'bg-destructive/10' : 'bg-primary/10'}`}>
-                        {isYouOwe ? (
-                          <ArrowDownRight className="w-5 h-5 text-destructive" />
-                        ) : (
-                          <ArrowUpRight className="w-5 h-5 text-primary" />
-                        )}
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="text-lg">{g.groupEmoji || '👥'}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground">
-                          <span className="font-medium">{b.from?.name || 'Someone'}</span>
-                          {' → '}
-                          <span className="font-medium">{b.to?.name || 'Someone'}</span>
-                        </p>
-                        {isYouOwe && <p className="text-xs text-destructive mt-0.5">You need to pay</p>}
-                        {isOwedToYou && <p className="text-xs text-primary mt-0.5">Owed to you</p>}
+                        <p className="text-sm font-medium text-foreground truncate">{g.groupName}</p>
+                        <p className="text-xs text-muted-foreground">Group balance</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-sm font-bold ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-foreground'}`}>
-                          ₹{(Number(b.amount) || 0).toFixed(2)}
-                        </span>
-                        {(isYouOwe || isOwedToYou) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className={`h-7 text-xs ${isYouOwe ? 'border-destructive/30 text-destructive hover:bg-destructive/10' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPayFrom(b.from?.id || '');
-                              setPayTo(b.to?.id || '');
-                              setPayAmount(String(Number(b.amount).toFixed(2)));
-                              setPayNote('');
-                              setRecordOpen(true);
-                            }}
-                          >
-                            Settle
-                          </Button>
-                        )}
-                      </div>
+                      <span className="text-sm font-bold text-primary">+₹{g.yourBalance.toFixed(2)}</span>
+                      <button
+                        className="ml-1 p-1.5 rounded-lg hover:bg-muted transition-colors"
+                        onClick={() => { setTab('group'); setSelectedGroupId(g.groupId); }}
+                      >
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
                     </CardContent>
                   </Card>
-                );
-              })}
-            </div>
-          )}
-
-
-          {simplified.length > 0 && (
-            <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-primary" />Optimal Payment Plan
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground mb-3">Reduce from {balances.length} transactions to {simplified.length}:</p>
-                <div className="space-y-2">
-                  {simplified.map((p, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-2.5 bg-background rounded-lg border border-primary/20">
-                      <span className="text-sm flex-1 text-foreground font-medium">{p.fromUserName} → {p.toUserName}</span>
-                      <span className="text-sm font-bold text-foreground">₹{(Number(p.amount) || 0).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-
-          {settlements.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold text-foreground mb-2">Recent Settlements</h4>
-              <div className="space-y-2">
-                {settlements.slice(0, 5).map((s) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground">{s.from?.name} paid {s.to?.name}</p>
-                      {s.note && <p className="text-xs text-muted-foreground">{s.note}</p>}
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">₹{(Number(s.amount) || 0).toFixed(2)}</span>
-                  </div>
                 ))}
-              </div>
+              {/* Direct balances where you're owed */}
+              {directBalances
+                .filter(d => d.amount > 0)
+                .map((d, i) => (
+                  <Card key={`direct-${i}`}>
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                          {(d.userName || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{d.userName || 'Someone'}</p>
+                        <p className="text-xs text-muted-foreground">Direct expense</p>
+                      </div>
+                      <span className="text-sm font-bold text-primary">+₹{d.amount.toFixed(2)}</span>
+                    </CardContent>
+                  </Card>
+                ))}
+
+              {/* People you owe */}
+              {groupBalances.filter(g => g.yourBalance < 0).length + directBalances.filter(d => d.amount < 0).length > 0 && (
+                <p className="text-xs font-semibold text-destructive uppercase tracking-wider pt-2">You owe</p>
+              )}
+              {/* Group balances where you owe */}
+              {groupBalances
+                .filter(g => g.yourBalance < 0)
+                .map(g => (
+                  <Card key={g.groupId}>
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                        <span className="text-lg">{g.groupEmoji || '👥'}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{g.groupName}</p>
+                        <p className="text-xs text-muted-foreground">Group balance</p>
+                      </div>
+                      <span className="text-sm font-bold text-destructive">-₹{Math.abs(g.yourBalance).toFixed(2)}</span>
+                      <button
+                        className="ml-1 p-1.5 rounded-lg hover:bg-muted transition-colors"
+                        onClick={() => { setTab('group'); setSelectedGroupId(g.groupId); }}
+                      >
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </CardContent>
+                  </Card>
+                ))}
+              {/* Direct balances where you owe */}
+              {directBalances
+                .filter(d => d.amount < 0)
+                .map((d, i) => (
+                  <Card key={`direct-${i}`}>
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-destructive/10 text-destructive text-sm font-semibold">
+                          {(d.userName || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{d.userName || 'Someone'}</p>
+                        <p className="text-xs text-muted-foreground">Direct expense</p>
+                      </div>
+                      <span className="text-sm font-bold text-destructive">-₹{Math.abs(d.amount).toFixed(2)}</span>
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           )}
         </div>
       )}
 
+      {/* GROUP TAB - Detailed group settle up */}
+      {tab === 'group' && (
+        <div className="space-y-4">
+          {/* Group Selector */}
+          {loading ? (
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-8 w-20 rounded-lg" />
+              </CardContent></Card>
+            ))}</div>
+          ) : groupBalances.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">No groups yet</h3>
+                <p className="text-sm text-muted-foreground">Create a group first to see balances.</p>
+              </CardContent>
+            </Card>
+          ) : !selectedGroupId ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Select a group to settle</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-gray-100">
+                  {groupBalances.map((gb) => (
+                    <button
+                      key={gb.groupId}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left"
+                      onClick={() => setSelectedGroupId(gb.groupId)}
+                    >
+                      <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground text-sm">{gb.groupName}</p>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold ${
+                          gb.yourBalance >= 0 ? 'text-primary' : 'text-destructive'
+                        }`}
+                      >
+                        {gb.yourBalance >= 0 ? '+' : ''}₹{(Number(gb.yourBalance) || 0).toFixed(2)}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Group detail header */}
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setSelectedGroupId(''); setBalances([]); setSettlements([]); setSimplified([]); }}>
+                  ← Back
+                </Button>
+                <h3 className="text-base font-semibold text-foreground">
+                  {groupBalances.find(g => g.groupId === selectedGroupId)?.groupEmoji}{' '}
+                  {groupBalances.find(g => g.groupId === selectedGroupId)?.groupName || 'Group'}
+                </h3>
+              </div>
 
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">Detailed balances within this group</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-white"
+                    onClick={() => setRecordOpen(true)}
+                  >
+                    <CreditCard className="w-4 h-4 mr-1.5" />Record Payment
+                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="outline" onClick={handleSimplify} disabled={simplifyLoading}>
+                          {simplifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
+                          Simplify
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs max-w-xs">
+                        Calculates the minimum number of payments needed to settle all debts
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+
+              {detailLoading ? (
+                <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </CardContent></Card>
+                ))}</div>
+              ) : balances.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground font-medium">All settled up in this group!</p>
+                    <p className="text-xs text-muted-foreground mt-1">No outstanding balances</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {balances.map((b, idx) => {
+                    const isYouOwe = b.from?.id === user?.id;
+                    const isOwedToYou = b.to?.id === user?.id;
+                    return (
+                      <Card key={idx} className={isYouOwe || isOwedToYou ? 'ring-1 ring-emerald-100' : ''}>
+                        <CardContent className="p-4 flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isYouOwe ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+                            {isYouOwe ? (
+                              <ArrowDownRight className="w-5 h-5 text-destructive" />
+                            ) : (
+                              <ArrowUpRight className="w-5 h-5 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground">
+                              <span className="font-medium">{b.from?.name || 'Someone'}</span>
+                              {' → '}
+                              <span className="font-medium">{b.to?.name || 'Someone'}</span>
+                            </p>
+                            {isYouOwe && <p className="text-xs text-destructive mt-0.5">You need to pay</p>}
+                            {isOwedToYou && <p className="text-xs text-primary mt-0.5">Owed to you</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-sm font-bold ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-foreground'}`}>
+                              ₹{(Number(b.amount) || 0).toFixed(2)}
+                            </span>
+                            {(isYouOwe || isOwedToYou) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={`h-7 text-xs ${isYouOwe ? 'border-destructive/30 text-destructive hover:bg-destructive/10' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPayFrom(b.from?.id || '');
+                                  setPayTo(b.to?.id || '');
+                                  setPayAmount(String(Number(b.amount).toFixed(2)));
+                                  setPayNote('');
+                                  setRecordOpen(true);
+                                }}
+                              >
+                                Settle
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+
+              {simplified.length > 0 && (
+                <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-primary" />Optimal Payment Plan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground mb-3">Reduce from {balances.length} transactions to {simplified.length}:</p>
+                    <div className="space-y-2">
+                      {simplified.map((p, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-2.5 bg-background rounded-lg border border-primary/20">
+                          <span className="text-sm flex-1 text-foreground font-medium">{p.fromUserName} → {p.toUserName}</span>
+                          <span className="text-sm font-bold text-foreground">₹{(Number(p.amount) || 0).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {settlements.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Recent Settlements</h4>
+                  <div className="space-y-2">
+                    {settlements.slice(0, 10).map((s) => (
+                      <div key={s.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground">{s.from?.name} paid {s.to?.name}</p>
+                          {s.note && <p className="text-xs text-muted-foreground">{s.note}</p>}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-semibold text-foreground">₹{(Number(s.amount) || 0).toFixed(2)}</span>
+                          <p className="text-[10px] text-muted-foreground">{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Record Payment Dialog */}
       <Dialog open={recordOpen} onOpenChange={setRecordOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -468,8 +674,8 @@ export function SettleView() {
               <Select value={payFrom} onValueChange={setPayFrom}>
                 <SelectTrigger><SelectValue placeholder="Who is paying?" /></SelectTrigger>
                 <SelectContent>
-                  {balances.map((b, idx) => (
-                    <SelectItem key={`from-${idx}`} value={b.from?.id || ''}>{b.from?.name}</SelectItem>
+                  {groupMembers.map((m) => (
+                    <SelectItem key={m.userId} value={m.userId}>{m.userName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -479,8 +685,8 @@ export function SettleView() {
               <Select value={payTo} onValueChange={setPayTo}>
                 <SelectTrigger><SelectValue placeholder="Who receives payment?" /></SelectTrigger>
                 <SelectContent>
-                  {balances.map((b, idx) => (
-                    <SelectItem key={`to-${idx}`} value={b.to?.id || ''}>{b.to?.name}</SelectItem>
+                  {groupMembers.map((m) => (
+                    <SelectItem key={m.userId} value={m.userId}>{m.userName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -506,7 +712,7 @@ export function SettleView() {
               <Label htmlFor="pay-note">Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input
                 id="pay-note"
-                placeholder="e.g., Venmo, Cash, UPI"
+                placeholder="e.g., UPI, Cash, Venmo"
                 value={payNote}
                 onChange={(e) => setPayNote(e.target.value)}
               />

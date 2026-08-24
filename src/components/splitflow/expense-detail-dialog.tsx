@@ -7,6 +7,7 @@ import {
   User,
   Tag,
   Receipt,
+  Wallet,
 } from 'lucide-react';
 import {
   Dialog,
@@ -24,6 +25,7 @@ interface Split {
   userId: string;
   userName: string;
   amount: number;
+  paidAmount?: number;
 }
 
 interface ExpenseDetail {
@@ -106,6 +108,9 @@ export function ExpenseDetailDialog({
 
   const catEmoji = expense?.categoryEmoji || CATEGORY_EMOJIS[expense?.category || ''] || '📋';
 
+  // Check if multi-payer (any split has paidAmount > 0)
+  const isMultiPayer = expense?.splits?.some(s => (s.paidAmount || 0) > 0.005) || false;
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -157,18 +162,18 @@ export function ExpenseDetailDialog({
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <User className="w-3 h-3" />Paid by
+                  <Calendar className="w-3 h-3" />Date
                 </p>
                 <p className="text-sm font-medium text-foreground">
-                  {expense.paidBy?.name || 'Unknown'}
+                  {expense.date ? new Date(expense.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />Date
+                  <User className="w-3 h-3" />Split Type
                 </p>
-                <p className="text-sm font-medium text-foreground">
-                  {expense.date ? new Date(expense.date).toLocaleDateString() : 'N/A'}
+                <p className="text-sm font-medium text-foreground capitalize">
+                  {expense.splitType || 'equal'}
                 </p>
               </div>
             </div>
@@ -181,7 +186,31 @@ export function ExpenseDetailDialog({
 
             <Separator />
 
+            {/* Who paid section - show multi-payer info if applicable */}
+            {isMultiPayer && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <Wallet className="w-3 h-3" />Who Paid
+                </p>
+                <div className="space-y-1.5">
+                  {expense.splits
+                    .filter(s => (s.paidAmount || 0) > 0.005)
+                    .map((split) => (
+                      <div key={split.userId} className="flex items-center gap-2 px-2 py-1.5 bg-primary/5 rounded-lg">
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="bg-primary/10 text-foreground text-[10px] font-semibold">
+                            {split.userName?.charAt(0)?.toUpperCase() || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="flex-1 text-xs text-foreground">{split.userName}</span>
+                        <span className="text-xs font-semibold text-foreground">₹{(Number(split.paidAmount) || 0).toFixed(2)}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
+            {/* Split Breakdown */}
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                 Split Breakdown ({expense.splitType || 'equal'})
@@ -194,19 +223,42 @@ export function ExpenseDetailDialog({
                         {split.userName?.charAt(0)?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 text-sm text-foreground">
-                      {split.userName}
-                    </span>
-                    <span className="text-sm font-semibold text-foreground">
-                      ₹{(Number(split.amount) || 0).toFixed(2)}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-foreground">
+                        {split.userName}
+                      </span>
+                      {isMultiPayer && (split.paidAmount || 0) > 0.005 && (
+                        <span className="text-[10px] text-primary ml-1.5">
+                          (paid ₹{(split.paidAmount || 0).toFixed(2)})
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-foreground">
+                        ₹{(Number(split.amount) || 0).toFixed(2)}
+                      </span>
+                      {isMultiPayer && (
+                        <p className={`text-[10px] ${
+                          (Number(split.paidAmount || 0) - Number(split.amount)) > 0.005
+                            ? 'text-primary'
+                            : (Number(split.paidAmount || 0) - Number(split.amount)) < -0.005
+                              ? 'text-destructive'
+                              : 'text-muted-foreground'
+                        }` }>
+                          {(() => {
+                            const diff = Math.round((Number(split.paidAmount || 0) - Number(split.amount)) * 100) / 100;
+                            if (Math.abs(diff) <= 0.005) return 'settled';
+                            return diff > 0 ? `gets back ₹${diff.toFixed(2)}` : `owes ₹${Math.abs(diff).toFixed(2)}`;
+                          })()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             <Separator />
-
 
             <div className="flex gap-2 justify-end">
               <Button

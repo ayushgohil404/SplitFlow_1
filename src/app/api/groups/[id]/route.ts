@@ -42,67 +42,109 @@ export async function GET(
 
     const memberIds = group.members.map((m) => m.userId)
 
-    const balances: { fromUserId: string; toUserId: string; amount: number }[] = []
+    // Calculate balances using paidAmount from splits (supports multi-payer)
+    // For old expenses where paidAmount is all 0, fall back to createdBy paying full amount
+    const allSplits = await db.expenseSplit.findMany({
+      where: { expense: { groupId: id } },
+      select: {
+        userId: true,
+        amount: true,
+        paidAmount: true,
+        expenseId: true,
+        expense: { select: { createdBy: true, amount: true } },
+      },
+    })
 
-    for (let i = 0; i < memberIds.length; i++) {
-      for (let j = i + 1; j < memberIds.length; j++) {
-        const userA = memberIds[i]
-        const userB = memberIds[j]
+    // Group splits by expense for backward compatibility check
+    const expenseSplitsMap = new Map<string, typeof allSplits>()
+    for (const split of allSplits) {
+      if (!expenseSplitsMap.has(split.expenseId)) {
+        expenseSplitsMap.set(split.expenseId, [])
+      }
+      expenseSplitsMap.get(split.expenseId)!.push(split)
+    }
 
-        const aOwesBSplits = await db.expenseSplit.findMany({
-          where: {
-            userId: userA,
-            expense: {
-              groupId: id,
-              createdBy: userB,
-            },
-          },
-        })
+    // Calculate each member's net balance: sum(paidAmount) - sum(amount)
+    const memberNets: Map<string, number> = new Map()
+    for (const m of group.members) {
+      memberNets.set(m.userId, 0)
+    }
 
-        const bOwesASplits = await db.expenseSplit.findMany({
-          where: {
-            userId: userB,
-            expense: {
-              groupId: id,
-              createdBy: userA,
-            },
-          },
-        })
+    for (const [, splits] of expenseSplitsMap) {
+      const hasAnyPayment = splits.some(s => (s.paidAmount || 0) > 0.005)
 
-        const aOwesB = aOwesBSplits.reduce((sum, s) => sum + Number(s.amount), 0)
-        const bOwesA = bOwesASplits.reduce((sum, s) => sum + Number(s.amount), 0)
-
-        const settlementsAB = await db.settlement.findMany({
-          where: {
-            groupId: id,
-            fromUserId: userA,
-            toUserId: userB,
-            status: 'completed',
-          },
-        })
-        const settlementsBA = await db.settlement.findMany({
-          where: {
-            groupId: id,
-            fromUserId: userB,
-            toUserId: userA,
-            status: 'completed',
-          },
-        })
-
-        const settledAB = settlementsAB.reduce((sum, s) => sum + Number(s.amount), 0)
-        const settledBA = settlementsBA.reduce((sum, s) => sum + Number(s.amount), 0)
-
-        const netAmount = aOwesB - bOwesA - settledAB + settledBA
-
-        if (Math.abs(netAmount) > 0.005) {
-          if (netAmount > 0) {
-            balances.push({ fromUserId: userA, toUserId: userB, amount: Math.round(netAmount * 100) / 100 })
-          } else {
-            balances.push({ fromUserId: userB, toUserId: userA, amount: Math.round(-netAmount * 100) / 100 })
-          }
+      if (!hasAnyPayment) {
+        // Legacy expense: createdBy paid the full amount
+        const createdBy = splits[0].expense.createdBy
+        const totalAmount = splits[0].expense.amount
+        for (const split of splits) {
+          const paidAmt = split.userId === createdBy ? totalAmount : 0
+          const net = paidAmt - Number(split.amount)
+          const current = memberNets.get(split.userId) ?? 0
+          memberNets.set(split.userId, Math.round((current + net) * 100) / 100)
+        }
+      } else {
+        // New expense: use paidAmount from splits
+        for (const split of splits) {
+          const net = (split.paidAmount || 0) - Number(split.amount)
+          const current = memberNets.get(split.userId) ?? 0
+          memberNets.set(split.userId, Math.round((current + net) * 100) / 100)
         }
       }
     }
+
+    // Subtract completed settlements
+    const settlements = await db.settlement.findMany({
+      where: { groupId: id, status: 'completed' },
+      select: { fromUserId: true, toUserId: true, amount: true },
+    })
+    for (const s of settlements) {
+      const fromVal = memberNets.get(s.fromUserId) ?? 0
+      memberNets.set(s.fromUserId, Math.round((fromVal - Number(s.amount)) * 100) / 100)
+      const toVal = memberNets.get(s.toUserId) ?? 0
+      memberNets.set(s.toUserId, Math.round((toVal + Number(s.amount)) * 100) / 100)
+    }
+
+    // Simplify to minimal pairwise transactions
+    const debts: { userId: string; net: number }[] = []
+    for (const [uid, net] of memberNets) {
+      if (Math.abs(net) > 0.005) {
+        debts.push({ userId: uid, net })
+      }
+    }
+
+    const debtors = debts.filter(d => d.net < -0.005).map(d => ({ userId: d.userId, amount: Math.round(-d.net * 100) / 100 })).sort((a, b) => b.amount - a.amount)
+    const creditors = debts.filter(d => d.net > 0.005).map(d => ({ userId: d.userId, amount: Math.round(d.net * 100) / 100 })).sort((a, b) => b.amount - a.amount)
+
+    const balances: { fromUserId: string; toUserId: string; amount: number }[] = []
+    let i = 0, j = 0
+    while (i < debtors.length && j < creditors.length) {
+      const transfer = Math.min(debtors[i].amount, creditors[j].amount)
+      const rounded = Math.round(transfer * 100) / 100
+      if (rounded > 0) {
+        balances.push({
+          fromUserId: debtors[i].userId,
+          toUserId: creditors[j].userId,
+          amount: rounded,
+        })
+      }
+      debtors[i].amount = Math.round((debtors[i].amount - transfer) * 100) / 100
+      creditors[j].amount = Math.round((creditors[j].amount - transfer) * 100) / 100
+      if (debtors[i].amount <= 0.005) i++
+      if (creditors[j].amount <= 0.005) j++
+    }
+
+    // Build balance detail with user names
+    const userNameMap = new Map<string, string>()
+    for (const m of group.members) {
+      userNameMap.set(m.userId, m.user?.name || 'Unknown')
+    }
+
+    const balancesWithNames = balances.map(b => ({
+      from: { id: b.fromUserId, name: userNameMap.get(b.fromUserId) || 'Unknown' },
+      to: { id: b.toUserId, name: userNameMap.get(b.toUserId) || 'Unknown' },
+      amount: b.amount,
+    }))
 
     return NextResponse.json({ group, balances })
   } catch (error) {

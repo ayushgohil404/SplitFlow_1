@@ -29,16 +29,21 @@ export function useAuth() {
   }, [checkSession]);
 
   const signOut = async () => {
-    // Clear all auth cookies
-    document.cookie.split(';').forEach((c) => {
-      const name = c.split('=')[0].trim();
-      document.cookie = `${name}=; path=/; max-age=0; domain=${window.location.hostname}`;
-      document.cookie = `${name}=; path=/; max-age=0`;
-    });
+    try {
+      // Use NextAuth's signOut which handles CSRF token + server-side session invalidation
+      await nextAuthSignOut({ redirect: false });
+    } catch {
+      // If NextAuth signOut fails, manually clear cookies as fallback
+      document.cookie.split(';').forEach((c) => {
+        const name = c.split('=')[0].trim();
+        document.cookie = `${name}=; path=/; max-age=0; domain=${window.location.hostname}`;
+        document.cookie = `${name}=; path=/; max-age=0`;
+      });
+    }
     setUser(null);
     setChecked(false);
-    // Use NextAuth's signOut which handles CSRF token properly
-    await nextAuthSignOut({ redirect: false });
+    // Small delay to ensure cookies are cleared before redirect
+    await new Promise((r) => setTimeout(r, 100));
     window.location.href = '/app';
   };
 

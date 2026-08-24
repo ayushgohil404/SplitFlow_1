@@ -5,12 +5,14 @@ import {
   Search,
   User,
   Receipt,
+  ChevronRight,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { ExpenseDetailDialog } from './expense-detail-dialog';
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   food: '🍕',
@@ -54,6 +56,11 @@ export function HistoryView() {
   const [page, setPage] = useState(0);
   const limit = 30;
 
+  // Expense detail popup state
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     async function fetchData() {
@@ -83,7 +90,7 @@ export function HistoryView() {
     }
     fetchData();
     return () => { cancelled = true; };
-  }, [filter, search, category, page]);
+  }, [filter, search, category, page, refreshKey]);
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -106,6 +113,16 @@ export function HistoryView() {
   const totalPages = Math.ceil(total / limit);
   const totalAmount = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
+  const openExpenseDetail = (expenseId: string) => {
+    setSelectedExpenseId(expenseId);
+    setDetailOpen(true);
+  };
+
+  const handleExpenseDeleted = () => {
+    setRefreshKey(k => k + 1);
+    setDetailOpen(false);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-5">
 
@@ -113,7 +130,6 @@ export function HistoryView() {
         <h2 className="text-xl font-bold text-foreground">Expense History</h2>
         <p className="text-sm text-muted-foreground mt-1">All your expenses across groups and direct splits.</p>
       </div>
-
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -127,7 +143,6 @@ export function HistoryView() {
           </p>
         </div>
       </div>
-
 
       <div className="rounded-xl border bg-background p-4 space-y-3">
         <div className="relative">
@@ -174,7 +189,6 @@ export function HistoryView() {
         </div>
       </div>
 
-
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -215,7 +229,8 @@ export function HistoryView() {
                   return (
                     <div
                       key={String(exp.id || Math.random())}
-                      className="rounded-xl border bg-background p-4 flex items-center gap-3 hover:shadow-sm transition-shadow"
+                      className="rounded-xl border bg-background p-4 flex items-center gap-3 hover:shadow-sm transition-shadow cursor-pointer"
+                      onClick={() => openExpenseDetail(String(exp.id))}
                     >
                       <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                         <span className="text-lg">{CATEGORY_EMOJIS[cat] || '📋'}</span>
@@ -248,16 +263,18 @@ export function HistoryView() {
                           </div>
                         )}
                       </div>
-                      <span className="text-sm font-semibold text-foreground shrink-0">
-                        {'₹'}{amount.toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-sm font-semibold text-foreground">
+                          {'₹'}{amount.toFixed(2)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
           ))}
-
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 pt-2">
@@ -284,6 +301,15 @@ export function HistoryView() {
           )}
         </div>
       )}
+
+      // Expense Detail Dialog
+      <ExpenseDetailDialog
+        expenseId={selectedExpenseId || ''}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        onUpdated={() => { setRefreshKey(k => k + 1); setDetailOpen(false); }}
+        onDeleted={handleExpenseDeleted}
+      />
     </div>
   );
 }
