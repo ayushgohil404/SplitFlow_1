@@ -1,0 +1,722 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback } from 'react';
+     4→import { motion, AnimatePresence } from 'framer-motion';
+     5→import {
+     6→  UserPlus,
+     7→  Search,
+     8→  ArrowUpRight,
+     9→  ArrowDownRight,
+    10→  Check,
+    11→  X,
+    12→  Mail,
+    13→  User,
+    14→  Clock,
+    15→  Loader2,
+    16→  Users,
+    17→  Send,
+    18→  ChevronDown,
+    19→  ChevronRight,
+    20→  Receipt,
+    21→  Calendar,
+    22→  Tag,
+    23→  HandCoins,
+    24→} from 'lucide-react';
+    25→import { Card, CardContent } from '@/components/ui/card';
+    26→import { Button } from '@/components/ui/button';
+    27→import { Input } from '@/components/ui/input';
+    28→import { Label } from '@/components/ui/label';
+    29→import { Badge } from '@/components/ui/badge';
+    30→import { Skeleton } from '@/components/ui/skeleton';
+    31→import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+    32→import { Separator } from '@/components/ui/separator';
+    33→import {
+    34→  Dialog,
+    35→  DialogContent,
+    36→  DialogHeader,
+    37→  DialogTitle,
+    38→  DialogFooter,
+    39→} from '@/components/ui/dialog';
+    40→import {
+    41→  Tooltip,
+    42→  TooltipContent,
+    43→  TooltipProvider,
+    44→  TooltipTrigger,
+    45→} from '@/components/ui/tooltip';
+    46→import { toast } from 'sonner';
+    47→import { useAppStore } from '@/store/app-store';
+    48→
+    49→interface Friend {
+    50→  id: string;
+    51→  name: string | null;
+    52→  email: string;
+    53→  image: string | null;
+    54→  friendshipId: string;
+    55→  friendsSince: string;
+    56→}
+    57→
+    58→interface PendingRequest {
+    59→  id: string;
+    60→  user: { id: string; name: string | null; email: string; image: string | null };
+    61→  createdAt: string;
+    62→}
+    63→
+    64→interface GroupBalance {
+    65→  groupId: string;
+    66→  groupName: string;
+    67→  groupEmoji: string;
+    68→  currency: string;
+    69→  balances: {
+    70→    userId: string;
+    71→    userName: string | null;
+    72→    amount: number;
+    73→  }[];
+    74→}
+    75→
+    76→interface DirectBalance {
+    77→  userId: string;
+    78→  userName: string | null;
+    79→  amount: number;
+    80→  isEmail: boolean;
+    81→}
+    82→
+    83→interface FriendExpense {
+    84→  id: string;
+    85→  description: string;
+    86→  amount: number;
+    87→  category: string;
+    88→  date: string;
+    89→  splitType: string;
+    90→  groupName: string | null;
+    91→  groupEmoji: string | null;
+    92→  paidBy: { name: string; id?: string };
+    93→  yourShare: number;
+    94→  friendShare: number;
+    95→  iPaid: number;
+    96→  friendPaid: number;
+    97→  net: number;
+    98→}
+    99→
+   100→interface SettlementRecord {
+   101→  id: string;
+   102→  fromUserId: string;
+   103→  toUserId: string;
+   104→  amount: number;
+   105→  note: string;
+   106→  createdAt: string;
+   107→}
+   108→
+   109→const CATEGORY_EMOJIS: Record<string, string> = {
+   110→  food: '🍕',
+   111→  travel: '✈️',
+   112→  housing: '🏠',
+   113→  entertainment: '🎉',
+   114→  utilities: '💡',
+   115→  shopping: '🛍️',
+   116→  transport: '🚗',
+   117→  health: '🏥',
+   118→  education: '📚',
+   119→  general: '📋',
+   120→};
+   121→
+   122→export function FriendsView() {
+   123→  const { user } = useAppStore();
+   124→  const [friends, setFriends] = useState<Friend[]>([]);
+   125→  const [pendingReceived, setPendingReceived] = useState<PendingRequest[]>([]);
+   126→  const [pendingSent, setPendingSent] = useState<PendingRequest[]>([]);
+   127→  const [groupBalances, setGroupBalances] = useState<GroupBalance[]>([]);
+   128→  const [directBalances, setDirectBalances] = useState<DirectBalance[]>([]);
+   129→  const [loading, setLoading] = useState(true);
+   130→
+   131→  const [addOpen, setAddOpen] = useState(false);
+   132→  const [addEmail, setAddEmail] = useState('');
+   133→  const [adding, setAdding] = useState(false);
+   134→
+   135→  // Friend detail popup state
+   136→  const [detailFriend, setDetailFriend] = useState<Friend | null>(null);
+   137→  const [detailLoading, setDetailLoading] = useState(false);
+   138→  const [detailExpenses, setDetailExpenses] = useState<FriendExpense[]>([]);
+   139→  const [detailSettlements, setDetailSettlements] = useState<SettlementRecord[]>([]);
+   140→
+   141→  const fetchData = useCallback(async () => {
+   142→    setLoading(true);
+   143→    try {
+   144→      const [friendsRes, balanceRes] = await Promise.all([
+   145→        fetch('/api/friends'),
+   146→        fetch('/api/user/balance'),
+   147→      ]);
+   148→
+   149→      if (friendsRes.ok) {
+   150→        const data = await friendsRes.json();
+   151→        setFriends(data.friends || []);
+   152→        setPendingReceived(data.pendingReceived || []);
+   153→        setPendingSent(data.pendingSent || []);
+   154→      }
+   155→
+   156→      if (balanceRes.ok) {
+   157→        const data = await balanceRes.json();
+   158→        setGroupBalances(data.groups || []);
+   159→        setDirectBalances(data.direct || []);
+   160→      }
+   161→    } catch {
+   162→      toast.error('Failed to load data');
+   163→    } finally {
+   164→      setLoading(false);
+   165→    }
+   166→  }, []);
+   167→
+   168→  useEffect(() => {
+   169→    fetchData();
+   170→  }, [fetchData]);
+   171→
+   172→  const getFriendNetBalance = (friendId: string): number => {
+   173→    let net = 0;
+   174→    for (const gb of groupBalances) {
+   175→      const bal = gb.balances.find((b) => b.userId === friendId);
+   176→      if (bal) net += bal.amount;
+   177→    }
+   178→    const direct = directBalances.find((d) => d.userId === friendId);
+   179→    if (direct) net += direct.amount;
+   180→    return Math.round(net * 100) / 100;
+   181→  };
+   182→
+   183→  const getFriendGroupBreakdown = (friendId: string) => {
+   184→    return groupBalances
+   185→      .map((gb) => {
+   186→        const bal = gb.balances.find((b) => b.userId === friendId);
+   187→        if (!bal || Math.abs(bal.amount) < 0.005) return null;
+   188→        return {
+   189→          groupId: gb.groupId,
+   190→          groupName: gb.groupName,
+   191→          groupEmoji: gb.groupEmoji,
+   192→          amount: bal.amount,
+   193→        };
+   194→      })
+   195→      .filter(Boolean);
+   196→  };
+   197→
+   198→  // Fetch friend detail data (all shared expenses + settlements)
+   199→  const fetchFriendDetail = async (friend: Friend) => {
+   200→    setDetailFriend(friend);
+   201→    setDetailLoading(true);
+   202→    try {
+   203→      const res = await fetch(`/api/friends/expenses?friendId=${friend.id}`);
+   204→      if (res.ok) {
+   205→        const data = await res.json();
+   206→        setDetailExpenses(data.expenses || []);
+   207→        setDetailSettlements(data.settlements || []);
+   208→      } else {
+   209→        toast.error('Failed to load friend details');
+   210→      }
+   211→    } catch {
+   212→      toast.error('Failed to load friend details');
+   213→    } finally {
+   214→      setDetailLoading(false);
+   215→    }
+   216→  };
+   217→
+   218→  const handleAddFriend = async () => {
+   219→    if (!addEmail.trim()) return;
+   220→    setAdding(true);
+   221→    try {
+   222→      const res = await fetch('/api/friends', {
+   223→        method: 'POST',
+   224→        headers: { 'Content-Type': 'application/json' },
+   225→        body: JSON.stringify({ email: addEmail.trim() }),
+   226→      });
+   227→      const data = await res.json();
+   228→      if (res.ok) {
+   229→        toast.success(data.message || 'Friend request sent!');
+   230→        setAddOpen(false);
+   231→        setAddEmail('');
+   232→        fetchData();
+   233→      } else if (res.status === 404 && data.code === 'USER_NOT_FOUND') {
+   234→        toast.info(data.error);
+   235→      } else {
+   236→        toast.error(data.error || 'Failed to send request');
+   237→      }
+   238→    } catch {
+   239→      toast.error('Failed to send request');
+   240→    } finally {
+   241→      setAdding(false);
+   242→    }
+   243→  };
+   244→
+   245→  const handleAcceptRequest = async (friendshipId: string) => {
+   246→    try {
+   247→      const res = await fetch('/api/friends/accept', {
+   248→        method: 'POST',
+   249→        headers: { 'Content-Type': 'application/json' },
+   250→        body: JSON.stringify({ friendshipId, action: 'accept' }),
+   251→      });
+   252→      if (res.ok) {
+   253→        toast.success('Friend request accepted!');
+   254→        fetchData();
+   255→      }
+   256→    } catch {
+   257→      toast.error('Failed to accept');
+   258→    }
+   259→  };
+   260→
+   261→  const handleDeclineRequest = async (friendshipId: string) => {
+   262→    try {
+   263→      const res = await fetch('/api/friends/accept', {
+   264→        method: 'POST',
+   265→        headers: { 'Content-Type': 'application/json' },
+   266→        body: JSON.stringify({ friendshipId, action: 'decline' }),
+   267→      });
+   268→      if (res.ok) {
+   269→        toast.success('Request declined');
+   270→        fetchData();
+   271→      }
+   272→    } catch {
+   273→      toast.error('Failed to decline');
+   274→    }
+   275→  };
+   276→
+   277→  const handleRemoveFriend = async (friendshipId: string) => {
+   278→    try {
+   279→      const res = await fetch(`/api/friends?id=${friendshipId}`, { method: 'DELETE' });
+   280→      if (res.ok) {
+   281→        toast.success('Friend removed');
+   282→        fetchData();
+   283→      }
+   284→    } catch {
+   285→      toast.error('Failed to remove friend');
+   286→    }
+   287→  };
+   288→
+   289→  const totalOwedToMe = friends
+   290→    .map((f) => getFriendNetBalance(f.id))
+   291→    .filter((a) => a > 0)
+   292→    .reduce((s, a) => s + a, 0);
+   293→
+   294→  const totalIOwe = friends
+   295→    .map((f) => getFriendNetBalance(f.id))
+   296→    .filter((a) => a < 0)
+   297→    .reduce((s, a) => s + Math.abs(a), 0);
+   298→
+   299→  const nonFriendDirect = directBalances.filter(
+   300→    (d) => !friends.some((f) => f.id === d.userId)
+   301→  );
+   302→  const nonFriendOwed = nonFriendDirect.filter((d) => d.amount > 0).reduce((s, d) => s + d.amount, 0);
+   303→  const nonFriendIOwe = nonFriendDirect.filter((d) => d.amount < 0).reduce((s, d) => s + Math.abs(d.amount), 0);
+   304→
+   305→  const grandTotalOwed = totalOwedToMe + nonFriendOwed;
+   306→  const grandTotalIOwe = totalIOwe + nonFriendIOwe;
+   307→
+   308→  // Computed totals for friend detail
+   309→  const totalFriendOwesMe = detailExpenses.filter(e => e.net > 0).reduce((s, e) => s + e.net, 0);
+   310→  const totalIOweFriend = detailExpenses.filter(e => e.net < 0).reduce((s, e) => s + Math.abs(e.net), 0);
+   311→  const totalSettledToMe = detailSettlements.filter(s => s.toUserId === user?.id).reduce((s, st) => s + st.amount, 0);
+   312→  const totalSettledByMe = detailSettlements.filter(s => s.fromUserId === user?.id).reduce((s, st) => s + st.amount, 0);
+   313→
+   314→  if (loading) {
+   315→    return (
+   316→      <div className="space-y-5">
+   317→        <Skeleton className="h-8 w-48" />
+   318→        <div className="grid grid-cols-2 gap-3">
+   319→          <Skeleton className="h-24 rounded-xl" />
+   320→          <Skeleton className="h-24 rounded-xl" />
+   321→        </div>
+   322→        {[1, 2, 3].map((i) => (
+   323→          <Skeleton key={i} className="h-16 rounded-xl" />
+   324→        ))}
+   325→      </div>
+   326→    );
+   327→  }
+   328→
+   329→  return (
+   330→    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-5">
+   331→
+   332→      <div className="flex items-center justify-between">
+   333→        <div>
+   334→          <h2 className="text-xl font-bold text-foreground">Friends</h2>
+   335→          <p className="text-sm text-muted-foreground mt-1">Manage friends and balances.</p>
+   336→        </div>
+   337→        <Button
+   338→          onClick={() => setAddOpen(true)}
+   339→          className="bg-primary hover:bg-primary/90 text-white"
+   340→          size="sm"
+   341→        >
+   342→          <UserPlus className="w-4 h-4 mr-1.5" />Add Friend
+   343→        </Button>
+   344→      </div>
+   345→
+   346→      {/* Summary Cards */}
+   347→      <div className="grid grid-cols-2 gap-3">
+   348→        <Card className="bg-primary/5 border-primary/20">
+   349→          <CardContent className="p-4">
+   350→            <div className="flex items-center gap-2">
+   351→              <ArrowDownRight className="w-4 h-4 text-primary" />
+   352→              <p className="text-xs text-primary font-medium">Friends owe you</p>
+   353→            </div>
+   354→            <p className="text-2xl font-bold text-foreground mt-1">₹{grandTotalOwed.toFixed(2)}</p>
+   355→          </CardContent>
+   356→        </Card>
+   357→        <Card className="bg-destructive/5 border-destructive/20">
+   358→          <CardContent className="p-4">
+   359→            <div className="flex items-center gap-2">
+   360→              <ArrowUpRight className="w-4 h-4 text-destructive" />
+   361→              <p className="text-xs text-destructive font-medium">You owe friends</p>
+   362→            </div>
+   363→            <p className="text-2xl font-bold text-destructive mt-1">₹{grandTotalIOwe.toFixed(2)}</p>
+   364→          </CardContent>
+   365→        </Card>
+   366→      </div>
+   367→
+   368→      {/* Pending Requests */}
+   369→      {pendingReceived.length > 0 && (
+   370→        <div className="space-y-2">
+   371→          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+   372→            <Clock className="w-4 h-4" />
+   373→            Pending Requests ({pendingReceived.length})
+   374→          </h3>
+   375→          {pendingReceived.map((req) => (
+   376→            <Card key={req.id} className="border-amber-500/20 bg-amber-500/10">
+   377→              <CardContent className="p-4 flex items-center gap-3">
+   378→                <Avatar className="w-10 h-10">
+   379→                  <AvatarFallback className="bg-amber-500/15 text-amber-400 text-sm font-semibold">
+   380→                    {req.user.name?.charAt(0)?.toUpperCase() || 'U'}
+   381→                  </AvatarFallback>
+   382→                </Avatar>
+   383→                <div className="flex-1 min-w-0">
+   384→                  <p className="text-sm font-medium text-foreground truncate">{req.user.name || 'User'}</p>
+   385→                  <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
+   386→                </div>
+   387→                <div className="flex gap-1.5 shrink-0">
+   388→                  <Button
+   389→                    size="sm"
+   390→                    className="h-8 bg-primary hover:bg-primary/90 text-white"
+   391→                    onClick={() => handleAcceptRequest(req.id)}
+   392→                  >
+   393→                    <Check className="w-3.5 h-3.5" />
+   394→                  </Button>
+   395→                  <Button
+   396→                    size="sm"
+   397→                    variant="outline"
+   398→                    className="h-8 text-destructive hover:text-red-700 hover:bg-destructive/10"
+   399→                    onClick={() => handleDeclineRequest(req.id)}
+   400→                  >
+   401→                    <X className="w-3.5 h-3.5" />
+   402→                  </Button>
+   403→                </div>
+   404→              </CardContent>
+   405→            </Card>
+   406→          ))}
+   407→        </div>
+   408→      )}
+   409→
+   410→      {/* Sent Requests */}
+   411→      {pendingSent.length > 0 && (
+   412→        <div className="space-y-2">
+   413→          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+   414→            <Send className="w-3.5 h-3.5" />
+   415→            Sent Requests ({pendingSent.length})
+   416→          </h3>
+   417→          {pendingSent.map((req) => (
+   418→            <Card key={req.id} className="opacity-60">
+   419→              <CardContent className="p-4 flex items-center gap-3">
+   420→                <Avatar className="w-9 h-9">
+   421→                  <AvatarFallback className="bg-muted text-muted-foreground text-xs font-semibold">
+   422→                    {req.user.name?.charAt(0)?.toUpperCase() || 'U'}
+   423→                  </AvatarFallback>
+   424→                </Avatar>
+   425→                <div className="flex-1 min-w-0">
+   426→                  <p className="text-sm text-foreground truncate">{req.user.name || 'User'}</p>
+   427→                  <p className="text-xs text-muted-foreground truncate">{req.user.email}</p>
+   428→                </div>
+   429→                <Badge variant="secondary" className="text-[10px]">Pending</Badge>
+   430→              </CardContent>
+   431→            </Card>
+   432→          ))}
+   433→        </div>
+   434→      )}
+   435→
+   436→      {/* Friends List - Clickable to show detail popup */}
+   437→      <div className="space-y-2">
+   438→        <h3 className="text-sm font-semibold text-foreground">
+   439→          Your Friends ({friends.length})
+   440→        </h3>
+   441→
+   442→        {friends.length === 0 && pendingReceived.length === 0 && pendingSent.length === 0 ? (
+   443→          <Card>
+   444→            <CardContent className="p-12 text-center">
+   445→              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+   446→              <p className="text-muted-foreground font-medium">No friends yet</p>
+   447→              <p className="text-sm text-muted-foreground mt-1 mb-4">Add friends by email to start splitting expenses directly</p>
+   448→              <Button
+   449→                onClick={() => setAddOpen(true)}
+   450→                className="bg-primary hover:bg-primary/90 text-white"
+   451→              >
+   452→                <UserPlus className="w-4 h-4 mr-1.5" />Add Friend
+   453→              </Button>
+   454→            </CardContent>
+   455→          </Card>
+   456→        ) : (
+   457→          <div className="space-y-2">
+   458→            {friends.map((friend) => {
+   459→              const netBalance = getFriendNetBalance(friend.id);
+   460→
+   461→              return (
+   462→                <Card
+   463→                  key={friend.id}
+   464→                  className="cursor-pointer hover:shadow-sm transition-all"
+   465→                  onClick={() => fetchFriendDetail(friend)}
+   466→                >
+   467→                  <CardContent className="p-4 flex items-center gap-3">
+   468→                    <Avatar className="w-10 h-10">
+   469→                      <AvatarFallback className="bg-primary/10 text-foreground text-sm font-semibold">
+   470→                        {friend.name?.charAt(0)?.toUpperCase() || friend.email?.charAt(0)?.toUpperCase() || '?'}
+   471→                      </AvatarFallback>
+   472→                    </Avatar>
+   473→                    <div className="flex-1 min-w-0">
+   474→                      <p className="text-sm font-medium text-foreground truncate">
+   475→                        {friend.name || friend.email}
+   476→                      </p>
+   477→                      <p className="text-xs text-muted-foreground truncate">{friend.email}</p>
+   478→                    </div>
+   479→                    {Math.abs(netBalance) > 0.005 ? (
+   480→                      <div className="text-right shrink-0 mr-1">
+   481→                        <span className={`text-sm font-bold ${netBalance > 0 ? 'text-primary' : 'text-destructive'}`}>
+   482→                          {netBalance > 0 ? '+' : ''}₹{netBalance.toFixed(2)}
+   483→                        </span>
+   484→                        <p className="text-[10px] text-muted-foreground">
+   485→                          {netBalance > 0 ? 'owes you' : 'you owe'}
+   486→                        </p>
+   487→                      </div>
+   488→                    ) : (
+   489→                      <Badge variant="secondary" className="text-[10px] shrink-0 bg-muted text-muted-foreground">Settled</Badge>
+   490→                    )}
+   491→                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+   492→                  </CardContent>
+   493→                </Card>
+   494→              );
+   495→            })}
+   496→          </div>
+   497→        )}
+   498→      </div>
+   499→
+   500→      {/* Non-friend direct balances */}
+   501→      {nonFriendDirect.length > 0 && (
+   502→        <div className="space-y-2">
+   503→          <h3 className="text-sm font-semibold text-muted-foreground">Other Balances</h3>
+   504→          {nonFriendDirect.map((d, i) => (
+   505→            <Card key={i}>
+   506→              <CardContent className="p-4 flex items-center gap-3">
+   507→                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+   508→                  {d.isEmail ? <Mail className="w-5 h-5 text-muted-foreground" /> : <User className="w-5 h-5 text-muted-foreground" />}
+   509→                </div>
+   510→                <div className="flex-1 min-w-0">
+   511→                  <p className="text-sm font-medium text-foreground truncate">{d.userName || 'Unknown'}</p>
+   512→                  <p className="text-xs text-muted-foreground">{d.isEmail ? 'Not yet a user' : 'Not friends'}</p>
+   513→                </div>
+   514→                <span className={`text-sm font-bold ${d.amount > 0 ? 'text-primary' : 'text-destructive'}`}>
+   515→                  {d.amount > 0 ? '+' : ''}₹{(Number(d.amount) || 0).toFixed(2)}
+   516→                </span>
+   517→              </CardContent>
+   518→            </Card>
+   519→          ))}
+   520→        </div>
+   521→      )}
+   522→
+   523→      {/* Add Friend Dialog */}
+   524→      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   525→        <DialogContent className="sm:max-w-md">
+   526→          <DialogHeader>
+   527→            <DialogTitle className="flex items-center gap-2">
+   528→              <UserPlus className="w-5 h-5 text-primary" />
+   529→              Add Friend
+   530→            </DialogTitle>
+   531→          </DialogHeader>
+   532→          <div className="space-y-4">
+   533→            <p className="text-sm text-muted-foreground leading-relaxed">
+   534→              Enter your friend&apos;s email address. If they&apos;re already on SplitFlow, they&apos;ll receive a friend request. If not, you can still add expenses using their email.
+   535→            </p>
+   536→            <div className="space-y-1.5">
+   537→              <Label htmlFor="friend-email">Friend&apos;s Email</Label>
+   538→              <div className="relative">
+   539→                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+   540→                <Input
+   541→                  id="friend-email"
+   542→                  type="email"
+   543→                  placeholder="friend@email.com"
+   544→                  value={addEmail}
+   545→                  onChange={(e) => setAddEmail(e.target.value)}
+   546→                  className="pl-10"
+   547→                  onKeyDown={(e) => e.key === 'Enter' && handleAddFriend()}
+   548→                />
+   549→              </div>
+   550→            </div>
+   551→            <Button
+   552→              onClick={handleAddFriend}
+   553→              disabled={!addEmail.trim() || adding}
+   554→              className="w-full bg-primary hover:bg-primary/90 text-white"
+   555→            >
+   556→              {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
+   557→              {adding ? 'Sending...' : 'Send Friend Request'}
+   558→            </Button>
+   559→          </div>
+   560→          <DialogFooter>
+   561→            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+   562→          </DialogFooter>
+   563→        </DialogContent>
+   564→      </Dialog>
+   565→
+   566→      {/* Friend Detail Popup - Splitwise-like */}
+   567→      <Dialog open={!!detailFriend} onOpenChange={(open) => !open && setDetailFriend(null)}>
+   568→        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+   569→          <DialogHeader>
+   570→            <DialogTitle className="flex items-center gap-3">
+   571→              <Avatar className="w-10 h-10">
+   572→                <AvatarFallback className="bg-primary/10 text-foreground text-base font-semibold">
+   573→                  {detailFriend?.name?.charAt(0)?.toUpperCase() || '?'}
+   574→                </AvatarFallback>
+   575→              </Avatar>
+   576→              <div>
+   577→                <div>{detailFriend?.name || 'Friend'}</div>
+   578→                <div className="text-xs text-muted-foreground font-normal">{detailFriend?.email}</div>
+   579→              </div>
+   580→            </DialogTitle>
+   581→          </DialogHeader>
+   582→
+   583→          {detailLoading ? (
+   584→            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+   585→              <Skeleton className="h-20 rounded-xl" />
+   586→              <Skeleton className="h-16 rounded-xl" />
+   587→              <Skeleton className="h-16 rounded-xl" />
+   588→              <Skeleton className="h-16 rounded-xl" />
+   589→            </div>
+   590→          ) : (
+   591→            <div className="flex-1 overflow-y-auto">
+   592→              {/* Balance Summary in Popup */}
+   593→              <div className="grid grid-cols-2 gap-3 mb-4">
+   594→                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+   595→                  <p className="text-[10px] text-primary font-medium uppercase">{detailFriend?.name || 'They'} owe you</p>
+   596→                  <p className="text-lg font-bold text-primary mt-0.5">₹{totalFriendOwesMe.toFixed(2)}</p>
+   597→                </div>
+   598→                <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+   599→                  <p className="text-[10px] text-destructive font-medium uppercase">You owe {detailFriend?.name || 'them'}</p>
+   600→                  <p className="text-lg font-bold text-destructive mt-0.5">₹{totalIOweFriend.toFixed(2)}</p>
+   601→                </div>
+   602→              </div>
+   603→
+   604→              {Math.abs(totalFriendOwesMe - totalIOweFriend) > 0.005 && (
+   605→                <div className={`rounded-lg p-3 mb-4 text-center ${totalFriendOwesMe - totalIOweFriend > 0 ? 'bg-primary/5 border border-primary/20' : 'bg-destructive/5 border border-destructive/20'}`}>
+   606→                  <p className="text-sm font-semibold text-foreground">
+   607→                    {totalFriendOwesMe - totalIOweFriend > 0
+   608→                      ? `${detailFriend?.name || 'They'} owe you ₹${(totalFriendOwesMe - totalIOweFriend).toFixed(2)} total`
+   609→                      : `You owe ${detailFriend?.name || 'them'} ₹${Math.abs(totalFriendOwesMe - totalIOweFriend).toFixed(2)} total`
+   610→                    }
+   611→                  </p>
+   612→                </div>
+   613→              )}
+   614→
+   615→              {/* Expenses List */}
+   616→              <div className="space-y-2 mb-4">
+   617→                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+   618→                  Expenses ({detailExpenses.length})
+   619→                </p>
+   620→                {detailExpenses.length === 0 ? (
+   621→                  <div className="rounded-lg bg-muted p-4 text-center">
+   622→                    <Receipt className="w-6 h-6 text-muted-foreground/40 mx-auto mb-1" />
+   623→                    <p className="text-xs text-muted-foreground">No shared expenses yet</p>
+   624→                  </div>
+   625→                ) : (
+   626→                  detailExpenses.map((exp) => {
+   627→                    const catEmoji = CATEGORY_EMOJIS[exp.category] || '📋';
+   628→                    const isYouOwe = exp.net < 0;
+   629→                    return (
+   630→                      <div key={exp.id} className="rounded-lg border p-3 hover:shadow-sm transition-shadow">
+   631→                        <div className="flex items-center gap-2.5">
+   632→                          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+   633→                            <span className="text-base">{catEmoji}</span>
+   634→                          </div>
+   635→                          <div className="flex-1 min-w-0">
+   636→                            <p className="text-sm font-medium text-foreground truncate">{exp.description}</p>
+   637→                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+   638→                              {exp.groupName && (
+   639→                                <span className="text-[10px] font-medium px-1.5 py-0 h-4 rounded bg-muted text-muted-foreground inline-flex items-center">
+   640→                                  {exp.groupEmoji} {exp.groupName}
+   641→                                </span>
+   642→                              )}
+   643→                              <span className="text-[10px] text-muted-foreground">
+   644→                                {exp.paidBy?.name} paid ₹{exp.amount.toFixed(2)}
+   645→                              </span>
+   646→                            </div>
+   647→                          </div>
+   648→                          <div className="text-right shrink-0">
+   649→                            <p className="text-xs font-medium text-foreground">You: ₹{exp.yourShare.toFixed(2)}</p>
+   650→                            <p className="text-[10px] text-muted-foreground">{detailFriend?.name?.split(' ')[0]}: ₹{exp.friendShare.toFixed(2)}</p>
+   651→                          </div>
+   652→                        </div>
+   653→                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-muted">
+   654→                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+   655→                            <Calendar className="w-3 h-3" />
+   656→                            {exp.date ? new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+   657→                          </span>
+   658→                          {Math.abs(exp.net) > 0.005 && (
+   659→                            <span className={`text-xs font-semibold ${isYouOwe ? 'text-destructive' : 'text-primary'}`}>
+   660→                              {isYouOwe ? 'you owe' : 'owes you'} ₹{Math.abs(exp.net).toFixed(2)}
+   661→                            </span>
+   662→                          )}
+   663→                          {Math.abs(exp.net) <= 0.005 && (
+   664→                            <span className="text-xs text-muted-foreground">settled</span>
+   665→                          )}
+   666→                        </div>
+   667→                      </div>
+   668→                    );
+   669→                  })
+   670→                )}
+   671→              </div>
+   672→
+   673→              {/* Settlements */}
+   674→              {detailSettlements.length > 0 && (
+   675→                <div className="space-y-2">
+   676→                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+   677→                    Settlements ({detailSettlements.length})
+   678→                  </p>
+   679→                  {detailSettlements.map((s) => (
+   680→                    <div key={s.id} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-primary/5 border border-primary/10">
+   681→                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+   682→                        <HandCoins className="w-3.5 h-3.5 text-primary" />
+   683→                      </div>
+   684→                      <div className="flex-1 min-w-0">
+   685→                        <p className="text-xs text-foreground">
+   686→                          {s.fromUserId === user?.id ? 'You' : detailFriend?.name?.split(' ')[0]} paid{' '}
+   687→                          {s.toUserId === user?.id ? 'you' : detailFriend?.name?.split(' ')[0]}
+   688→                        </p>
+   689→                        {s.note && <p className="text-[10px] text-muted-foreground">{s.note}</p>}
+   690→                      </div>
+   691→                      <div className="text-right shrink-0">
+   692→                        <p className="text-xs font-semibold text-foreground">₹{s.amount.toFixed(2)}</p>
+   693→                        <p className="text-[10px] text-muted-foreground">
+   694→                          {s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+   695→                        </p>
+   696→                      </div>
+   697→                    </div>
+   698→                  ))}
+   699→                </div>
+   700→              )}
+   701→
+   702→              {/* Actions */}
+   703→              <div className="flex gap-2 mt-4 pt-3 border-t">
+   704→                {detailFriend && (
+   705→                  <Button
+   706→                    variant="outline"
+   707→                    size="sm"
+   708→                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+   709→                    onClick={(e) => { e.stopPropagation(); handleRemoveFriend(detailFriend.friendshipId); setDetailFriend(null); }}
+   710→                  >
+   711→                    Remove Friend
+   712→                  </Button>
+   713→                )}
+   714→              </div>
+   715→            </div>
+   716→          )}
+   717→        </DialogContent>
+   718→      </Dialog>
+   719→    </motion.div>
+   720→  );
+   721→}
+   722→

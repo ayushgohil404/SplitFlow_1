@@ -1,0 +1,736 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback } from 'react';
+     4→import { motion } from 'framer-motion';
+     5→import {
+     6→  HandCoins,
+     7→  ArrowUpRight,
+     8→  ArrowDownRight,
+     9→  CheckCircle2,
+    10→  Zap,
+    11→  CreditCard,
+    12→  RefreshCw,
+    13→  AlertCircle,
+    14→  Loader2,
+    15→  Users,
+    16→  ChevronRight,
+    17→} from 'lucide-react';
+    18→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    19→import { Button } from '@/components/ui/button';
+    20→import { Input } from '@/components/ui/input';
+    21→import { Label } from '@/components/ui/label';
+    22→import { Skeleton } from '@/components/ui/skeleton';
+    23→import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+    24→import {
+    25→  Dialog,
+    26→  DialogContent,
+    27→  DialogHeader,
+    28→  DialogTitle,
+    29→  DialogFooter,
+    30→} from '@/components/ui/dialog';
+    31→import {
+    32→  Select,
+    33→  SelectContent,
+    34→  SelectItem,
+    35→  SelectTrigger,
+    36→  SelectValue,
+    37→} from '@/components/ui/select';
+    38→import {
+    39→  Tooltip,
+    40→  TooltipContent,
+    41→  TooltipProvider,
+    42→  TooltipTrigger,
+    43→} from '@/components/ui/tooltip';
+    44→import { toast } from 'sonner';
+    45→import { useAppStore } from '@/store/app-store';
+    46→
+    47→interface GroupBalance {
+    48→  groupId: string;
+    49→  groupName: string;
+    50→  groupEmoji: string;
+    51→  yourBalance: number;
+    52→}
+    53→
+    54→interface DirectBalance {
+    55→  userId: string;
+    56→  userName: string | null;
+    57→  userImage: string | null;
+    58→  amount: number;
+    59→  isEmail?: boolean;
+    60→}
+    61→
+    62→interface BalanceDetail {
+    63→  from: { id: string; name: string };
+    64→  to: { id: string; name: string };
+    65→  amount: number;
+    66→}
+    67→
+    68→interface GroupMember {
+    69→  userId: string;
+    70→  userName: string;
+    71→}
+    72→
+    73→interface Settlement {
+    74→  id: string;
+    75→  from: { name: string };
+    76→  to: { name: string };
+    77→  amount: number;
+    78→  note: string;
+    79→  createdAt: string;
+    80→}
+    81→
+    82→interface SimplifiedPayment {
+    83→  fromUserId: string;
+    84→  fromUserName: string;
+    85→  toUserId: string;
+    86→  toUserName: string;
+    87→  amount: number;
+    88→}
+    89→
+    90→type Tab = 'overall' | 'group';
+    91→
+    92→export function SettleView() {
+    93→  const { user } = useAppStore();
+    94→  const [tab, setTab] = useState<Tab>('overall');
+    95→  const [groupBalances, setGroupBalances] = useState<GroupBalance[]>([]);
+    96→  const [directBalances, setDirectBalances] = useState<DirectBalance[]>([]);
+    97→  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+    98→  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+    99→  const [balances, setBalances] = useState<BalanceDetail[]>([]);
+   100→  const [settlements, setSettlements] = useState<Settlement[]>([]);
+   101→  const [simplified, setSimplified] = useState<SimplifiedPayment[]>([]);
+   102→  const [loading, setLoading] = useState(true);
+   103→  const [detailLoading, setDetailLoading] = useState(false);
+   104→  const [simplifyLoading, setSimplifyLoading] = useState(false);
+   105→
+   106→  const [recordOpen, setRecordOpen] = useState(false);
+   107→  const [payFrom, setPayFrom] = useState('');
+   108→  const [payTo, setPayTo] = useState('');
+   109→  const [payAmount, setPayAmount] = useState('');
+   110→  const [payAmountError, setPayAmountError] = useState('');
+   111→  const [payNote, setPayNote] = useState('');
+   112→  const [recording, setRecording] = useState(false);
+   113→
+   114→  const fetchOverviewData = useCallback(async () => {
+   115→    setLoading(true);
+   116→    try {
+   117→      const res = await fetch('/api/user/balance');
+   118→      if (res.ok) {
+   119→        const data = await res.json();
+   120→        setGroupBalances((data.groups || []).map((g: any) => ({
+   121→          groupId: g.groupId,
+   122→          groupName: g.groupName,
+   123→          groupEmoji: g.groupEmoji,
+   124→          yourBalance: g.balances
+   125→            ? g.balances.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0)
+   126→            : 0,
+   127→        })));
+   128→        setDirectBalances(data.direct || []);
+   129→      }
+   130→    } catch {
+   131→    } finally {
+   132→      setLoading(false);
+   133→    }
+   134→  }, []);
+   135→
+   136→  useEffect(() => {
+   137→    fetchOverviewData();
+   138→  }, [fetchOverviewData]);
+   139→
+   140→  const fetchGroupDetail = useCallback(async (groupId: string) => {
+   141→    setDetailLoading(true);
+   142→    setSimplified([]);
+   143→    try {
+   144→      const [groupRes, settleRes] = await Promise.all([
+   145→        fetch(`/api/groups/${groupId}`),
+   146→        fetch(`/api/settlements?groupId=${groupId}`),
+   147→      ]);
+   148→      if (groupRes.ok) {
+   149→        const data = await groupRes.json();
+   150→        const g = data.group || data;
+   151→        // Extract member list for the "record payment" dialog
+   152→        const memberList = ((g.members || []) as any[]).map((m: any) => ({
+   153→          userId: m.user?.id || m.userId || m.id,
+   154→          userName: m.user?.name || m.name || 'Unknown',
+   155→        }));
+   156→        setGroupMembers(memberList);
+   157→        // The API now returns balances with from/to objects
+   158→        const rawBalances = data.balances || [];
+   159→        setBalances(rawBalances.map((b: any) => ({
+   160→          from: b.from || { id: b.fromUserId, name: 'Unknown' },
+   161→          to: b.to || { id: b.toUserId, name: 'Unknown' },
+   162→          amount: Number(b.amount) || 0,
+   163→        })));
+   164→      }
+   165→      if (settleRes.ok) {
+   166→        const sData = await settleRes.json();
+   167→        setSettlements((sData.settlements || []).map((s: any) => ({
+   168→          id: s.id,
+   169→          from: { name: s.fromUser?.name || 'Someone' },
+   170→          to: { name: s.toUser?.name || 'Someone' },
+   171→          amount: Number(s.amount),
+   172→          note: s.note || '',
+   173→          createdAt: s.createdAt,
+   174→        })));
+   175→      }
+   176→    } catch {
+   177→    } finally {
+   178→      setDetailLoading(false);
+   179→    }
+   180→  }, []);
+   181→
+   182→  useEffect(() => {
+   183→    if (selectedGroupId) {
+   184→      fetchGroupDetail(selectedGroupId);
+   185→    }
+   186→  }, [selectedGroupId, fetchGroupDetail]);
+   187→
+   188→  const handleSimplify = async () => {
+   189→    if (!selectedGroupId) return;
+   190→    setSimplifyLoading(true);
+   191→    try {
+   192→      const res = await fetch('/api/settlements/simplify', {
+   193→        method: 'POST',
+   194→        headers: { 'Content-Type': 'application/json' },
+   195→        body: JSON.stringify({ groupId: selectedGroupId }),
+   196→      });
+   197→      if (res.ok) {
+   198→        const data = await res.json();
+   199→        setSimplified(data.settlements || []);
+   200→        toast.success('Optimal payment plan calculated!');
+   201→      }
+   202→    } catch {
+   203→      toast.error('Failed to simplify debts');
+   204→    } finally {
+   205→      setSimplifyLoading(false);
+   206→    }
+   207→  };
+   208→
+   209→  const handleRecordPayment = async () => {
+   210→    setPayAmountError('');
+   211→    const numAmount = parseFloat(payAmount);
+   212→    if (!payFrom || !payTo || !payAmount || !selectedGroupId) {
+   213→      toast.error('Please fill in all required fields');
+   214→      return;
+   215→    }
+   216→    if (isNaN(numAmount) || numAmount <= 0) {
+   217→      setPayAmountError('Enter a valid amount greater than ₹0');
+   218→      return;
+   219→    }
+   220→    if (payFrom === payTo) {
+   221→      toast.error('Payer and receiver must be different people');
+   222→      return;
+   223→    }
+   224→    setRecording(true);
+   225→    try {
+   226→      const res = await fetch('/api/settlements', {
+   227→        method: 'POST',
+   228→        headers: { 'Content-Type': 'application/json' },
+   229→        body: JSON.stringify({
+   230→          groupId: selectedGroupId,
+   231→          fromUserId: payFrom,
+   232→          toUserId: payTo,
+   233→          amount: numAmount,
+   234→          note: payNote.trim(),
+   235→        }),
+   236→      });
+   237→      if (res.ok) {
+   238→        toast.success('Payment recorded!');
+   239→        setRecordOpen(false);
+   240→        setPayFrom('');
+   241→        setPayTo('');
+   242→        setPayAmount('');
+   243→        setPayNote('');
+   244→        fetchGroupDetail(selectedGroupId);
+   245→        fetchOverviewData();
+   246→      } else {
+   247→        toast.error('Failed to record payment');
+   248→      }
+   249→    } catch {
+   250→      toast.error('Network error. Please try again.');
+   251→    } finally {
+   252→      setRecording(false);
+   253→    }
+   254→  };
+   255→
+   256→  // Calculate totals from overview data
+   257→  const groupOwed = groupBalances.filter(g => g.yourBalance > 0).reduce((s, g) => s + g.yourBalance, 0);
+   258→  const groupOwing = groupBalances.filter(g => g.yourBalance < 0).reduce((s, g) => s + Math.abs(g.yourBalance), 0);
+   259→  const directOwed = directBalances.filter(d => d.amount > 0).reduce((s, d) => s + d.amount, 0);
+   260→  const directOwing = directBalances.filter(d => d.amount < 0).reduce((s, d) => s + Math.abs(d.amount), 0);
+   261→  const totalOwed = groupOwed + directOwed;
+   262→  const totalOwing = groupOwing + directOwing;
+   263→  const hasAnyBalance = totalOwed > 0 || totalOwing > 0;
+   264→
+   265→  return (
+   266→    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+   267→
+   268→      {/* Header */}
+   269→      <div>
+   270→        <h2 className="text-xl font-bold text-foreground">Settle Up</h2>
+   271→        <p className="text-sm text-muted-foreground mt-1">See who owes whom and record payments.</p>
+   272→      </div>
+   273→
+   274→      {/* Summary Cards */}
+   275→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   276→        <Card className="border-l-4 border-l-emerald-500">
+   277→          <CardContent className="p-5">
+   278→            <div className="flex items-center justify-between">
+   279→              <div>
+   280→                <p className="text-sm text-muted-foreground">Others owe you</p>
+   281→                <p className="text-2xl font-bold text-primary mt-1">₹{totalOwed.toFixed(2)}</p>
+   282→                <p className="text-xs text-muted-foreground mt-1">Groups: ₹{groupOwed.toFixed(2)} · Direct: ₹{directOwed.toFixed(2)}</p>
+   283→              </div>
+   284→              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+   285→                <ArrowUpRight className="w-6 h-6 text-primary" />
+   286→              </div>
+   287→            </div>
+   288→          </CardContent>
+   289→        </Card>
+   290→        <Card className="border-l-4 border-l-red-400">
+   291→          <CardContent className="p-5">
+   292→            <div className="flex items-center justify-between">
+   293→              <div>
+   294→                <p className="text-sm text-muted-foreground">You owe others</p>
+   295→                <p className="text-2xl font-bold text-destructive mt-1">₹{totalOwing.toFixed(2)}</p>
+   296→                <p className="text-xs text-muted-foreground mt-1">Groups: ₹{groupOwing.toFixed(2)} · Direct: ₹{directOwing.toFixed(2)}</p>
+   297→              </div>
+   298→              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+   299→                <ArrowDownRight className="w-6 h-6 text-destructive" />
+   300→              </div>
+   301→            </div>
+   302→          </CardContent>
+   303→        </Card>
+   304→      </div>
+   305→
+   306→      {/* Tab Switcher */}
+   307→      <div className="flex gap-1 p-1 bg-muted rounded-lg">
+   308→        <button
+   309→          type="button"
+   310→          onClick={() => setTab('overall')}
+   311→          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+   312→            tab === 'overall' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+   313→          }`}
+   314→        >
+   315→          <HandCoins className="w-4 h-4" />
+   316→          Overall
+   317→        </button>
+   318→        <button
+   319→          type="button"
+   320→          onClick={() => setTab('group')}
+   321→          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+   322→            tab === 'group' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+   323→          }`}
+   324→        >
+   325→          <Users className="w-4 h-4" />
+   326→          By Group
+   327→        </button>
+   328→      </div>
+   329→
+   330→      {/* OVERALL TAB - Splitwise-like list of all people you owe / owe you */}
+   331→      {tab === 'overall' && (
+   332→        <div className="space-y-4">
+   333→          {loading ? (
+   334→            <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => (
+   335→              <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+   336→                <Skeleton className="w-10 h-10 rounded-full" />
+   337→                <div className="flex-1 space-y-1.5">
+   338→                  <Skeleton className="h-4 w-28" />
+   339→                  <Skeleton className="h-3 w-20" />
+   340→                </div>
+   341→                <Skeleton className="h-8 w-20 rounded-lg" />
+   342→              </CardContent></Card>
+   343→            ))}</div>
+   344→          ) : !hasAnyBalance ? (
+   345→            <Card>
+   346→              <CardContent className="p-12 text-center">
+   347→                <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-3" />
+   348→                <h3 className="text-lg font-semibold text-foreground mb-1">All settled up!</h3>
+   349→                <p className="text-sm text-muted-foreground">You don&apos;t owe anyone and no one owes you. Nice!</p>
+   350→              </CardContent>
+   351→            </Card>
+   352→          ) : (
+   353→            <div className="space-y-2">
+   354→              {/* People who owe you */}
+   355→              {groupBalances.filter(g => g.yourBalance > 0).length + directBalances.filter(d => d.amount > 0).length > 0 && (
+   356→                <p className="text-xs font-semibold text-primary uppercase tracking-wider">Friends owe you</p>
+   357→              )}
+   358→              {/* Group balances where you're owed */}
+   359→              {groupBalances
+   360→                .filter(g => g.yourBalance > 0)
+   361→                .map(g => (
+   362→                  <Card key={g.groupId}>
+   363→                    <CardContent className="p-4 flex items-center gap-3">
+   364→                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+   365→                        <span className="text-lg">{g.groupEmoji || '👥'}</span>
+   366→                      </div>
+   367→                      <div className="flex-1 min-w-0">
+   368→                        <p className="text-sm font-medium text-foreground truncate">{g.groupName}</p>
+   369→                        <p className="text-xs text-muted-foreground">Group balance</p>
+   370→                      </div>
+   371→                      <span className="text-sm font-bold text-primary">+₹{g.yourBalance.toFixed(2)}</span>
+   372→                      <button
+   373→                        className="ml-1 p-1.5 rounded-lg hover:bg-muted transition-colors"
+   374→                        onClick={() => { setTab('group'); setSelectedGroupId(g.groupId); }}
+   375→                      >
+   376→                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+   377→                      </button>
+   378→                    </CardContent>
+   379→                  </Card>
+   380→                ))}
+   381→              {/* Direct balances where you're owed */}
+   382→              {directBalances
+   383→                .filter(d => d.amount > 0)
+   384→                .map((d, i) => (
+   385→                  <Card key={`direct-${i}`}>
+   386→                    <CardContent className="p-4 flex items-center gap-3">
+   387→                      <Avatar className="w-10 h-10">
+   388→                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+   389→                          {(d.userName || 'U').charAt(0).toUpperCase()}
+   390→                        </AvatarFallback>
+   391→                      </Avatar>
+   392→                      <div className="flex-1 min-w-0">
+   393→                        <p className="text-sm font-medium text-foreground truncate">{d.userName || 'Someone'}</p>
+   394→                        <p className="text-xs text-muted-foreground">Direct expense</p>
+   395→                      </div>
+   396→                      <span className="text-sm font-bold text-primary">+₹{d.amount.toFixed(2)}</span>
+   397→                    </CardContent>
+   398→                  </Card>
+   399→                ))}
+   400→
+   401→              {/* People you owe */}
+   402→              {groupBalances.filter(g => g.yourBalance < 0).length + directBalances.filter(d => d.amount < 0).length > 0 && (
+   403→                <p className="text-xs font-semibold text-destructive uppercase tracking-wider pt-2">You owe</p>
+   404→              )}
+   405→              {/* Group balances where you owe */}
+   406→              {groupBalances
+   407→                .filter(g => g.yourBalance < 0)
+   408→                .map(g => (
+   409→                  <Card key={g.groupId}>
+   410→                    <CardContent className="p-4 flex items-center gap-3">
+   411→                      <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+   412→                        <span className="text-lg">{g.groupEmoji || '👥'}</span>
+   413→                      </div>
+   414→                      <div className="flex-1 min-w-0">
+   415→                        <p className="text-sm font-medium text-foreground truncate">{g.groupName}</p>
+   416→                        <p className="text-xs text-muted-foreground">Group balance</p>
+   417→                      </div>
+   418→                      <span className="text-sm font-bold text-destructive">-₹{Math.abs(g.yourBalance).toFixed(2)}</span>
+   419→                      <button
+   420→                        className="ml-1 p-1.5 rounded-lg hover:bg-muted transition-colors"
+   421→                        onClick={() => { setTab('group'); setSelectedGroupId(g.groupId); }}
+   422→                      >
+   423→                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+   424→                      </button>
+   425→                    </CardContent>
+   426→                  </Card>
+   427→                ))}
+   428→              {/* Direct balances where you owe */}
+   429→              {directBalances
+   430→                .filter(d => d.amount < 0)
+   431→                .map((d, i) => (
+   432→                  <Card key={`direct-${i}`}>
+   433→                    <CardContent className="p-4 flex items-center gap-3">
+   434→                      <Avatar className="w-10 h-10">
+   435→                        <AvatarFallback className="bg-destructive/10 text-destructive text-sm font-semibold">
+   436→                          {(d.userName || 'U').charAt(0).toUpperCase()}
+   437→                        </AvatarFallback>
+   438→                      </Avatar>
+   439→                      <div className="flex-1 min-w-0">
+   440→                        <p className="text-sm font-medium text-foreground truncate">{d.userName || 'Someone'}</p>
+   441→                        <p className="text-xs text-muted-foreground">Direct expense</p>
+   442→                      </div>
+   443→                      <span className="text-sm font-bold text-destructive">-₹{Math.abs(d.amount).toFixed(2)}</span>
+   444→                    </CardContent>
+   445→                  </Card>
+   446→                ))}
+   447→            </div>
+   448→          )}
+   449→        </div>
+   450→      )}
+   451→
+   452→      {/* GROUP TAB - Detailed group settle up */}
+   453→      {tab === 'group' && (
+   454→        <div className="space-y-4">
+   455→          {/* Group Selector */}
+   456→          {loading ? (
+   457→            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+   458→              <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+   459→                <Skeleton className="w-10 h-10 rounded-full" />
+   460→                <div className="flex-1 space-y-1.5">
+   461→                  <Skeleton className="h-4 w-24" />
+   462→                  <Skeleton className="h-3 w-32" />
+   463→                </div>
+   464→                <Skeleton className="h-8 w-20 rounded-lg" />
+   465→              </CardContent></Card>
+   466→            ))}</div>
+   467→          ) : groupBalances.length === 0 ? (
+   468→            <Card>
+   469→              <CardContent className="p-12 text-center">
+   470→                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+   471→                <h3 className="text-lg font-semibold text-foreground mb-1">No groups yet</h3>
+   472→                <p className="text-sm text-muted-foreground">Create a group first to see balances.</p>
+   473→              </CardContent>
+   474→            </Card>
+   475→          ) : !selectedGroupId ? (
+   476→            <Card>
+   477→              <CardHeader className="pb-3">
+   478→                <CardTitle className="text-base">Select a group to settle</CardTitle>
+   479→              </CardHeader>
+   480→              <CardContent className="p-0">
+   481→                <div className="divide-y divide-gray-100">
+   482→                  {groupBalances.map((gb) => (
+   483→                    <button
+   484→                      key={gb.groupId}
+   485→                      className="w-full flex items-center gap-3 p-4 hover:bg-muted transition-colors text-left"
+   486→                      onClick={() => setSelectedGroupId(gb.groupId)}
+   487→                    >
+   488→                      <span className="text-2xl">{gb.groupEmoji || '👥'}</span>
+   489→                      <div className="flex-1 min-w-0">
+   490→                        <p className="font-medium text-foreground text-sm">{gb.groupName}</p>
+   491→                      </div>
+   492→                      <span
+   493→                        className={`text-sm font-semibold ${
+   494→                          gb.yourBalance >= 0 ? 'text-primary' : 'text-destructive'
+   495→                        }`}
+   496→                      >
+   497→                        {gb.yourBalance >= 0 ? '+' : ''}₹{(Number(gb.yourBalance) || 0).toFixed(2)}
+   498→                      </span>
+   499→                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+   500→                    </button>
+   501→                  ))}
+   502→                </div>
+   503→              </CardContent>
+   504→            </Card>
+   505→          ) : (
+   506→            <>
+   507→              {/* Group detail header */}
+   508→              <div className="flex items-center gap-3">
+   509→                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setSelectedGroupId(''); setBalances([]); setSettlements([]); setSimplified([]); }}>
+   510→                  ← Back
+   511→                </Button>
+   512→                <h3 className="text-base font-semibold text-foreground">
+   513→                  {groupBalances.find(g => g.groupId === selectedGroupId)?.groupEmoji}{' '}
+   514→                  {groupBalances.find(g => g.groupId === selectedGroupId)?.groupName || 'Group'}
+   515→                </h3>
+   516→              </div>
+   517→
+   518→              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+   519→                <p className="text-sm text-muted-foreground">Detailed balances within this group</p>
+   520→                <div className="flex gap-2">
+   521→                  <Button
+   522→                    size="sm"
+   523→                    className="bg-primary hover:bg-primary/90 text-white"
+   524→                    onClick={() => setRecordOpen(true)}
+   525→                  >
+   526→                    <CreditCard className="w-4 h-4 mr-1.5" />Record Payment
+   527→                  </Button>
+   528→                  <TooltipProvider>
+   529→                    <Tooltip>
+   530→                      <TooltipTrigger asChild>
+   531→                        <Button size="sm" variant="outline" onClick={handleSimplify} disabled={simplifyLoading}>
+   532→                          {simplifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
+   533→                          Simplify
+   534→                        </Button>
+   535→                      </TooltipTrigger>
+   536→                      <TooltipContent className="text-xs max-w-xs">
+   537→                        Calculates the minimum number of payments needed to settle all debts
+   538→                      </TooltipContent>
+   539→                    </Tooltip>
+   540→                  </TooltipProvider>
+   541→                </div>
+   542→              </div>
+   543→
+   544→              {detailLoading ? (
+   545→                <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
+   546→                  <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+   547→                    <Skeleton className="w-10 h-10 rounded-full" />
+   548→                    <div className="flex-1 space-y-1.5">
+   549→                      <Skeleton className="h-4 w-36" />
+   550→                      <Skeleton className="h-3 w-20" />
+   551→                    </div>
+   552→                    <Skeleton className="h-5 w-16" />
+   553→                  </CardContent></Card>
+   554→                ))}</div>
+   555→              ) : balances.length === 0 ? (
+   556→                <Card>
+   557→                  <CardContent className="p-8 text-center">
+   558→                    <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2" />
+   559→                    <p className="text-sm text-muted-foreground font-medium">All settled up in this group!</p>
+   560→                    <p className="text-xs text-muted-foreground mt-1">No outstanding balances</p>
+   561→                  </CardContent>
+   562→                </Card>
+   563→              ) : (
+   564→                <div className="space-y-2">
+   565→                  {balances.map((b, idx) => {
+   566→                    const isYouOwe = b.from?.id === user?.id;
+   567→                    const isOwedToYou = b.to?.id === user?.id;
+   568→                    return (
+   569→                      <Card key={idx} className={isYouOwe || isOwedToYou ? 'ring-1 ring-emerald-100' : ''}>
+   570→                        <CardContent className="p-4 flex items-center gap-3">
+   571→                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isYouOwe ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+   572→                            {isYouOwe ? (
+   573→                              <ArrowDownRight className="w-5 h-5 text-destructive" />
+   574→                            ) : (
+   575→                              <ArrowUpRight className="w-5 h-5 text-primary" />
+   576→                            )}
+   577→                          </div>
+   578→                          <div className="flex-1 min-w-0">
+   579→                            <p className="text-sm text-foreground">
+   580→                              <span className="font-medium">{b.from?.name || 'Someone'}</span>
+   581→                              {' → '}
+   582→                              <span className="font-medium">{b.to?.name || 'Someone'}</span>
+   583→                            </p>
+   584→                            {isYouOwe && <p className="text-xs text-destructive mt-0.5">You need to pay</p>}
+   585→                            {isOwedToYou && <p className="text-xs text-primary mt-0.5">Owed to you</p>}
+   586→                          </div>
+   587→                          <div className="flex items-center gap-2 shrink-0">
+   588→                            <span className={`text-sm font-bold ${isYouOwe ? 'text-destructive' : isOwedToYou ? 'text-primary' : 'text-foreground'}`}>
+   589→                              ₹{(Number(b.amount) || 0).toFixed(2)}
+   590→                            </span>
+   591→                            {(isYouOwe || isOwedToYou) && (
+   592→                              <Button
+   593→                                size="sm"
+   594→                                variant="outline"
+   595→                                className={`h-7 text-xs ${isYouOwe ? 'border-destructive/30 text-destructive hover:bg-destructive/10' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
+   596→                                onClick={(e) => {
+   597→                                  e.stopPropagation();
+   598→                                  setPayFrom(b.from?.id || '');
+   599→                                  setPayTo(b.to?.id || '');
+   600→                                  setPayAmount(String(Number(b.amount).toFixed(2)));
+   601→                                  setPayNote('');
+   602→                                  setRecordOpen(true);
+   603→                                }}
+   604→                              >
+   605→                                Settle
+   606→                              </Button>
+   607→                            )}
+   608→                          </div>
+   609→                        </CardContent>
+   610→                      </Card>
+   611→                    );
+   612→                  })}
+   613→                </div>
+   614→              )}
+   615→
+   616→              {simplified.length > 0 && (
+   617→                <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/30">
+   618→                  <CardHeader className="pb-3">
+   619→                    <CardTitle className="text-base flex items-center gap-2">
+   620→                      <Zap className="w-4 h-4 text-primary" />Optimal Payment Plan
+   621→                    </CardTitle>
+   622→                  </CardHeader>
+   623→                  <CardContent>
+   624→                    <p className="text-xs text-muted-foreground mb-3">Reduce from {balances.length} transactions to {simplified.length}:</p>
+   625→                    <div className="space-y-2">
+   626→                      {simplified.map((p, idx) => (
+   627→                        <div key={idx} className="flex items-center gap-3 p-2.5 bg-background rounded-lg border border-primary/20">
+   628→                          <span className="text-sm flex-1 text-foreground font-medium">{p.fromUserName} → {p.toUserName}</span>
+   629→                          <span className="text-sm font-bold text-foreground">₹{(Number(p.amount) || 0).toFixed(2)}</span>
+   630→                        </div>
+   631→                      ))}
+   632→                    </div>
+   633→                  </CardContent>
+   634→                </Card>
+   635→              )}
+   636→
+   637→              {settlements.length > 0 && (
+   638→                <div>
+   639→                  <h4 className="text-sm font-semibold text-foreground mb-2">Recent Settlements</h4>
+   640→                  <div className="space-y-2">
+   641→                    {settlements.slice(0, 10).map((s) => (
+   642→                      <div key={s.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+   643→                        <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+   644→                        <div className="flex-1 min-w-0">
+   645→                          <p className="text-sm text-foreground">{s.from?.name} paid {s.to?.name}</p>
+   646→                          {s.note && <p className="text-xs text-muted-foreground">{s.note}</p>}
+   647→                        </div>
+   648→                        <div className="text-right shrink-0">
+   649→                          <span className="text-sm font-semibold text-foreground">₹{(Number(s.amount) || 0).toFixed(2)}</span>
+   650→                          <p className="text-[10px] text-muted-foreground">{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}</p>
+   651→                        </div>
+   652→                      </div>
+   653→                    ))}
+   654→                  </div>
+   655→                </div>
+   656→              )}
+   657→            </>
+   658→          )}
+   659→        </div>
+   660→      )}
+   661→
+   662→      {/* Record Payment Dialog */}
+   663→      <Dialog open={recordOpen} onOpenChange={setRecordOpen}>
+   664→        <DialogContent className="sm:max-w-md">
+   665→          <DialogHeader>
+   666→            <DialogTitle>Record a Payment</DialogTitle>
+   667→          </DialogHeader>
+   668→          <div className="space-y-4">
+   669→            <p className="text-sm text-muted-foreground leading-relaxed">
+   670→              Record that a payment was made. This will reduce the outstanding balance.
+   671→            </p>
+   672→            <div className="space-y-1.5">
+   673→              <Label>From (payer) <span className="text-destructive">*</span></Label>
+   674→              <Select value={payFrom} onValueChange={setPayFrom}>
+   675→                <SelectTrigger><SelectValue placeholder="Who is paying?" /></SelectTrigger>
+   676→                <SelectContent>
+   677→                  {groupMembers.map((m) => (
+   678→                    <SelectItem key={m.userId} value={m.userId}>{m.userName}</SelectItem>
+   679→                  ))}
+   680→                </SelectContent>
+   681→              </Select>
+   682→            </div>
+   683→            <div className="space-y-1.5">
+   684→              <Label>To (receiver) <span className="text-destructive">*</span></Label>
+   685→              <Select value={payTo} onValueChange={setPayTo}>
+   686→                <SelectTrigger><SelectValue placeholder="Who receives payment?" /></SelectTrigger>
+   687→                <SelectContent>
+   688→                  {groupMembers.map((m) => (
+   689→                    <SelectItem key={m.userId} value={m.userId}>{m.userName}</SelectItem>
+   690→                  ))}
+   691→                </SelectContent>
+   692→              </Select>
+   693→            </div>
+   694→            <div className="space-y-1.5">
+   695→              <Label htmlFor="pay-amount">Amount <span className="text-destructive">*</span></Label>
+   696→              <div className="relative">
+   697→                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
+   698→                <Input
+   699→                  id="pay-amount"
+   700→                  type="number"
+   701→                  step="0.01"
+   702→                  min="0.01"
+   703→                  placeholder="0.00"
+   704→                  value={payAmount}
+   705→                  onChange={(e) => { setPayAmount(e.target.value); setPayAmountError(''); }}
+   706→                  className={`pl-7 ${payAmountError ? 'border-destructive/40' : ''}`}
+   707→                />
+   708→              </div>
+   709→              {payAmountError && <p className="text-xs text-destructive mt-1">{payAmountError}</p>}
+   710→            </div>
+   711→            <div className="space-y-1.5">
+   712→              <Label htmlFor="pay-note">Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
+   713→              <Input
+   714→                id="pay-note"
+   715→                placeholder="e.g., UPI, Cash, Venmo"
+   716→                value={payNote}
+   717→                onChange={(e) => setPayNote(e.target.value)}
+   718→              />
+   719→            </div>
+   720→          </div>
+   721→          <DialogFooter>
+   722→            <Button variant="outline" onClick={() => setRecordOpen(false)}>Cancel</Button>
+   723→            <Button
+   724→              onClick={handleRecordPayment}
+   725→              disabled={!payFrom || !payTo || !payAmount || recording}
+   726→              className="bg-primary hover:bg-primary/90 text-white"
+   727→            >
+   728→              {recording ? 'Recording...' : 'Record Payment'}
+   729→            </Button>
+   730→          </DialogFooter>
+   731→        </DialogContent>
+   732→      </Dialog>
+   733→    </motion.div>
+   734→  );
+   735→}
+   736→

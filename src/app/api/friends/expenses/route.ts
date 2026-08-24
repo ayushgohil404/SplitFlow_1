@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
     }
 
     // Find all expenses where both users are involved as splitters
-    // Use two separate some conditions
     const expenses = await db.expense.findMany({
       where: {
         AND: [
@@ -46,6 +45,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        nonUserSplits: true,
         paidBy: {
           select: { id: true, name: true, image: true },
         },

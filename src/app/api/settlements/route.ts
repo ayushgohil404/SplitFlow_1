@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const { groupId, fromUserId, toUserId, amount, note } = body as {
-      groupId: string
+      groupId: string | null
       fromUserId: string
       toUserId: string
       amount: number

@@ -11,9 +11,15 @@ export function useAuth() {
   const checkSession = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/session');
-      const session = await res.json();
+      const data = await res.json();
+      const session = data.session || data;
       if (session?.user) {
-        setUser(session.user);
+        setUser({
+          id: (session.user as any).id,
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+        });
       } else {
         setUser(null);
       }

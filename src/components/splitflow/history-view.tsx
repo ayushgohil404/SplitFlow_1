@@ -302,7 +302,6 @@ export function HistoryView() {
         </div>
       )}
 
-      // Expense Detail Dialog
       <ExpenseDetailDialog
         expenseId={selectedExpenseId || ''}
         open={detailOpen}
