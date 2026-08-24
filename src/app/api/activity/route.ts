@@ -13,7 +13,18 @@ export async function GET(req: NextRequest) {
     const groupId = searchParams.get('groupId')
     const limit = parseInt(searchParams.get('limit') ?? '50', 10)
 
-    const where: Record<string, unknown> = {}
+    // Get user's group IDs for group activity feed
+    const myGroupIds = (await db.groupMember.findMany({
+      where: { userId: user.id },
+      select: { groupId: true },
+    })).map(m => m.groupId)
+
+    const where: Record<string, unknown> = {
+      OR: [
+        { userId: user.id },
+        ...(myGroupIds.length > 0 ? [{ groupId: { in: myGroupIds } }] : []),
+      ],
+    }
     if (groupId) {
       where.groupId = groupId
     }
